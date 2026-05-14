@@ -1,0 +1,3 @@
+# Strings allowed to appear as bare `Text('...')` in presentation/ code.
+# One string per line. Bloc-verifier skips these.
+# Keep this list as small as possible — prefer ARB keys.
