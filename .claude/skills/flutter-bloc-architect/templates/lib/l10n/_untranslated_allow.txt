@@ -1,0 +1,6 @@
+# One literal per line. Strings on this list may appear as `Text('...')` in
+# `presentation/` without going through `AppLocalizations`. Use sparingly —
+# typically only for brand names that should not be translated.
+#
+# Example:
+# Acme

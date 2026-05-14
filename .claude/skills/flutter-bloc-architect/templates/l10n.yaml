@@ -1,0 +1,11 @@
+# Flutter localization config — used by `flutter gen-l10n`.
+#
+# Generated files commit to the repo (output-dir under lib/) so they're
+# greppable and IDE-navigable. The deprecated `synthetic-package` key has
+# been removed (Flutter 3.27+ — the option no longer has any effect).
+
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+output-dir: lib/l10n/generated

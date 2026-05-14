@@ -1,0 +1,41 @@
+# lefthook pre-commit hooks. Cross-platform; install once with `lefthook install`.
+#
+# Three gates, all mandatory:
+#   1. Format          — refuses unformatted Dart.
+#   2. Analyze         — refuses analyzer warnings.
+#   3. TDD diff check  — refuses commits that change lib/ without changing test/.
+#
+# Tests are NOT in pre-commit (too slow); they run in CI on every push.
+
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      glob: "*.dart"
+      run: dart format --set-exit-if-changed {staged_files}
+    analyze:
+      run: flutter analyze
+    tdd-diff-check:
+      # Block commits that touch lib/{features,core,app}/ without a matching
+      # test/ change. TDD is non-negotiable in this skill — see SKILL.md.
+      # Bypass is `git commit --no-verify`, which signals an emergency only.
+      run: |
+        lib_changed=$(git diff --cached --name-only --diff-filter=ACMRT \
+          | grep -E '^lib/(features|core|app)/.+\.dart$' \
+          | grep -vE '\.(g|freezed|gr|config)\.dart$' \
+          || true)
+        test_changed=$(git diff --cached --name-only --diff-filter=ACMRT \
+          | grep -E '^test/.+\.dart$' \
+          || true)
+        if [ -n "$lib_changed" ] && [ -z "$test_changed" ]; then
+          echo "✗ TDD violation: lib/ changed without test/ changing."
+          echo ""
+          echo "Files in lib/ touched in this commit:"
+          echo "$lib_changed" | sed 's/^/  - /'
+          echo ""
+          echo "Write the failing test first, run 'flutter test' to confirm red,"
+          echo "then implement and stage both lib/ and test/ together."
+          echo ""
+          echo "Real emergency? --no-verify bypasses; explain in the commit message."
+          exit 1
+        fi

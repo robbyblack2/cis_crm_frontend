@@ -1,0 +1,41 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "My Flutter App",
+  "@appTitle": {
+    "description": "Application title shown in the OS task switcher and on web."
+  },
+
+  "loading": "Loading",
+  "@loading": {
+    "description": "Generic loading indicator label, also used as a Semantics label for skeleton placeholders."
+  },
+
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retry button label on error states."
+  },
+
+  "dismiss": "Dismiss",
+  "@dismiss": {
+    "description": "Dismiss/close button label on banners and dialogs."
+  },
+
+  "failure_network": "No internet connection. Check your network and try again.",
+  "@failure_network": {},
+
+  "failure_server": "Something went wrong on our end. Please try again in a moment.",
+  "@failure_server": {},
+
+  "failure_unauthorized": "Your session has expired. Please sign in again.",
+  "@failure_unauthorized": {},
+
+  "failure_validation": "Please check the highlighted fields and try again.",
+  "@failure_validation": {},
+
+  "failure_cache": "We couldn't read local data. Try restarting the app.",
+  "@failure_cache": {},
+
+  "failure_unknown": "Something went wrong. Please try again.",
+  "@failure_unknown": {}
+}

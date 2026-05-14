@@ -1,0 +1,104 @@
+name: my_flutter_app
+description: A Flutter application.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.5.0
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # ── State management (BLoC ecosystem, official) ──────────
+  flutter_bloc: ^9.1.0
+  hydrated_bloc: ^10.1.1
+  bloc_concurrency: ^0.3.0
+
+  # ── Equality + JSON ──────────────────────────────────────
+  equatable: ^2.0.5
+  json_annotation: ^4.9.0
+
+  # ── Dependency injection ─────────────────────────────────
+  get_it: ^7.7.0
+
+  # ── Routing ──────────────────────────────────────────────
+  go_router: ^14.0.0
+
+  # ── Networking ───────────────────────────────────────────
+  dio: ^5.4.0
+
+  # ── Forms ────────────────────────────────────────────────
+  formz: ^0.7.0
+
+  # ── Storage ──────────────────────────────────────────────
+  flutter_secure_storage: ^9.2.2
+  shared_preferences: ^2.3.0
+  path_provider: ^2.1.4
+
+  # ── Utilities ────────────────────────────────────────────
+  # intl is pinned by flutter_localizations from the SDK; use any-compatible to
+  # avoid version-solving failures when the Flutter SDK bumps the pinned version.
+  intl: any
+  logger: ^2.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # ── Linting (VGV strict, BLoC-team aligned) ──────────────
+  very_good_analysis: ^6.0.0
+
+  # ── Bloc testing + mocks ─────────────────────────────────
+  bloc_test: ^10.0.0
+  mocktail: ^1.0.0
+
+  # ── Native icon + splash generation ──────────────────────
+  flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.1
+
+  # ── Codegen (JSON only) ──────────────────────────────────
+  build_runner: ^2.4.13
+  json_serializable: ^6.8.0
+
+flutter:
+  uses-material-design: true
+  generate: true   # required for flutter_localizations + .arb files
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-VariableFont.ttf
+
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/lottie/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/launcher_icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/launcher_icon_foreground.png"
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "assets/launcher_icon.png"
+  windows:
+    generate: true
+    image_path: "assets/launcher_icon.png"
+  macos:
+    generate: true
+    image_path: "assets/launcher_icon.png"
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: "assets/splash.png"
+  android_12:
+    color: "#FFFFFF"
+    image: "assets/splash.png"
+  web: false

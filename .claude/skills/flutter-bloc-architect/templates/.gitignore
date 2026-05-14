@@ -1,0 +1,15 @@
+# Templates are source files only. Never commit Flutter tool artifacts.
+.dart_tool/
+.flutter-plugins-dependencies
+build/
+pubspec.lock
+ios/
+macos/
+windows/
+linux/
+android/
+.metadata
+.packages
+
+# Generated localization output (regenerated per project by /configure-flutter-app)
+lib/l10n/generated/
