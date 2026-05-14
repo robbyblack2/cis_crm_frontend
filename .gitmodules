@@ -1,0 +1,3 @@
+[submodule "docs/knowledgebase"]
+	path = docs/knowledgebase
+	url = https://github.com/robbyblack2/cis_crm_knowelegebase.git
