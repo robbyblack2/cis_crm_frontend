@@ -9,6 +9,8 @@ import 'package:cis_crm/core/network/token_storage.dart';
 import 'package:cis_crm/core/observability/app_bloc_observer.dart';
 import 'package:cis_crm/core/router/app_router.dart';
 import 'package:cis_crm/core/router/routes.dart';
+import 'package:cis_crm/core/router/shell.dart';
+import 'package:cis_crm/core/widgets/adaptive_scaffold.dart';
 import 'package:cis_crm/features/activity/data/datasources/activity_remote_data_source.dart';
 import 'package:cis_crm/features/activity/data/datasources/activity_remote_data_source_impl.dart';
 import 'package:cis_crm/features/activity/data/repositories/call_log_repository_impl.dart';
@@ -17,6 +19,7 @@ import 'package:cis_crm/features/activity/domain/repositories/call_log_repositor
 import 'package:cis_crm/features/activity/domain/repositories/task_repository.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/call_log_cubit.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/tasks_bloc.dart';
+import 'package:cis_crm/features/activity/presentation/pages/tasks_page.dart';
 import 'package:cis_crm/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:cis_crm/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:cis_crm/features/auth/domain/repositories/auth_repository.dart';
@@ -30,6 +33,7 @@ import 'package:cis_crm/features/calendar/data/datasources/calendar_remote_data_
 import 'package:cis_crm/features/calendar/data/repositories/calendar_repository_impl.dart';
 import 'package:cis_crm/features/calendar/domain/repositories/calendar_repository.dart';
 import 'package:cis_crm/features/calendar/presentation/bloc/calendar_bloc.dart';
+import 'package:cis_crm/features/calendar/presentation/pages/calendar_page.dart';
 import 'package:cis_crm/features/contacts/data/datasources/company_remote_data_source.dart';
 import 'package:cis_crm/features/contacts/data/datasources/contact_remote_data_source.dart';
 import 'package:cis_crm/features/contacts/data/repositories/company_repository_impl.dart';
@@ -37,6 +41,7 @@ import 'package:cis_crm/features/contacts/data/repositories/contact_repository_i
 import 'package:cis_crm/features/contacts/domain/repositories/company_repository.dart';
 import 'package:cis_crm/features/contacts/domain/repositories/contact_repository.dart';
 import 'package:cis_crm/features/contacts/presentation/bloc/contacts_bloc.dart';
+import 'package:cis_crm/features/contacts/presentation/pages/contacts_page.dart';
 import 'package:cis_crm/features/email/data/datasources/email_remote_data_source.dart';
 import 'package:cis_crm/features/email/data/repositories/email_repository_impl.dart';
 import 'package:cis_crm/features/email/domain/repositories/email_repository.dart';
@@ -53,6 +58,7 @@ import 'package:cis_crm/features/pipeline/domain/repositories/pipeline_repositor
 import 'package:cis_crm/features/pipeline/domain/repositories/record_repository.dart';
 import 'package:cis_crm/features/pipeline/presentation/bloc/pipeline_bloc.dart';
 import 'package:cis_crm/features/pipeline/presentation/bloc/record_bloc.dart';
+import 'package:cis_crm/features/pipeline/presentation/pages/pipeline_page.dart';
 import 'package:cis_crm/features/products/data/datasources/product_remote_datasource.dart';
 import 'package:cis_crm/features/products/data/datasources/subscription_remote_datasource.dart';
 import 'package:cis_crm/features/products/data/repositories/product_repository_impl.dart';
@@ -61,10 +67,12 @@ import 'package:cis_crm/features/products/domain/repositories/product_repository
 import 'package:cis_crm/features/products/domain/repositories/subscription_repository.dart';
 import 'package:cis_crm/features/products/presentation/bloc/products_bloc.dart';
 import 'package:cis_crm/features/products/presentation/bloc/subscriptions_bloc.dart';
+import 'package:cis_crm/features/products/presentation/pages/products_page.dart';
 import 'package:cis_crm/features/reporting/data/datasources/report_remote_datasource.dart';
 import 'package:cis_crm/features/reporting/data/repositories/report_repository_impl.dart';
 import 'package:cis_crm/features/reporting/domain/repositories/report_repository.dart';
 import 'package:cis_crm/features/reporting/presentation/bloc/reports_cubit.dart';
+import 'package:cis_crm/features/reporting/presentation/pages/reports_page.dart';
 import 'package:cis_crm/features/search/data/datasources/search_remote_datasource.dart';
 import 'package:cis_crm/features/search/data/repositories/search_repository_impl.dart';
 import 'package:cis_crm/features/search/domain/repositories/search_repository.dart';
@@ -340,50 +348,92 @@ Future<void> configureDependencies(FlavorConfig config) async {
       },
       routes: [
         GoRoute(
-          path: Routes.home,
-          builder: (context, state) => const Scaffold(
-            body: Center(child: Text('CIS CRM Home')),
-          ),
-        ),
-        GoRoute(
           path: Routes.login,
           builder: (context, state) => const LoginPage(),
         ),
-        GoRoute(
-          path: Routes.contacts,
-          builder: (context, state) => const Scaffold(
-            body: Center(child: Text('Contacts')),
-          ),
-        ),
-        GoRoute(
-          path: Routes.pipelines,
-          builder: (context, state) => const Scaffold(
-            body: Center(child: Text('Pipelines')),
-          ),
-        ),
-        GoRoute(
-          path: Routes.calendar,
-          builder: (context, state) => const Scaffold(
-            body: Center(child: Text('Calendar')),
-          ),
-        ),
-        GoRoute(
-          path: Routes.tasks,
-          builder: (context, state) => const Scaffold(
-            body: Center(child: Text('Tasks')),
-          ),
-        ),
-        GoRoute(
-          path: Routes.products,
-          builder: (context, state) => const Scaffold(
-            body: Center(child: Text('Products')),
-          ),
-        ),
-        GoRoute(
-          path: Routes.reports,
-          builder: (context, state) => const Scaffold(
-            body: Center(child: Text('Reports')),
-          ),
+        buildAdaptiveShell(
+          destinations: const [
+            AdaptiveDestination(
+              icon: Icon(Icons.dashboard_outlined),
+              selectedIcon: Icon(Icons.dashboard),
+              label: 'Pipeline',
+            ),
+            AdaptiveDestination(
+              icon: Icon(Icons.contacts_outlined),
+              selectedIcon: Icon(Icons.contacts),
+              label: 'Contacts',
+            ),
+            AdaptiveDestination(
+              icon: Icon(Icons.task_alt_outlined),
+              selectedIcon: Icon(Icons.task_alt),
+              label: 'Tasks',
+            ),
+            AdaptiveDestination(
+              icon: Icon(Icons.calendar_month_outlined),
+              selectedIcon: Icon(Icons.calendar_month),
+              label: 'Calendar',
+            ),
+            AdaptiveDestination(
+              icon: Icon(Icons.inventory_2_outlined),
+              selectedIcon: Icon(Icons.inventory_2),
+              label: 'Products',
+            ),
+            AdaptiveDestination(
+              icon: Icon(Icons.bar_chart_outlined),
+              selectedIcon: Icon(Icons.bar_chart),
+              label: 'Reports',
+            ),
+          ],
+          branches: [
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: Routes.home,
+                  builder: (_, __) => const PipelinePage(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: Routes.contacts,
+                  builder: (_, __) => const ContactsPage(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: Routes.tasks,
+                  builder: (_, __) => const TasksPage(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: Routes.calendar,
+                  builder: (_, __) => const CalendarPage(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: Routes.products,
+                  builder: (_, __) => const ProductsPage(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: Routes.reports,
+                  builder: (_, __) => const ReportsPage(),
+                ),
+              ],
+            ),
+          ],
         ),
       ],
     ),
