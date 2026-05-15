@@ -1,0 +1,4 @@
+enum EmailDirection {
+  inbound,
+  outbound,
+}

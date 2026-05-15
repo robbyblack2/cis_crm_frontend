@@ -5,20 +5,20 @@ abstract final class ErrorBanner {
     ScaffoldMessenger.of(context)
       ..clearMaterialBanners()
       ..showMaterialBanner(
-      MaterialBanner(
-        content: Text(message),
-        leading: Icon(
-          Icons.warning_amber_rounded,
-          color: Theme.of(context).colorScheme.error,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => hide(context),
-            child: const Text('Dismiss'),
+        MaterialBanner(
+          content: Text(message),
+          leading: Icon(
+            Icons.warning_amber_rounded,
+            color: Theme.of(context).colorScheme.error,
           ),
-        ],
-      ),
-    );
+          actions: [
+            TextButton(
+              onPressed: () => hide(context),
+              child: const Text('Dismiss'),
+            ),
+          ],
+        ),
+      );
   }
 
   static void hide(BuildContext context) {

@@ -1,0 +1,4 @@
+enum CallDirection {
+  inbound,
+  outbound,
+}
