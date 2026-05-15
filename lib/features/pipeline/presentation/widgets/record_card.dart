@@ -41,7 +41,7 @@ class RecordCard extends StatelessWidget {
                   if (record.ownerId != null) ...[
                     const SizedBox(width: 8),
                     Tooltip(
-                      message: record.ownerId!,
+                      message: record.ownerId ?? '',
                       child: CircleAvatar(
                         radius: 14,
                         backgroundColor: colorScheme.primaryContainer,

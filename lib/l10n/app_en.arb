@@ -21,6 +21,7 @@
     "description": "Dismiss/close button label on banners and dialogs."
   },
 
+
   "failure_network": "No internet connection. Check your network and try again.",
   "@failure_network": {},
 
@@ -37,5 +38,577 @@
   "@failure_cache": {},
 
   "failure_unknown": "Something went wrong. Please try again.",
-  "@failure_unknown": {}
+  "@failure_unknown": {},
+
+
+  "navPipeline": "Pipeline",
+  "@navPipeline": {
+    "description": "Navigation label for the pipeline/deals view."
+  },
+
+  "navContacts": "Contacts",
+  "@navContacts": {
+    "description": "Navigation label for the contacts view."
+  },
+
+  "navTasks": "Tasks",
+  "@navTasks": {
+    "description": "Navigation label for the tasks view."
+  },
+
+  "navCalendar": "Calendar",
+  "@navCalendar": {
+    "description": "Navigation label for the calendar view."
+  },
+
+  "navProducts": "Products",
+  "@navProducts": {
+    "description": "Navigation label for the products view."
+  },
+
+  "navReports": "Reports",
+  "@navReports": {
+    "description": "Navigation label for the reports view."
+  },
+
+  "signIn": "Sign in",
+  "@signIn": {
+    "description": "Generic sign-in action label."
+  },
+
+  "signOut": "Sign out",
+  "@signOut": {
+    "description": "Generic sign-out action label."
+  },
+
+  "email": "Email",
+  "@email": {
+    "description": "Generic email field label."
+  },
+
+  "password": "Password",
+  "@password": {
+    "description": "Generic password field label."
+  },
+
+  "search": "Search",
+  "@search": {
+    "description": "Generic search action label."
+  },
+
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Generic cancel action label."
+  },
+
+  "save": "Save",
+  "@save": {
+    "description": "Generic save action label."
+  },
+
+  "delete": "Delete",
+  "@delete": {
+    "description": "Generic delete action label."
+  },
+
+  "edit": "Edit",
+  "@edit": {
+    "description": "Generic edit action label."
+  },
+
+  "create": "Create",
+  "@create": {
+    "description": "Generic create action label."
+  },
+
+  "add": "Add",
+  "@add": {
+    "description": "Generic add action label."
+  },
+
+  "noResults": "No results found",
+  "@noResults": {
+    "description": "Empty state when a list or search yields zero items."
+  },
+
+  "confirmDelete": "Confirm delete",
+  "@confirmDelete": {
+    "description": "Title for a delete confirmation dialog."
+  },
+
+  "confirmDeleteMessage": "Are you sure you want to delete this item? This action cannot be undone.",
+  "@confirmDeleteMessage": {
+    "description": "Body text for a generic delete confirmation dialog."
+  },
+
+
+  "loginTitle": "Sign in to CIS CRM",
+  "@loginTitle": {
+    "description": "Title shown on the login page."
+  },
+
+  "loginEmailLabel": "Email address",
+  "@loginEmailLabel": {
+    "description": "Label for the email field on the login form."
+  },
+
+  "loginPasswordLabel": "Password",
+  "@loginPasswordLabel": {
+    "description": "Label for the password field on the login form."
+  },
+
+  "loginButton": "Sign in",
+  "@loginButton": {
+    "description": "Primary login submit button label."
+  },
+
+  "loginEmailInvalid": "Please enter a valid email address.",
+  "@loginEmailInvalid": {
+    "description": "Validation error for a malformed email on the login form."
+  },
+
+  "loginPasswordTooShort": "Password must be at least 8 characters.",
+  "@loginPasswordTooShort": {
+    "description": "Validation error when the password is too short."
+  },
+
+
+  "contactsTitle": "Contacts",
+  "@contactsTitle": {
+    "description": "Page title for the contacts list."
+  },
+
+  "contactsEmpty": "No contacts yet",
+  "@contactsEmpty": {
+    "description": "Empty-state title when the contacts list is empty."
+  },
+
+  "contactsEmptyMessage": "Add your first contact to get started.",
+  "@contactsEmptyMessage": {
+    "description": "Empty-state body when the contacts list is empty."
+  },
+
+  "contactSearch": "Search contacts",
+  "@contactSearch": {
+    "description": "Placeholder text for the contacts search field."
+  },
+
+  "contactFirstName": "First name",
+  "@contactFirstName": {
+    "description": "Label for contact first name field."
+  },
+
+  "contactLastName": "Last name",
+  "@contactLastName": {
+    "description": "Label for contact last name field."
+  },
+
+  "contactEmail": "Email",
+  "@contactEmail": {
+    "description": "Label for contact email field."
+  },
+
+  "contactPhone": "Phone",
+  "@contactPhone": {
+    "description": "Label for contact phone field."
+  },
+
+  "contactJobTitle": "Job title",
+  "@contactJobTitle": {
+    "description": "Label for contact job title field."
+  },
+
+  "contactSource": "Source",
+  "@contactSource": {
+    "description": "Label for contact lead-source field."
+  },
+
+  "contactStatus": "Status",
+  "@contactStatus": {
+    "description": "Label for contact status field."
+  },
+
+  "contactTags": "Tags",
+  "@contactTags": {
+    "description": "Label for contact tags field."
+  },
+
+  "contactDeleteConfirm": "Are you sure you want to delete this contact?",
+  "@contactDeleteConfirm": {
+    "description": "Confirmation message before deleting a contact."
+  },
+
+
+  "pipelineTitle": "Pipeline",
+  "@pipelineTitle": {
+    "description": "Page title for the pipeline/deals view."
+  },
+
+  "pipelineEmpty": "No deals in your pipeline",
+  "@pipelineEmpty": {
+    "description": "Empty-state text when the pipeline has no deals."
+  },
+
+  "recordCreate": "Create record",
+  "@recordCreate": {
+    "description": "Button label for creating a new pipeline record/deal."
+  },
+
+  "recordTitle": "Title",
+  "@recordTitle": {
+    "description": "Label for the pipeline record title field."
+  },
+
+  "recordMove": "Move",
+  "@recordMove": {
+    "description": "Action label for moving a record to another stage."
+  },
+
+  "recordStageHistory": "Stage history",
+  "@recordStageHistory": {
+    "description": "Label for viewing the stage transition history of a record."
+  },
+
+  "kanbanEmpty": "No records in this stage",
+  "@kanbanEmpty": {
+    "description": "Empty-state text for a Kanban column with no cards."
+  },
+
+  "stageWon": "Won",
+  "@stageWon": {
+    "description": "Label for the won/closed-won pipeline stage."
+  },
+
+  "stageLost": "Lost",
+  "@stageLost": {
+    "description": "Label for the lost/closed-lost pipeline stage."
+  },
+
+
+  "tasksTitle": "Tasks",
+  "@tasksTitle": {
+    "description": "Page title for the tasks view."
+  },
+
+  "tasksEmpty": "No tasks yet",
+  "@tasksEmpty": {
+    "description": "Empty-state title when the tasks list is empty."
+  },
+
+  "tasksEmptyMessage": "Create a task to start tracking your work.",
+  "@tasksEmptyMessage": {
+    "description": "Empty-state body when the tasks list is empty."
+  },
+
+  "taskTodo": "To do",
+  "@taskTodo": {
+    "description": "Label for the to-do task status."
+  },
+
+  "taskInProgress": "In progress",
+  "@taskInProgress": {
+    "description": "Label for the in-progress task status."
+  },
+
+  "taskDone": "Done",
+  "@taskDone": {
+    "description": "Label for the completed task status."
+  },
+
+  "taskPriorityLow": "Low",
+  "@taskPriorityLow": {
+    "description": "Label for low-priority tasks."
+  },
+
+  "taskPriorityMedium": "Medium",
+  "@taskPriorityMedium": {
+    "description": "Label for medium-priority tasks."
+  },
+
+  "taskPriorityHigh": "High",
+  "@taskPriorityHigh": {
+    "description": "Label for high-priority tasks."
+  },
+
+  "taskTitle": "Title",
+  "@taskTitle": {
+    "description": "Label for the task title field."
+  },
+
+  "taskDescription": "Description",
+  "@taskDescription": {
+    "description": "Label for the task description field."
+  },
+
+  "taskDueDate": "Due date",
+  "@taskDueDate": {
+    "description": "Label for the task due-date field."
+  },
+
+  "taskAssignee": "Assignee",
+  "@taskAssignee": {
+    "description": "Label for the task assignee field."
+  },
+
+
+  "calendarTitle": "Calendar",
+  "@calendarTitle": {
+    "description": "Page title for the calendar view."
+  },
+
+  "calendarEmpty": "No events scheduled",
+  "@calendarEmpty": {
+    "description": "Empty-state text when the calendar has no events."
+  },
+
+  "calendarToday": "Today",
+  "@calendarToday": {
+    "description": "Button label to jump to today's date in the calendar."
+  },
+
+  "viewDay": "Day",
+  "@viewDay": {
+    "description": "Calendar view selector: day view."
+  },
+
+  "viewWeek": "Week",
+  "@viewWeek": {
+    "description": "Calendar view selector: week view."
+  },
+
+  "viewMonth": "Month",
+  "@viewMonth": {
+    "description": "Calendar view selector: month view."
+  },
+
+  "eventTitle": "Event title",
+  "@eventTitle": {
+    "description": "Label for the calendar event title field."
+  },
+
+  "eventLocation": "Location",
+  "@eventLocation": {
+    "description": "Label for the calendar event location field."
+  },
+
+  "eventMeetingLink": "Meeting link",
+  "@eventMeetingLink": {
+    "description": "Label for the calendar event meeting-link field."
+  },
+
+
+  "productsTitle": "Products",
+  "@productsTitle": {
+    "description": "Page title for the products view."
+  },
+
+  "catalogTab": "Catalog",
+  "@catalogTab": {
+    "description": "Tab label for the product catalog."
+  },
+
+  "subscriptionsTab": "Subscriptions",
+  "@subscriptionsTab": {
+    "description": "Tab label for the subscriptions list."
+  },
+
+  "productName": "Product name",
+  "@productName": {
+    "description": "Label for the product name field."
+  },
+
+  "productType": "Type",
+  "@productType": {
+    "description": "Label for the product type field."
+  },
+
+  "productPrice": "Price",
+  "@productPrice": {
+    "description": "Label for the product price field."
+  },
+
+  "productActive": "Active",
+  "@productActive": {
+    "description": "Status label for an active product."
+  },
+
+  "productInactive": "Inactive",
+  "@productInactive": {
+    "description": "Status label for an inactive product."
+  },
+
+  "subscriptionSystemId": "System ID",
+  "@subscriptionSystemId": {
+    "description": "Label for the subscription system-ID field."
+  },
+
+  "subscriptionStatus": "Subscription status",
+  "@subscriptionStatus": {
+    "description": "Label for the subscription status field."
+  },
+
+  "statusTrialing": "Trialing",
+  "@statusTrialing": {
+    "description": "Subscription status: trialing."
+  },
+
+  "statusActive": "Active",
+  "@statusActive": {
+    "description": "Subscription status: active."
+  },
+
+  "statusPastDue": "Past due",
+  "@statusPastDue": {
+    "description": "Subscription status: past due."
+  },
+
+  "statusPaused": "Paused",
+  "@statusPaused": {
+    "description": "Subscription status: paused."
+  },
+
+  "statusCancelled": "Cancelled",
+  "@statusCancelled": {
+    "description": "Subscription status: cancelled."
+  },
+
+  "statusExpired": "Expired",
+  "@statusExpired": {
+    "description": "Subscription status: expired."
+  },
+
+
+  "emailCompose": "Compose",
+  "@emailCompose": {
+    "description": "Button label for composing a new email."
+  },
+
+  "emailSend": "Send",
+  "@emailSend": {
+    "description": "Button label for sending an email."
+  },
+
+  "emailSaveDraft": "Save draft",
+  "@emailSaveDraft": {
+    "description": "Button label for saving an email as a draft."
+  },
+
+  "emailTo": "To",
+  "@emailTo": {
+    "description": "Label for the email recipient field."
+  },
+
+  "emailSubject": "Subject",
+  "@emailSubject": {
+    "description": "Label for the email subject field."
+  },
+
+  "emailBody": "Body",
+  "@emailBody": {
+    "description": "Label for the email body field."
+  },
+
+  "emailTemplates": "Templates",
+  "@emailTemplates": {
+    "description": "Label for the email templates section."
+  },
+
+  "emailTemplatesEmpty": "No templates available",
+  "@emailTemplatesEmpty": {
+    "description": "Empty-state text when there are no email templates."
+  },
+
+
+  "filesTitle": "Files",
+  "@filesTitle": {
+    "description": "Page title for the files view."
+  },
+
+  "filesEmpty": "No files uploaded",
+  "@filesEmpty": {
+    "description": "Empty-state text when there are no files."
+  },
+
+  "uploadFile": "Upload file",
+  "@uploadFile": {
+    "description": "Button label for uploading a file."
+  },
+
+  "deleteFile": "Delete file",
+  "@deleteFile": {
+    "description": "Button label for deleting a file."
+  },
+
+
+  "automationTitle": "Automation",
+  "@automationTitle": {
+    "description": "Page title for the automation rules view."
+  },
+
+  "automationEmpty": "No automation rules",
+  "@automationEmpty": {
+    "description": "Empty-state text when there are no automation rules."
+  },
+
+  "automationRuleActive": "Active",
+  "@automationRuleActive": {
+    "description": "Status label for an active automation rule."
+  },
+
+  "automationRuleInactive": "Inactive",
+  "@automationRuleInactive": {
+    "description": "Status label for an inactive automation rule."
+  },
+
+  "executionLog": "Execution log",
+  "@executionLog": {
+    "description": "Label for the automation execution log."
+  },
+
+  "executionSuccess": "Success",
+  "@executionSuccess": {
+    "description": "Label for a successful automation execution."
+  },
+
+  "executionFailed": "Failed",
+  "@executionFailed": {
+    "description": "Label for a failed automation execution."
+  },
+
+
+  "reportsTitle": "Reports",
+  "@reportsTitle": {
+    "description": "Page title for the reports view."
+  },
+
+  "reportsEmpty": "No reports available",
+  "@reportsEmpty": {
+    "description": "Empty-state text when there are no reports."
+  },
+
+  "reportRun": "Run report",
+  "@reportRun": {
+    "description": "Button label for running/generating a report."
+  },
+
+  "reportExport": "Export",
+  "@reportExport": {
+    "description": "Button label for exporting a report."
+  },
+
+
+  "searchHint": "Search...",
+  "@searchHint": {
+    "description": "Hint text for the global search field."
+  },
+
+  "searchEmpty": "Start typing to search",
+  "@searchEmpty": {
+    "description": "Placeholder text shown before the user begins typing in search."
+  },
+
+  "searchNoResults": "No results match your search",
+  "@searchNoResults": {
+    "description": "Empty-state text when a search returns no results."
+  }
 }

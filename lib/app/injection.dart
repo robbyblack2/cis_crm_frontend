@@ -6,10 +6,13 @@ import 'package:cis_crm/core/logging/app_logger.dart';
 import 'package:cis_crm/core/network/auth_api.dart';
 import 'package:cis_crm/core/network/dio_client.dart';
 import 'package:cis_crm/core/network/token_storage.dart';
+import 'package:cis_crm/core/network/web_socket_cubit.dart';
+import 'package:cis_crm/core/network/web_socket_service.dart';
 import 'package:cis_crm/core/observability/app_bloc_observer.dart';
 import 'package:cis_crm/core/router/app_router.dart';
 import 'package:cis_crm/core/router/routes.dart';
 import 'package:cis_crm/core/router/shell.dart';
+import 'package:cis_crm/core/theme/theme_cubit.dart';
 import 'package:cis_crm/core/widgets/adaptive_scaffold.dart';
 import 'package:cis_crm/features/activity/data/datasources/activity_remote_data_source.dart';
 import 'package:cis_crm/features/activity/data/datasources/activity_remote_data_source_impl.dart';
@@ -119,6 +122,18 @@ Future<void> configureDependencies(FlavorConfig config) async {
       tokens: getIt<TokenStorage>(),
       authApi: getIt<AuthApi>(),
     ),
+  );
+
+  // ignore: cascade_invocations
+  getIt.registerLazySingleton<WebSocketService>(
+    () => WebSocketService(
+      baseUrl: config.apiBaseUrl,
+      tokenStorage: getIt<TokenStorage>(),
+    ),
+  );
+  // ignore: cascade_invocations
+  getIt.registerLazySingleton<WebSocketCubit>(
+    () => WebSocketCubit(getIt<WebSocketService>()),
   );
 
   // ── 3. Cross-cutting services (no-op defaults) ──────────────────
@@ -267,9 +282,11 @@ Future<void> configureDependencies(FlavorConfig config) async {
 
   // ── 7. App-wide blocs (singletons) ─────────────────────────────
   // ignore: cascade_invocations
-  getIt.registerLazySingleton<AuthBloc>(
-    () => AuthBloc(getIt<AuthRepository>()),
-  );
+  getIt
+    ..registerLazySingleton<AuthBloc>(
+      () => AuthBloc(getIt<AuthRepository>()),
+    )
+    ..registerLazySingleton<ThemeCubit>(ThemeCubit.new);
 
   // ── 8. Feature blocs (factories — fresh per page mount) ────────
   // ignore: cascade_invocations

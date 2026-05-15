@@ -1,7 +1,7 @@
+import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/core/widgets/state/empty_state.dart';
 import 'package:cis_crm/core/widgets/state/page_error.dart';
 import 'package:cis_crm/core/widgets/state/page_loading.dart';
-import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/features/products/presentation/bloc/products_bloc.dart';
 import 'package:cis_crm/features/products/presentation/bloc/subscriptions_bloc.dart';
 import 'package:cis_crm/features/products/presentation/pages/product_detail_page.dart';
