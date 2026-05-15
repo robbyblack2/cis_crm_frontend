@@ -1,3 +1,4 @@
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 abstract final class ErrorSnackbar {
@@ -6,6 +7,7 @@ abstract final class ErrorSnackbar {
     required String message,
     VoidCallback? onRetry,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -13,7 +15,7 @@ abstract final class ErrorSnackbar {
           content: Text(message),
           action: onRetry == null
               ? null
-              : SnackBarAction(label: 'Retry', onPressed: onRetry),
+              : SnackBarAction(label: l10n.retry, onPressed: onRetry),
         ),
       );
   }

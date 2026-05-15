@@ -80,6 +80,9 @@ import 'package:cis_crm/features/search/data/datasources/search_remote_datasourc
 import 'package:cis_crm/features/search/data/repositories/search_repository_impl.dart';
 import 'package:cis_crm/features/search/domain/repositories/search_repository.dart';
 import 'package:cis_crm/features/search/presentation/bloc/search_bloc.dart';
+import 'package:cis_crm/features/search/presentation/pages/search_page.dart';
+import 'package:cis_crm/features/settings/presentation/pages/profile_page.dart';
+import 'package:cis_crm/features/settings/presentation/pages/settings_page.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -463,6 +466,18 @@ Future<void> configureDependencies(FlavorConfig config) async {
               ],
             ),
           ],
+        ),
+        GoRoute(
+          path: Routes.settings,
+          builder: (_, __) => const SettingsPage(),
+        ),
+        GoRoute(
+          path: Routes.profile,
+          builder: (_, __) => const ProfilePage(),
+        ),
+        GoRoute(
+          path: Routes.search,
+          builder: (_, __) => const SearchPage(),
         ),
       ],
     ),

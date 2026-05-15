@@ -16,14 +16,14 @@ class FlavorConfig {
       'dev' => const FlavorConfig(
           flavor: Flavor.dev,
           flavorName: 'dev',
-          apiBaseUrl: 'https://api.dev.example.com',
+          apiBaseUrl: 'http://localhost:8087',
           logLevel: Level.trace,
           sentryTracesSampleRate: 1,
         ),
       _ => const FlavorConfig(
           flavor: Flavor.prod,
           flavorName: 'prod',
-          apiBaseUrl: 'https://api.example.com',
+          apiBaseUrl: 'http://localhost:8087',
           logLevel: Level.warning,
           sentryTracesSampleRate: 0.1,
         ),

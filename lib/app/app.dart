@@ -2,9 +2,9 @@ import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/core/theme/app_theme.dart';
 import 'package:cis_crm/core/theme/theme_cubit.dart';
 import 'package:cis_crm/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 final appNavigatorKey = GlobalKey<NavigatorState>();
@@ -33,17 +33,14 @@ class App extends StatelessWidget {
         child: BlocBuilder<ThemeCubit, ThemeMode>(
           builder: (context, themeMode) {
             return MaterialApp.router(
-              title: 'CIS CRM',
+              onGenerateTitle: (context) =>
+                  AppLocalizations.of(context)?.appTitle ?? 'CIS CRM',
               theme: AppTheme.light,
               darkTheme: AppTheme.dark,
               themeMode: themeMode,
               routerConfig: getIt<GoRouter>(),
-              localizationsDelegates: const [
-                GlobalMaterialLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-              ],
-              supportedLocales: const [Locale('en')],
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
             );
           },
         ),

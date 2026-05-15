@@ -1,3 +1,4 @@
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class Shimmer extends StatefulWidget {
@@ -38,7 +39,7 @@ class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
     final highlight = theme.colorScheme.surfaceContainerLow;
 
     return Semantics(
-      label: 'Loading',
+      label: AppLocalizations.of(context)?.loading ?? 'Loading',
       excludeSemantics: true,
       child: RepaintBoundary(
         child: AnimatedBuilder(
