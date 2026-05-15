@@ -1,3 +1,7 @@
+import 'package:cis_crm/app/injection.dart';
+import 'package:cis_crm/core/widgets/state/empty_state.dart';
+import 'package:cis_crm/core/widgets/state/page_error.dart';
+import 'package:cis_crm/core/widgets/state/page_loading.dart';
 import 'package:cis_crm/features/automation/presentation/bloc/automation_bloc.dart';
 import 'package:cis_crm/features/automation/presentation/widgets/automation_rule_tile.dart';
 import 'package:flutter/material.dart';
@@ -8,23 +12,63 @@ class AutomationPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) =>
+          getIt<AutomationBloc>()..add(const AutomationRulesLoadRequested()),
+      child: const _AutomationView(),
+    );
+  }
+}
+
+class _AutomationView extends StatelessWidget {
+  const _AutomationView();
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Automation Rules')),
+      appBar: AppBar(title: const Text('Automation')),
+      floatingActionButton: FloatingActionButton(
+        tooltip: 'Create rule',
+        onPressed: () {
+          // TODO(automation): Navigate to create rule page.
+        },
+        child: const Icon(Icons.add),
+      ),
       body: BlocBuilder<AutomationBloc, AutomationState>(
         builder: (context, state) {
           return switch (state) {
-            AutomationInitial() => const Center(
-                child: Text('Load automation rules to get started.'),
+            AutomationInitial() || AutomationLoading() => const PageLoading(),
+            AutomationLoaded(:final rules) when rules.isEmpty =>
+              const EmptyState(
+                icon: Icons.bolt_outlined,
+                title: 'No automation rules',
+                message: 'Create your first automation rule.',
               ),
-            AutomationLoading() =>
-              const Center(child: CircularProgressIndicator()),
             AutomationLoaded(:final rules) => ListView.builder(
                 itemCount: rules.length,
-                itemBuilder: (context, index) =>
-                    AutomationRuleTile(rule: rules[index]),
+                itemBuilder: (context, index) {
+                  final rule = rules[index];
+                  return AutomationRuleTile(
+                    rule: rule,
+                    onTap: () {
+                      // TODO(automation): Navigate to rule detail.
+                    },
+                    onToggle: (_) {
+                      context.read<AutomationBloc>().add(
+                            AutomationRuleToggleRequested(ruleId: rule.id),
+                          );
+                    },
+                  );
+                },
               ),
-            AutomationError(:final message) => Center(
-                child: Text(message),
+            AutomationError(:final message) => PageError(
+                title: 'Failed to load rules',
+                message: message,
+                onRetry: () {
+                  context
+                      .read<AutomationBloc>()
+                      .add(const AutomationRulesLoadRequested());
+                },
               ),
           };
         },

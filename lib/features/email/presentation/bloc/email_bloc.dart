@@ -14,25 +14,25 @@ part 'email_state.dart';
 
 class EmailBloc extends Bloc<EmailEvent, EmailState> {
   EmailBloc({required EmailRepository emailRepository})
-      : _emailRepository = emailRepository,
+      : _repository = emailRepository,
         super(const EmailInitial()) {
-    on<EmailSendRequested>(_onEmailSendRequested, transformer: droppable());
+    on<EmailSendRequested>(_onSendRequested, transformer: droppable());
     on<DraftSaveRequested>(_onDraftSaveRequested, transformer: droppable());
     on<DraftSendRequested>(_onDraftSendRequested, transformer: droppable());
     on<TemplatesLoadRequested>(
       _onTemplatesLoadRequested,
-      transformer: restartable(),
+      transformer: droppable(),
     );
   }
 
-  final EmailRepository _emailRepository;
+  final EmailRepository _repository;
 
-  Future<void> _onEmailSendRequested(
+  Future<void> _onSendRequested(
     EmailSendRequested event,
     Emitter<EmailState> emit,
   ) async {
     emit(const EmailLoading());
-    final result = await _emailRepository.sendEmail(
+    final result = await _repository.sendEmail(
       recipientEmails: event.recipientEmails,
       subject: event.subject,
       body: event.body,
@@ -50,7 +50,7 @@ class EmailBloc extends Bloc<EmailEvent, EmailState> {
     Emitter<EmailState> emit,
   ) async {
     emit(const EmailLoading());
-    final result = await _emailRepository.saveDraft(
+    final result = await _repository.saveDraft(
       recipientEmails: event.recipientEmails,
       subject: event.subject,
       body: event.body,
@@ -68,7 +68,7 @@ class EmailBloc extends Bloc<EmailEvent, EmailState> {
     Emitter<EmailState> emit,
   ) async {
     emit(const EmailLoading());
-    final result = await _emailRepository.sendDraft(id: event.draftId);
+    final result = await _repository.sendDraft(id: event.draftId);
     switch (result) {
       case Success(:final data):
         emit(EmailLoaded(sentMessage: data));
@@ -82,7 +82,7 @@ class EmailBloc extends Bloc<EmailEvent, EmailState> {
     Emitter<EmailState> emit,
   ) async {
     emit(const EmailLoading());
-    final result = await _emailRepository.getTemplates();
+    final result = await _repository.getTemplates();
     switch (result) {
       case Success(:final data):
         emit(EmailLoaded(templates: data));

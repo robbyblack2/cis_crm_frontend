@@ -1,7 +1,4 @@
-import 'package:cis_crm/core/error/failures.dart';
-import 'package:cis_crm/features/files/domain/entities/file_attachment.dart';
-import 'package:equatable/equatable.dart';
-import 'package:flutter/foundation.dart';
+part of 'files_cubit.dart';
 
 @immutable
 sealed class FilesState extends Equatable {
@@ -19,17 +16,17 @@ final class FilesLoading extends FilesState {
   const FilesLoading();
 }
 
-final class FilesLoaded extends FilesState {
-  const FilesLoaded(this.files);
+final class FilesUploading extends FilesState {
+  const FilesUploading(this.currentFiles);
 
-  final List<FileAttachment> files;
+  final List<FileAttachment> currentFiles;
 
   @override
-  List<Object?> get props => [files];
+  List<Object?> get props => [currentFiles];
 }
 
-final class FilesUploading extends FilesState {
-  const FilesUploading(this.files);
+final class FilesLoaded extends FilesState {
+  const FilesLoaded(this.files);
 
   final List<FileAttachment> files;
 

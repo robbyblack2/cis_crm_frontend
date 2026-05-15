@@ -20,12 +20,12 @@ final class EmailLoaded extends EmailState {
   const EmailLoaded({
     this.sentMessage,
     this.savedDraft,
-    this.templates = const [],
+    this.templates,
   });
 
   final EmailMessage? sentMessage;
   final EmailDraft? savedDraft;
-  final List<EmailTemplate> templates;
+  final List<EmailTemplate>? templates;
 
   @override
   List<Object?> get props => [sentMessage, savedDraft, templates];

@@ -1,4 +1,5 @@
 import 'package:bloc_concurrency/bloc_concurrency.dart';
+import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/features/automation/domain/entities/automation_rule.dart';
 import 'package:cis_crm/features/automation/domain/repositories/automation_repository.dart';
 import 'package:equatable/equatable.dart';
@@ -22,7 +23,7 @@ class AutomationBloc extends Bloc<AutomationEvent, AutomationState> {
     );
     on<AutomationRuleToggleRequested>(
       _onRuleToggleRequested,
-      transformer: droppable(),
+      transformer: sequential(),
     );
   }
 
@@ -34,10 +35,11 @@ class AutomationBloc extends Bloc<AutomationEvent, AutomationState> {
   ) async {
     emit(const AutomationLoading());
     final result = await _repository.getRules();
-    if (result.isSuccess) {
-      emit(AutomationLoaded(rules: result.dataOrNull!));
-    } else {
-      emit(AutomationError(message: result.failureOrNull!.message));
+    switch (result) {
+      case Success(:final data):
+        emit(AutomationLoaded(rules: data));
+      case Failure(:final error):
+        emit(AutomationError(message: error.message));
     }
   }
 
@@ -47,15 +49,17 @@ class AutomationBloc extends Bloc<AutomationEvent, AutomationState> {
   ) async {
     emit(const AutomationLoading());
     final result = await _repository.createRule(event.rule);
-    if (result.isSuccess) {
-      final rulesResult = await _repository.getRules();
-      if (rulesResult.isSuccess) {
-        emit(AutomationLoaded(rules: rulesResult.dataOrNull!));
-      } else {
-        emit(AutomationError(message: rulesResult.failureOrNull!.message));
-      }
-    } else {
-      emit(AutomationError(message: result.failureOrNull!.message));
+    switch (result) {
+      case Success():
+        final listResult = await _repository.getRules();
+        switch (listResult) {
+          case Success(:final data):
+            emit(AutomationLoaded(rules: data));
+          case Failure(:final error):
+            emit(AutomationError(message: error.message));
+        }
+      case Failure(:final error):
+        emit(AutomationError(message: error.message));
     }
   }
 
@@ -65,15 +69,17 @@ class AutomationBloc extends Bloc<AutomationEvent, AutomationState> {
   ) async {
     emit(const AutomationLoading());
     final result = await _repository.toggleRule(event.ruleId);
-    if (result.isSuccess) {
-      final rulesResult = await _repository.getRules();
-      if (rulesResult.isSuccess) {
-        emit(AutomationLoaded(rules: rulesResult.dataOrNull!));
-      } else {
-        emit(AutomationError(message: rulesResult.failureOrNull!.message));
-      }
-    } else {
-      emit(AutomationError(message: result.failureOrNull!.message));
+    switch (result) {
+      case Success():
+        final listResult = await _repository.getRules();
+        switch (listResult) {
+          case Success(:final data):
+            emit(AutomationLoaded(rules: data));
+          case Failure(:final error):
+            emit(AutomationError(message: error.message));
+        }
+      case Failure(:final error):
+        emit(AutomationError(message: error.message));
     }
   }
 }

@@ -25,26 +25,22 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     Emitter<SearchState> emit,
   ) async {
     final query = event.query.trim();
-    if (query.isEmpty) {
-      if (state is! SearchInitial) {
-        emit(const SearchInitial());
-      }
-      return;
-    }
+    if (query.isEmpty) return;
 
     emit(const SearchLoading());
-
-    final result = await _repository.search(query: query, type: event.type);
-
+    final result = await _repository.search(
+      query: query,
+      type: event.type,
+    );
     switch (result) {
-      case Success(data: final results):
-        if (results.isEmpty) {
+      case Success(:final data):
+        if (data.isEmpty) {
           emit(SearchEmpty(query: query));
         } else {
-          emit(SearchLoaded(results: results, query: query));
+          emit(SearchLoaded(results: data, query: query));
         }
-      case Failure(error: final failure):
-        emit(SearchError(failure: failure));
+      case Failure(:final error):
+        emit(SearchError(failure: error));
     }
   }
 

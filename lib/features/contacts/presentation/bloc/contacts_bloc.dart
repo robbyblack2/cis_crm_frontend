@@ -11,47 +11,22 @@ part 'contacts_event.dart';
 part 'contacts_state.dart';
 
 class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
-  ContactsBloc({required this.contactRepository})
-      : super(const ContactsInitial()) {
-    on<ContactsLoadRequested>(
-      _onLoadRequested,
-      transformer: droppable(),
-    );
-    on<ContactsRefreshRequested>(
-      _onRefreshRequested,
-      transformer: droppable(),
-    );
-    on<ContactCreateRequested>(
-      _onCreateRequested,
-      transformer: sequential(),
-    );
-    on<ContactDeleteRequested>(
-      _onDeleteRequested,
-      transformer: sequential(),
-    );
+  ContactsBloc({required ContactRepository contactRepository})
+      : _repository = contactRepository,
+        super(const ContactsInitial()) {
+    on<ContactsLoadRequested>(_onLoadRequested, transformer: restartable());
+    on<ContactCreateRequested>(_onCreateRequested, transformer: droppable());
+    on<ContactDeleteRequested>(_onDeleteRequested, transformer: droppable());
   }
 
-  final ContactRepository contactRepository;
+  final ContactRepository _repository;
 
   Future<void> _onLoadRequested(
     ContactsLoadRequested event,
     Emitter<ContactsState> emit,
   ) async {
     emit(const ContactsLoading());
-    final result = await contactRepository.getContacts();
-    switch (result) {
-      case Success(:final data):
-        emit(ContactsLoaded(contacts: data));
-      case Failure(:final error):
-        emit(ContactsError(failure: error));
-    }
-  }
-
-  Future<void> _onRefreshRequested(
-    ContactsRefreshRequested event,
-    Emitter<ContactsState> emit,
-  ) async {
-    final result = await contactRepository.getContacts();
+    final result = await _repository.getContacts();
     switch (result) {
       case Success(:final data):
         emit(ContactsLoaded(contacts: data));
@@ -64,10 +39,10 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     ContactCreateRequested event,
     Emitter<ContactsState> emit,
   ) async {
-    final result = await contactRepository.createContact(event.contact);
+    final result = await _repository.createContact(event.contact);
     switch (result) {
       case Success():
-        add(const ContactsRefreshRequested());
+        add(const ContactsLoadRequested());
       case Failure(:final error):
         emit(ContactsError(failure: error));
     }
@@ -77,10 +52,10 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     ContactDeleteRequested event,
     Emitter<ContactsState> emit,
   ) async {
-    final result = await contactRepository.deleteContact(event.contactId);
+    final result = await _repository.deleteContact(event.contactId);
     switch (result) {
       case Success():
-        add(const ContactsRefreshRequested());
+        add(const ContactsLoadRequested());
       case Failure(:final error):
         emit(ContactsError(failure: error));
     }

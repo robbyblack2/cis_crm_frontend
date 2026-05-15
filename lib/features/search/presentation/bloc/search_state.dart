@@ -3,20 +3,17 @@ part of 'search_bloc.dart';
 @immutable
 sealed class SearchState extends Equatable {
   const SearchState();
+
+  @override
+  List<Object?> get props => [];
 }
 
 final class SearchInitial extends SearchState {
   const SearchInitial();
-
-  @override
-  List<Object?> get props => [];
 }
 
 final class SearchLoading extends SearchState {
   const SearchLoading();
-
-  @override
-  List<Object?> get props => [];
 }
 
 final class SearchLoaded extends SearchState {

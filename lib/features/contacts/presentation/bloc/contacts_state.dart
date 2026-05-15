@@ -3,20 +3,17 @@ part of 'contacts_bloc.dart';
 @immutable
 sealed class ContactsState extends Equatable {
   const ContactsState();
+
+  @override
+  List<Object?> get props => [];
 }
 
 final class ContactsInitial extends ContactsState {
   const ContactsInitial();
-
-  @override
-  List<Object?> get props => [];
 }
 
 final class ContactsLoading extends ContactsState {
   const ContactsLoading();
-
-  @override
-  List<Object?> get props => [];
 }
 
 final class ContactsLoaded extends ContactsState {

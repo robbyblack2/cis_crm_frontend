@@ -3,24 +3,17 @@ part of 'contacts_bloc.dart';
 @immutable
 sealed class ContactsEvent extends Equatable {
   const ContactsEvent();
+
+  @override
+  List<Object?> get props => [];
 }
 
 final class ContactsLoadRequested extends ContactsEvent {
   const ContactsLoadRequested();
-
-  @override
-  List<Object?> get props => [];
-}
-
-final class ContactsRefreshRequested extends ContactsEvent {
-  const ContactsRefreshRequested();
-
-  @override
-  List<Object?> get props => [];
 }
 
 final class ContactCreateRequested extends ContactsEvent {
-  const ContactCreateRequested({required this.contact});
+  const ContactCreateRequested(this.contact);
 
   final Contact contact;
 
@@ -29,7 +22,7 @@ final class ContactCreateRequested extends ContactsEvent {
 }
 
 final class ContactDeleteRequested extends ContactsEvent {
-  const ContactDeleteRequested({required this.contactId});
+  const ContactDeleteRequested(this.contactId);
 
   final String contactId;
 

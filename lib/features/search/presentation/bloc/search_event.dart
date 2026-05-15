@@ -3,6 +3,9 @@ part of 'search_bloc.dart';
 @immutable
 sealed class SearchEvent extends Equatable {
   const SearchEvent();
+
+  @override
+  List<Object?> get props => [];
 }
 
 final class SearchQueryChanged extends SearchEvent {
@@ -17,7 +20,4 @@ final class SearchQueryChanged extends SearchEvent {
 
 final class SearchCleared extends SearchEvent {
   const SearchCleared();
-
-  @override
-  List<Object?> get props => [];
 }

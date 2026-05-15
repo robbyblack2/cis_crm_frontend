@@ -290,10 +290,14 @@ Future<void> configureDependencies(FlavorConfig config) async {
       ),
     )
     ..registerFactory<CalendarBloc>(
-      () => CalendarBloc(repository: getIt<CalendarRepository>()),
+      () => CalendarBloc(
+        repository: getIt<CalendarRepository>(),
+      ),
     )
     ..registerFactory<TasksBloc>(
-      () => TasksBloc(taskRepository: getIt<TaskRepository>()),
+      () => TasksBloc(
+        taskRepository: getIt<TaskRepository>(),
+      ),
     )
     ..registerFactory<CallLogCubit>(
       () => CallLogCubit(
@@ -306,7 +310,9 @@ Future<void> configureDependencies(FlavorConfig config) async {
       ),
     )
     ..registerFactory<ProductsBloc>(
-      () => ProductsBloc(repository: getIt<ProductRepository>()),
+      () => ProductsBloc(
+        repository: getIt<ProductRepository>(),
+      ),
     )
     ..registerFactory<SubscriptionsBloc>(
       () => SubscriptionsBloc(
@@ -319,13 +325,19 @@ Future<void> configureDependencies(FlavorConfig config) async {
       ),
     )
     ..registerFactory<FilesCubit>(
-      () => FilesCubit(repository: getIt<FileRepository>()),
+      () => FilesCubit(
+        repository: getIt<FileRepository>(),
+      ),
     )
     ..registerFactory<SearchBloc>(
-      () => SearchBloc(repository: getIt<SearchRepository>()),
+      () => SearchBloc(
+        repository: getIt<SearchRepository>(),
+      ),
     )
     ..registerFactory<ReportsCubit>(
-      () => ReportsCubit(repository: getIt<ReportRepository>()),
+      () => ReportsCubit(
+        repository: getIt<ReportRepository>(),
+      ),
     );
 
   // ── 9. Router ──────────────────────────────────────────────────

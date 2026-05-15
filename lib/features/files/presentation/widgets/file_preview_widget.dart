@@ -6,30 +6,50 @@ class FilePreviewWidget extends StatelessWidget {
 
   final FileAttachment file;
 
+  String _formatSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isImage = file.contentType.startsWith('image/');
+    final theme = Theme.of(context);
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              isImage ? Icons.image : Icons.insert_drive_file,
+              Icons.preview_outlined,
               size: 64,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              file.filename,
+              style: theme.textTheme.titleMedium,
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              file.filename,
-              style: Theme.of(context).textTheme.titleMedium,
+              '${_formatSize(file.sizeBytes)} · ${file.contentType}',
+              style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 4),
             Text(
-              '${(file.sizeBytes / 1024).toStringAsFixed(1)} KB'
-              ' - ${file.contentType}',
-              style: Theme.of(context).textTheme.bodySmall,
+              'Uploaded by ${file.uploadedBy}',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 16),
+            FilledButton.tonalIcon(
+              onPressed: () {
+                // TODO(files): Implement file download/preview.
+              },
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('Open Preview'),
             ),
           ],
         ),

@@ -4,7 +4,6 @@ import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/features/files/domain/entities/file_attachment.dart';
 import 'package:cis_crm/features/files/domain/repositories/file_repository.dart';
 import 'package:cis_crm/features/files/presentation/cubit/files_cubit.dart';
-import 'package:cis_crm/features/files/presentation/cubit/files_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 

@@ -6,31 +6,129 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-part 'tasks_event.dart';
-part 'tasks_state.dart';
+// ── Events ──────────────────────────────────────────────────────────────
+
+@immutable
+sealed class TasksEvent extends Equatable {
+  const TasksEvent();
+
+  @override
+  List<Object?> get props => [];
+}
+
+final class TasksLoadRequested extends TasksEvent {
+  const TasksLoadRequested();
+}
+
+final class TaskCreateRequested extends TasksEvent {
+  const TaskCreateRequested({required this.task});
+
+  final CrmTask task;
+
+  @override
+  List<Object?> get props => [task];
+}
+
+final class TaskUpdateRequested extends TasksEvent {
+  const TaskUpdateRequested({required this.task});
+
+  final CrmTask task;
+
+  @override
+  List<Object?> get props => [task];
+}
+
+// Keep legacy event names used by the UI pages.
+final class TaskCreated extends TasksEvent {
+  const TaskCreated(this.task);
+
+  final CrmTask task;
+
+  @override
+  List<Object?> get props => [task];
+}
+
+final class TaskUpdated extends TasksEvent {
+  const TaskUpdated(this.task);
+
+  final CrmTask task;
+
+  @override
+  List<Object?> get props => [task];
+}
+
+final class TaskDeleted extends TasksEvent {
+  const TaskDeleted(this.taskId);
+
+  final String taskId;
+
+  @override
+  List<Object?> get props => [taskId];
+}
+
+// ── State ───────────────────────────────────────────────────────────────
+
+@immutable
+sealed class TasksState extends Equatable {
+  const TasksState();
+
+  @override
+  List<Object?> get props => [];
+}
+
+final class TasksInitial extends TasksState {
+  const TasksInitial();
+}
+
+final class TasksLoading extends TasksState {
+  const TasksLoading();
+}
+
+final class TasksLoaded extends TasksState {
+  const TasksLoaded({required this.tasks});
+
+  final List<CrmTask> tasks;
+
+  @override
+  List<Object?> get props => [tasks];
+}
+
+final class TasksError extends TasksState {
+  const TasksError({required this.message});
+
+  final String message;
+
+  @override
+  List<Object?> get props => [message];
+}
+
+// ── Bloc ────────────────────────────────────────────────────────────────
 
 class TasksBloc extends Bloc<TasksEvent, TasksState> {
   TasksBloc({required TaskRepository taskRepository})
-      : _taskRepository = taskRepository,
+      : _repository = taskRepository,
         super(const TasksInitial()) {
-    on<TasksLoadRequested>(_onLoadRequested, transformer: restartable());
+    on<TasksLoadRequested>(_onLoad, transformer: restartable());
     on<TaskCreateRequested>(_onCreateRequested, transformer: droppable());
     on<TaskUpdateRequested>(_onUpdateRequested, transformer: droppable());
+    on<TaskCreated>(_onCreate);
+    on<TaskUpdated>(_onUpdate);
+    on<TaskDeleted>(_onDelete);
   }
 
-  final TaskRepository _taskRepository;
+  final TaskRepository _repository;
 
-  Future<void> _onLoadRequested(
+  Future<void> _onLoad(
     TasksLoadRequested event,
     Emitter<TasksState> emit,
   ) async {
     emit(const TasksLoading());
-    final result = await _taskRepository.getTasks();
+    final result = await _repository.getTasks();
     switch (result) {
-      case Success(data: final tasks):
-        emit(TasksLoaded(tasks: tasks));
-      case Failure(error: final failure):
-        emit(TasksError(message: failure.message));
+      case Success(:final data):
+        emit(TasksLoaded(tasks: data));
+      case Failure(:final error):
+        emit(TasksError(message: error.message));
     }
   }
 
@@ -39,18 +137,18 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     Emitter<TasksState> emit,
   ) async {
     emit(const TasksLoading());
-    final result = await _taskRepository.createTask(event.task);
+    final result = await _repository.createTask(event.task);
     switch (result) {
       case Success():
-        final loadResult = await _taskRepository.getTasks();
-        switch (loadResult) {
-          case Success(data: final tasks):
-            emit(TasksLoaded(tasks: tasks));
-          case Failure(error: final failure):
-            emit(TasksError(message: failure.message));
+        final listResult = await _repository.getTasks();
+        switch (listResult) {
+          case Success(:final data):
+            emit(TasksLoaded(tasks: data));
+          case Failure(:final error):
+            emit(TasksError(message: error.message));
         }
-      case Failure(error: final failure):
-        emit(TasksError(message: failure.message));
+      case Failure(:final error):
+        emit(TasksError(message: error.message));
     }
   }
 
@@ -59,18 +157,37 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     Emitter<TasksState> emit,
   ) async {
     emit(const TasksLoading());
-    final result = await _taskRepository.updateTask(event.task);
+    final result = await _repository.updateTask(event.task);
     switch (result) {
       case Success():
-        final loadResult = await _taskRepository.getTasks();
-        switch (loadResult) {
-          case Success(data: final tasks):
-            emit(TasksLoaded(tasks: tasks));
-          case Failure(error: final failure):
-            emit(TasksError(message: failure.message));
+        final listResult = await _repository.getTasks();
+        switch (listResult) {
+          case Success(:final data):
+            emit(TasksLoaded(tasks: data));
+          case Failure(:final error):
+            emit(TasksError(message: error.message));
         }
-      case Failure(error: final failure):
-        emit(TasksError(message: failure.message));
+      case Failure(:final error):
+        emit(TasksError(message: error.message));
+    }
+  }
+
+  // Legacy event handlers used by UI pages.
+  void _onCreate(TaskCreated event, Emitter<TasksState> emit) {
+    add(TaskCreateRequested(task: event.task));
+  }
+
+  void _onUpdate(TaskUpdated event, Emitter<TasksState> emit) {
+    add(TaskUpdateRequested(task: event.task));
+  }
+
+  Future<void> _onDelete(TaskDeleted event, Emitter<TasksState> emit) async {
+    final result = await _repository.deleteTask(event.taskId);
+    switch (result) {
+      case Success():
+        add(const TasksLoadRequested());
+      case Failure(:final error):
+        emit(TasksError(message: error.message));
     }
   }
 }

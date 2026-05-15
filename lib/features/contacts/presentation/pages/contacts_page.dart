@@ -1,4 +1,9 @@
+import 'package:cis_crm/app/injection.dart';
+import 'package:cis_crm/core/widgets/state/empty_state.dart';
+import 'package:cis_crm/core/widgets/state/page_error.dart';
+import 'package:cis_crm/features/contacts/domain/entities/contact.dart';
 import 'package:cis_crm/features/contacts/presentation/bloc/contacts_bloc.dart';
+import 'package:cis_crm/features/contacts/presentation/pages/contact_detail_page.dart';
 import 'package:cis_crm/features/contacts/presentation/widgets/contact_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,31 +13,174 @@ class ContactsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => getIt<ContactsBloc>()..add(const ContactsLoadRequested()),
+      child: const _ContactsView(),
+    );
+  }
+}
+
+class _ContactsView extends StatelessWidget {
+  const _ContactsView();
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Contacts'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Search contacts',
+            onPressed: () => _openSearch(context),
+          ),
+        ],
       ),
       body: BlocBuilder<ContactsBloc, ContactsState>(
+        buildWhen: (previous, current) =>
+            previous.runtimeType != current.runtimeType || previous != current,
         builder: (context, state) {
           return switch (state) {
-            ContactsInitial() => const Center(
-                child: Text('Press load to fetch contacts.'),
-              ),
-            ContactsLoading() => const Center(
+            ContactsInitial() || ContactsLoading() => const Center(
                 child: CircularProgressIndicator(),
               ),
-            ContactsLoaded(:final contacts) => ListView.builder(
-                itemCount: contacts.length,
-                itemBuilder: (context, index) => ContactTile(
-                  contact: contacts[index],
-                ),
-              ),
-            ContactsError(:final failure) => Center(
-                child: Text('Error: ${failure.message}'),
+            ContactsLoaded(:final contacts) => contacts.isEmpty
+                ? EmptyState(
+                    icon: Icons.contacts_outlined,
+                    title: 'No contacts yet',
+                    message: 'Tap the + button to add your first contact.',
+                    action: FilledButton.icon(
+                      onPressed: () => _addContact(context),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Contact'),
+                    ),
+                  )
+                : _ContactsList(contacts: contacts),
+            ContactsError(:final failure) => PageError(
+                title: 'Failed to load contacts',
+                message: failure.message,
+                onRetry: () => context
+                    .read<ContactsBloc>()
+                    .add(const ContactsLoadRequested()),
               ),
           };
         },
       ),
+      floatingActionButton: FloatingActionButton(
+        tooltip: 'Add contact',
+        onPressed: () => _addContact(context),
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  void _openSearch(BuildContext context) {
+    final bloc = context.read<ContactsBloc>();
+    final currentState = bloc.state;
+    final contacts = switch (currentState) {
+      ContactsLoaded(:final contacts) => contacts,
+      _ => <Contact>[],
+    };
+    showSearch(
+      context: context,
+      delegate: _ContactSearchDelegate(contacts: contacts),
+    );
+  }
+
+  void _addContact(BuildContext context) {
+    // TODO(contacts): navigate to add contact form
+  }
+}
+
+class _ContactsList extends StatelessWidget {
+  const _ContactsList({required this.contacts});
+
+  final List<Contact> contacts;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      itemCount: contacts.length,
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemBuilder: (context, index) {
+        final contact = contacts[index];
+        return ContactTile(
+          contact: contact,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => ContactDetailPage(contact: contact),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ContactSearchDelegate extends SearchDelegate<Contact?> {
+  _ContactSearchDelegate({required this.contacts});
+
+  final List<Contact> contacts;
+
+  @override
+  String get searchFieldLabel => 'Search contacts';
+
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: const Icon(Icons.clear),
+        tooltip: 'Clear search',
+        onPressed: () {
+          query = '';
+          showSuggestions(context);
+        },
+      ),
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      tooltip: 'Back',
+      onPressed: () => close(context, null),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) => _buildList(context);
+
+  @override
+  Widget buildSuggestions(BuildContext context) => _buildList(context);
+
+  Widget _buildList(BuildContext context) {
+    final lowerQuery = query.toLowerCase();
+    final filtered = contacts.where((c) {
+      final fullName = '${c.firstName} ${c.lastName}'.trim();
+      return fullName.toLowerCase().contains(lowerQuery) ||
+          c.email.toLowerCase().contains(lowerQuery) ||
+          (c.phone?.contains(lowerQuery) ?? false);
+    }).toList();
+
+    if (filtered.isEmpty) {
+      return const EmptyState(
+        icon: Icons.search_off,
+        title: 'No results',
+        message: 'Try a different search term.',
+      );
+    }
+
+    return ListView.separated(
+      itemCount: filtered.length,
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemBuilder: (context, index) {
+        final contact = filtered[index];
+        return ContactTile(
+          contact: contact,
+          onTap: () => close(context, contact),
+        );
+      },
     );
   }
 }

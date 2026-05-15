@@ -1,17 +1,67 @@
+import 'package:cis_crm/features/activity/domain/entities/call_direction.dart';
 import 'package:cis_crm/features/activity/domain/entities/call_log.dart';
+import 'package:cis_crm/features/activity/domain/entities/call_outcome.dart';
 import 'package:flutter/material.dart';
 
 class CallLogTile extends StatelessWidget {
-  const CallLogTile({required this.callLog, super.key});
+  const CallLogTile({required this.log, super.key});
 
-  final CallLog callLog;
+  final CallLog log;
+
+  IconData _directionIcon(CallDirection direction) {
+    return switch (direction) {
+      CallDirection.inbound => Icons.phone_callback,
+      CallDirection.outbound => Icons.phone_forwarded,
+    };
+  }
+
+  String _outcomeLabel(CallOutcome outcome) {
+    return switch (outcome) {
+      CallOutcome.connected => 'Connected',
+      CallOutcome.voicemail => 'Voicemail',
+      CallOutcome.noAnswer => 'No Answer',
+      CallOutcome.busy => 'Busy',
+    };
+  }
+
+  String _formatDuration(int? seconds) {
+    if (seconds == null || seconds == 0) return '--';
+    final minutes = seconds ~/ 60;
+    final remaining = seconds % 60;
+    return '${minutes}m ${remaining}s';
+  }
+
+  String _formatTimestamp(DateTime timestamp) {
+    final month = timestamp.month.toString().padLeft(2, '0');
+    final day = timestamp.day.toString().padLeft(2, '0');
+    final hour = timestamp.hour.toString().padLeft(2, '0');
+    final minute = timestamp.minute.toString().padLeft(2, '0');
+    return '${timestamp.year}-$month-$day $hour:$minute';
+  }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return ListTile(
-      title: Text(callLog.contactId),
-      subtitle: Text(callLog.outcome.name),
-      trailing: Text(callLog.direction.name),
+      leading: Icon(
+        _directionIcon(log.direction),
+        color:
+            log.direction == CallDirection.inbound ? Colors.blue : Colors.green,
+      ),
+      title: Text(
+        log.contactId,
+        style: theme.textTheme.bodyLarge,
+      ),
+      subtitle: Text(
+        '${_outcomeLabel(log.outcome)}'
+        ' \u2022 ${_formatDuration(log.durationSeconds)}',
+        style: theme.textTheme.bodySmall,
+      ),
+      trailing: Text(
+        _formatTimestamp(log.createdAt),
+        style: theme.textTheme.labelSmall,
+      ),
     );
   }
 }
