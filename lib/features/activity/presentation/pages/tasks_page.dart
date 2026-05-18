@@ -3,6 +3,7 @@ import 'package:cis_crm/core/widgets/state/empty_state.dart';
 import 'package:cis_crm/core/widgets/state/page_error.dart';
 import 'package:cis_crm/core/widgets/state/page_loading.dart';
 import 'package:cis_crm/features/activity/domain/entities/crm_task.dart';
+import 'package:cis_crm/features/activity/domain/entities/task_priority.dart';
 import 'package:cis_crm/features/activity/domain/entities/task_status.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/tasks_bloc.dart';
 import 'package:cis_crm/features/activity/presentation/widgets/task_tile.dart';
@@ -51,6 +52,84 @@ class _TasksViewState extends State<_TasksView> {
     );
   }
 
+  void _showCreateTaskDialog(BuildContext context) {
+    final titleController = TextEditingController();
+    var selectedPriority = TaskPriority.medium;
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Create Task'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                  hintText: 'Enter task title',
+                ),
+                autofocus: true,
+                textCapitalization: TextCapitalization.sentences,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<TaskPriority>(
+                initialValue: selectedPriority,
+                decoration: const InputDecoration(
+                  labelText: 'Priority',
+                ),
+                items: TaskPriority.values
+                    .map(
+                      (p) => DropdownMenuItem(
+                        value: p,
+                        child: Text(
+                          p.name[0].toUpperCase() +
+                              p.name.substring(1),
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setDialogState(() => selectedPriority = value);
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final title = titleController.text.trim();
+                if (title.isEmpty) return;
+                final now = DateTime.now();
+                final task = CrmTask(
+                  id: '',
+                  title: title,
+                  status: TaskStatus.todo,
+                  priority: selectedPriority,
+                  parentType: '',
+                  parentId: '',
+                  createdBy: '',
+                  createdAt: now,
+                  updatedAt: now,
+                );
+                context.read<TasksBloc>().add(TaskCreateRequested(task: task));
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Create'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildLoaded(BuildContext context, List<CrmTask> tasks) {
     final filtered = _filter == null
         ? tasks
@@ -88,9 +167,7 @@ class _TasksViewState extends State<_TasksView> {
             ),
       floatingActionButton: FloatingActionButton(
         tooltip: 'Add task',
-        onPressed: () {
-          // TODO(nav): Navigate to task creation form.
-        },
+        onPressed: () => _showCreateTaskDialog(context),
         child: const Icon(Icons.add),
       ),
     );

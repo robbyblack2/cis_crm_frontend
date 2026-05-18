@@ -28,7 +28,7 @@ void main() {
   };
 
   group('signIn', () {
-    test('returns UserModel on successful login', () async {
+    test('returns access token on successful login', () async {
       when(
         () => dio.post<Map<String, dynamic>>(
           any(),
@@ -36,7 +36,9 @@ void main() {
         ),
       ).thenAnswer(
         (_) async => Response(
-          data: {'user': userJson},
+          data: {
+            'data': {'access_token': 'test-jwt-token'},
+          },
           statusCode: 200,
           requestOptions: RequestOptions(path: '/api/auth/login'),
         ),
@@ -47,8 +49,8 @@ void main() {
         password: 'password',
       );
 
-      expect(result, isA<UserModel>());
-      expect(result.email, 'test@example.com');
+      expect(result, isA<String>());
+      expect(result, 'test-jwt-token');
     });
 
     test('throws UnauthorizedException on 401', () async {
@@ -147,7 +149,7 @@ void main() {
         () => dio.get<Map<String, dynamic>>(any()),
       ).thenAnswer(
         (_) async => Response(
-          data: {'user': userJson},
+          data: {'data': userJson},
           statusCode: 200,
           requestOptions: RequestOptions(path: '/api/auth/me'),
         ),

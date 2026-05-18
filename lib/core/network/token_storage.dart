@@ -11,9 +11,11 @@ class TokenStorage {
   Future<String?> readAccess() => _storage.read(key: _accessKey);
   Future<String?> readRefresh() => _storage.read(key: _refreshKey);
 
-  Future<void> write({required String access, required String refresh}) async {
+  Future<void> write({required String access, String? refresh}) async {
     await _storage.write(key: _accessKey, value: access);
-    await _storage.write(key: _refreshKey, value: refresh);
+    if (refresh != null) {
+      await _storage.write(key: _refreshKey, value: refresh);
+    }
   }
 
   Future<void> clear() async {

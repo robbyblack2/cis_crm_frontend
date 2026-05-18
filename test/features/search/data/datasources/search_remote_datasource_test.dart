@@ -16,21 +16,24 @@ void main() {
     datasource = SearchRemoteDatasourceImpl(dio: mockDio);
   });
 
-  final tResponseData = [
-    {
-      'id': '1',
-      'entity_type': 'contact',
-      'title': 'John Doe',
-      'subtitle': 'john@example.com',
-      'matched_field': 'name',
+  final tResponseData = <String, dynamic>{
+    'data': {
+      'contacts': [
+        {
+          'id': '1',
+          'data': {'first_name': 'John', 'last_name': 'Doe'},
+          'rank': 0.06,
+        },
+      ],
+      'companies': <Map<String, dynamic>>[],
     },
-  ];
+  };
 
   group('search', () {
     test('returns List<SearchResultModel> when the call is successful',
         () async {
       when(
-        () => mockDio.get<List<dynamic>>(
+        () => mockDio.get<Map<String, dynamic>>(
           any(),
           queryParameters: any(named: 'queryParameters'),
         ),
@@ -48,8 +51,9 @@ void main() {
       expect(results.length, 1);
       expect(results.first.id, '1');
       expect(results.first.entityType, 'contact');
+      expect(results.first.title, 'John Doe');
       verify(
-        () => mockDio.get<List<dynamic>>(
+        () => mockDio.get<Map<String, dynamic>>(
           '/api/search',
           queryParameters: {'q': 'john'},
         ),
@@ -58,7 +62,7 @@ void main() {
 
     test('includes type in query parameters when provided', () async {
       when(
-        () => mockDio.get<List<dynamic>>(
+        () => mockDio.get<Map<String, dynamic>>(
           any(),
           queryParameters: any(named: 'queryParameters'),
         ),
@@ -73,7 +77,7 @@ void main() {
       await datasource.search(query: 'john', type: 'contact');
 
       verify(
-        () => mockDio.get<List<dynamic>>(
+        () => mockDio.get<Map<String, dynamic>>(
           '/api/search',
           queryParameters: {'q': 'john', 'type': 'contact'},
         ),
@@ -82,7 +86,7 @@ void main() {
 
     test('throws ServerException when DioException occurs', () async {
       when(
-        () => mockDio.get<List<dynamic>>(
+        () => mockDio.get<Map<String, dynamic>>(
           any(),
           queryParameters: any(named: 'queryParameters'),
         ),
@@ -105,12 +109,12 @@ void main() {
 
     test('throws ServerException when response data is null', () async {
       when(
-        () => mockDio.get<List<dynamic>>(
+        () => mockDio.get<Map<String, dynamic>>(
           any(),
           queryParameters: any(named: 'queryParameters'),
         ),
       ).thenAnswer(
-        (_) async => Response<List<dynamic>>(
+        (_) async => Response<Map<String, dynamic>>(
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),

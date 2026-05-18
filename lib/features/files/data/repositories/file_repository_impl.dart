@@ -12,6 +12,19 @@ class FileRepositoryImpl implements FileRepository {
   final FileRemoteDatasource _datasource;
 
   @override
+  Future<Result<List<FileAttachment>, AppFailure>> getFilesByParent({
+    required String parentType,
+    required String parentId,
+  }) async {
+    return _guard(
+      () => _datasource.getFilesByParent(
+        parentType: parentType,
+        parentId: parentId,
+      ),
+    );
+  }
+
+  @override
   Future<Result<FileAttachment, AppFailure>> upload({
     required String parentType,
     required String parentId,

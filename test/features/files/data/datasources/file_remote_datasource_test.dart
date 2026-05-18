@@ -29,11 +29,83 @@ void main() {
     datasource = FileRemoteDatasourceImpl(dio: mockDio);
   });
 
+  group('getFilesByParent', () {
+    test('returns list of FileAttachmentModel on success', () async {
+      when(
+        () => mockDio.get<Map<String, dynamic>>(
+          any(),
+          queryParameters: any(named: 'queryParameters'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          data: <String, dynamic>{
+            'data': [tJson],
+          },
+          statusCode: 200,
+          requestOptions: RequestOptions(),
+        ),
+      );
+
+      final result = await datasource.getFilesByParent(
+        parentType: 'contact',
+        parentId: 'c1',
+      );
+
+      expect(result, isA<List<FileAttachmentModel>>());
+      expect(result.length, 1);
+      expect(result.first.id, '1');
+    });
+
+    test('returns empty list when data is null', () async {
+      when(
+        () => mockDio.get<Map<String, dynamic>>(
+          any(),
+          queryParameters: any(named: 'queryParameters'),
+        ),
+      ).thenAnswer(
+        (_) async => Response(
+          data: <String, dynamic>{'data': null},
+          statusCode: 200,
+          requestOptions: RequestOptions(),
+        ),
+      );
+
+      final result = await datasource.getFilesByParent(
+        parentType: 'contact',
+        parentId: 'c1',
+      );
+
+      expect(result, isEmpty);
+    });
+
+    test('throws ServerException on DioException', () {
+      when(
+        () => mockDio.get<Map<String, dynamic>>(
+          any(),
+          queryParameters: any(named: 'queryParameters'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(),
+          message: 'server error',
+        ),
+      );
+
+      expect(
+        () => datasource.getFilesByParent(
+          parentType: 'contact',
+          parentId: 'c1',
+        ),
+        throwsA(isA<ServerException>()),
+      );
+    });
+  });
+
   group('getMetadata', () {
     test('returns FileAttachmentModel on success', () async {
       when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
         (_) async => Response(
-          data: tJson,
+          data: <String, dynamic>{'data': tJson},
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),
@@ -127,7 +199,9 @@ void main() {
     test('returns url string on success', () async {
       when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
         (_) async => Response(
-          data: <String, dynamic>{'url': 'https://example.com/preview'},
+          data: <String, dynamic>{
+            'data': {'url': 'https://example.com/preview'},
+          },
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),

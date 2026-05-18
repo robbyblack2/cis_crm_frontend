@@ -54,6 +54,134 @@ class _CalendarViewState extends State<_CalendarView> {
     );
   }
 
+  Future<void> _showCreateEventDialog(BuildContext context) async {
+    final titleController = TextEditingController();
+    var startDate = DateTime.now();
+    var endDate = DateTime.now().add(const Duration(hours: 1));
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Create Event'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Title',
+                    hintText: 'Enter event title',
+                  ),
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Start'),
+                  subtitle: Text(
+                    _formatDateTime(startDate),
+                  ),
+                  trailing: const Icon(Icons.edit_calendar),
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: dialogContext,
+                      initialDate: startDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2100),
+                    );
+                    if (date == null || !dialogContext.mounted) return;
+                    final time = await showTimePicker(
+                      context: dialogContext,
+                      initialTime: TimeOfDay.fromDateTime(startDate),
+                    );
+                    if (time == null) return;
+                    setDialogState(() {
+                      startDate = DateTime(
+                        date.year,
+                        date.month,
+                        date.day,
+                        time.hour,
+                        time.minute,
+                      );
+                      if (endDate.isBefore(startDate)) {
+                        endDate = startDate.add(const Duration(hours: 1));
+                      }
+                    });
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('End'),
+                  subtitle: Text(
+                    _formatDateTime(endDate),
+                  ),
+                  trailing: const Icon(Icons.edit_calendar),
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: dialogContext,
+                      initialDate: endDate,
+                      firstDate: startDate,
+                      lastDate: DateTime(2100),
+                    );
+                    if (date == null || !dialogContext.mounted) return;
+                    final time = await showTimePicker(
+                      context: dialogContext,
+                      initialTime: TimeOfDay.fromDateTime(endDate),
+                    );
+                    if (time == null) return;
+                    setDialogState(() {
+                      endDate = DateTime(
+                        date.year,
+                        date.month,
+                        date.day,
+                        time.hour,
+                        time.minute,
+                      );
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final title = titleController.text.trim();
+                if (title.isEmpty) return;
+                final event = CalendarEvent(
+                  id: '',
+                  title: title,
+                  start: startDate,
+                  end: endDate,
+                  createdAt: DateTime.now(),
+                );
+                context
+                    .read<CalendarBloc>()
+                    .add(CalendarEventCreateRequested(event: event));
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Create'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDateTime(DateTime dt) {
+    final h = dt.hour.toString().padLeft(2, '0');
+    final m = dt.minute.toString().padLeft(2, '0');
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-'
+        '${dt.day.toString().padLeft(2, '0')} $h:$m';
+  }
+
   Widget _buildLoaded(BuildContext context, List<CalendarEvent> events) {
     final grouped = _groupByDate(events);
     final sortedDates = grouped.keys.toList()..sort();
@@ -65,7 +193,9 @@ class _CalendarViewState extends State<_CalendarView> {
           IconButton(
             tooltip: 'Go to today',
             onPressed: () {
-              // TODO(feature): Scroll to today's date.
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Coming soon')),
+              );
             },
             icon: const Icon(Icons.today),
           ),
@@ -116,9 +246,7 @@ class _CalendarViewState extends State<_CalendarView> {
             ),
       floatingActionButton: FloatingActionButton(
         tooltip: 'Create event',
-        onPressed: () {
-          // TODO(nav): Navigate to event creation form.
-        },
+        onPressed: () => _showCreateEventDialog(context),
         child: const Icon(Icons.add),
       ),
     );

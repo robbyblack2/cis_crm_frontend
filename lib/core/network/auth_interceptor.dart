@@ -33,21 +33,12 @@ class AuthInterceptor extends QueuedInterceptorsWrapper {
       return handler.next(err);
     }
 
-    final refresh = await _tokens.readRefresh();
-    if (refresh == null || refresh.isEmpty) {
-      await _tokens.clear();
-      return handler.next(err);
-    }
-
     try {
-      final newTokens = await _authApi.refresh(refreshToken: refresh);
-      await _tokens.write(
-        access: newTokens.access,
-        refresh: newTokens.refresh,
-      );
+      final newAccessToken = await _authApi.refresh();
+      await _tokens.write(access: newAccessToken);
 
       final retryOptions = err.requestOptions
-        ..headers['Authorization'] = 'Bearer ${newTokens.access}';
+        ..headers['Authorization'] = 'Bearer $newAccessToken';
       final response = await Dio().fetch<dynamic>(retryOptions);
       handler.resolve(response);
     } catch (_) {

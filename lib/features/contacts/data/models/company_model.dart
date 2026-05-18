@@ -1,9 +1,5 @@
 import 'package:cis_crm/features/contacts/domain/entities/company.dart';
-import 'package:json_annotation/json_annotation.dart';
 
-part 'company_model.g.dart';
-
-@JsonSerializable(fieldRename: FieldRename.snake)
 class CompanyModel extends Company {
   const CompanyModel({
     required super.id,
@@ -18,8 +14,21 @@ class CompanyModel extends Company {
     super.employeeCount,
   });
 
-  factory CompanyModel.fromJson(Map<String, dynamic> json) =>
-      _$CompanyModelFromJson(json);
+  factory CompanyModel.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] as Map<String, dynamic>? ?? {};
+    return CompanyModel(
+      id: json['id'] as String,
+      ownerId: json['owner_id'] as String?,
+      name: data['name'] as String? ?? '',
+      domain: data['domain'] as String?,
+      industry: data['industry'] as String?,
+      phone: data['phone'] as String?,
+      employeeCount: data['employee_count'] as int?,
+      tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? const [],
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+    );
+  }
 
   factory CompanyModel.fromEntity(Company company) => CompanyModel(
         id: company.id,
@@ -34,5 +43,18 @@ class CompanyModel extends Company {
         updatedAt: company.updatedAt,
       );
 
-  Map<String, dynamic> toJson() => _$CompanyModelToJson(this);
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'owner_id': ownerId,
+        'tags': tags,
+        'created_at': createdAt.toIso8601String(),
+        'updated_at': updatedAt.toIso8601String(),
+        'data': {
+          'name': name,
+          'domain': domain,
+          'industry': industry,
+          'phone': phone,
+          'employee_count': employeeCount,
+        },
+      };
 }

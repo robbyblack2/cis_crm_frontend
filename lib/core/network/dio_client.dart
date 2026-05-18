@@ -20,6 +20,7 @@ Dio createDioClient({
       receiveTimeout: const Duration(seconds: 30),
       sendTimeout: const Duration(seconds: 30),
       contentType: 'application/json',
+      extra: <String, dynamic>{'withCredentials': true},
     ),
   );
 

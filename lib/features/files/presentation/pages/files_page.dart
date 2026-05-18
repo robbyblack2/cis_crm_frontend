@@ -29,14 +29,21 @@ class _FilesView extends StatelessWidget {
       floatingActionButton: FloatingActionButton(
         tooltip: 'Upload file',
         onPressed: () {
-          // TODO(files): Implement file picker and upload.
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Coming soon')),
+          );
         },
         child: const Icon(Icons.upload_file),
       ),
       body: BlocBuilder<FilesCubit, FilesState>(
         builder: (context, state) {
           return switch (state) {
-            FilesInitial() ||
+            FilesInitial() => const EmptyState(
+                icon: Icons.folder_open,
+                title: 'No parent context',
+                message:
+                    'Select a contact or record to view its files.',
+              ),
             FilesLoading() ||
             FilesUploading() =>
               const PageLoading(),
@@ -62,7 +69,14 @@ class _FilesView extends StatelessWidget {
                 title: 'Failed to load files',
                 message: failure.message,
                 onRetry: () {
-                  // TODO(files): Re-load files.
+                  // No parent context available from standalone files page.
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Select a contact or record to view its files.',
+                      ),
+                    ),
+                  );
                 },
               ),
           };

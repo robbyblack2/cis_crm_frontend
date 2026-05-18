@@ -1,5 +1,8 @@
+import 'package:cis_crm/app/injection.dart';
+import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/core/responsive/breakpoints.dart';
 import 'package:cis_crm/features/contacts/domain/entities/contact.dart';
+import 'package:cis_crm/features/contacts/domain/repositories/contact_repository.dart';
 import 'package:flutter/material.dart';
 
 String _fullName(Contact c) => '${c.firstName} ${c.lastName}'.trim();
@@ -28,7 +31,9 @@ class ContactDetailPage extends StatelessWidget {
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'Edit contact',
             onPressed: () {
-              // TODO(contacts): navigate to edit contact form
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Coming soon')),
+              );
             },
           ),
           IconButton(
@@ -61,18 +66,32 @@ class ContactDetailPage extends StatelessWidget {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete contact?'),
         content: Text(
-          'Are you sure you want to delete ${_fullName(contact)}? '
-          'This action cannot be undone.',
+          'Are you sure you want to delete ${_fullName(contact)}?',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop(true);
-              // TODO(contacts): dispatch delete event and pop page
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              final result = await getIt<ContactRepository>()
+                  .deleteContact(contact.id);
+              if (!context.mounted) return;
+              switch (result) {
+                case Success():
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Contact deleted')),
+                  );
+                  Navigator.of(context).pop();
+                case Failure(:final error):
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Delete failed: ${error.message}'),
+                    ),
+                  );
+              }
             },
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,

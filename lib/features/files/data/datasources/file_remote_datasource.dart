@@ -3,6 +3,11 @@ import 'package:cis_crm/features/files/data/models/file_attachment_model.dart';
 import 'package:dio/dio.dart';
 
 abstract interface class FileRemoteDatasource {
+  Future<List<FileAttachmentModel>> getFilesByParent({
+    required String parentType,
+    required String parentId,
+  });
+
   Future<FileAttachmentModel> upload({
     required String parentType,
     required String parentId,
@@ -25,6 +30,31 @@ class FileRemoteDatasourceImpl implements FileRemoteDatasource {
   final Dio _dio;
 
   @override
+  Future<List<FileAttachmentModel>> getFilesByParent({
+    required String parentType,
+    required String parentId,
+  }) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/api/files',
+        queryParameters: {
+          'parent_type': parentType,
+          'parent_id': parentId,
+        },
+      );
+      final items = response.data?['data'] as List<dynamic>?;
+      if (items == null) return [];
+      return items
+          .cast<Map<String, dynamic>>()
+          .map(FileAttachmentModel.fromJson)
+          .toList();
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error! as AppException;
+      throw ServerException(e.message ?? 'Failed to list files.');
+    }
+  }
+
+  @override
   Future<FileAttachmentModel> upload({
     required String parentType,
     required String parentId,
@@ -41,7 +71,11 @@ class FileRemoteDatasourceImpl implements FileRemoteDatasource {
         '/api/files/upload',
         data: formData,
       );
-      return FileAttachmentModel.fromJson(response.data!);
+      final data = response.data?['data'] as Map<String, dynamic>?;
+      if (data == null) {
+        throw const ServerException('Empty response');
+      }
+      return FileAttachmentModel.fromJson(data);
     } on DioException catch (e) {
       if (e.error is AppException) throw e.error! as AppException;
       throw ServerException(e.message ?? 'Upload failed.');
@@ -54,7 +88,11 @@ class FileRemoteDatasourceImpl implements FileRemoteDatasource {
       final response = await _dio.get<Map<String, dynamic>>(
         '/api/files/$id',
       );
-      return FileAttachmentModel.fromJson(response.data!);
+      final data = response.data?['data'] as Map<String, dynamic>?;
+      if (data == null) {
+        throw const ServerException('Empty response');
+      }
+      return FileAttachmentModel.fromJson(data);
     } on DioException catch (e) {
       if (e.error is AppException) throw e.error! as AppException;
       throw ServerException(e.message ?? 'Failed to fetch metadata.');
@@ -81,7 +119,11 @@ class FileRemoteDatasourceImpl implements FileRemoteDatasource {
       final response = await _dio.get<Map<String, dynamic>>(
         '/api/files/$id/preview',
       );
-      return response.data!['url'] as String;
+      final data = response.data?['data'] as Map<String, dynamic>?;
+      if (data == null) {
+        throw const ServerException('Empty response');
+      }
+      return data['url'] as String;
     } on DioException catch (e) {
       if (e.error is AppException) throw e.error! as AppException;
       throw ServerException(e.message ?? 'Preview failed.');

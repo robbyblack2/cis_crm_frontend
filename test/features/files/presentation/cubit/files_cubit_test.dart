@@ -36,6 +36,49 @@ void main() {
       cubit.close();
     });
 
+    group('loadFiles', () {
+      blocTest<FilesCubit, FilesState>(
+        'emits [FilesLoading, FilesLoaded] on success',
+        setUp: () {
+          when(
+            () => mockRepository.getFilesByParent(
+              parentType: any(named: 'parentType'),
+              parentId: any(named: 'parentId'),
+            ),
+          ).thenAnswer((_) async => Success([tFile]));
+        },
+        build: () => FilesCubit(repository: mockRepository),
+        act: (cubit) =>
+            cubit.loadFiles(parentType: 'contact', parentId: 'c1'),
+        expect: () => [
+          const FilesLoading(),
+          FilesLoaded([tFile]),
+        ],
+      );
+
+      blocTest<FilesCubit, FilesState>(
+        'emits [FilesLoading, FilesError] on failure',
+        setUp: () {
+          when(
+            () => mockRepository.getFilesByParent(
+              parentType: any(named: 'parentType'),
+              parentId: any(named: 'parentId'),
+            ),
+          ).thenAnswer(
+            (_) async =>
+                const Failure(ServerFailure('list failed', statusCode: 500)),
+          );
+        },
+        build: () => FilesCubit(repository: mockRepository),
+        act: (cubit) =>
+            cubit.loadFiles(parentType: 'contact', parentId: 'c1'),
+        expect: () => [
+          const FilesLoading(),
+          const FilesError(ServerFailure('list failed', statusCode: 500)),
+        ],
+      );
+    });
+
     group('loadFile', () {
       blocTest<FilesCubit, FilesState>(
         'emits [FilesLoading, FilesLoaded] on success',

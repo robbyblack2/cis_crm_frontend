@@ -15,6 +15,23 @@ class FilesCubit extends Cubit<FilesState> {
 
   final FileRepository _repository;
 
+  Future<void> loadFiles({
+    required String parentType,
+    required String parentId,
+  }) async {
+    emit(const FilesLoading());
+    final result = await _repository.getFilesByParent(
+      parentType: parentType,
+      parentId: parentId,
+    );
+    switch (result) {
+      case Success(:final data):
+        emit(FilesLoaded(data));
+      case Failure(:final error):
+        emit(FilesError(error));
+    }
+  }
+
   Future<void> loadFile(String id) async {
     emit(const FilesLoading());
     final result = await _repository.getMetadata(id);

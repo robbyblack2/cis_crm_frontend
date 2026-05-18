@@ -32,6 +32,42 @@ void main() {
     repository = FileRepositoryImpl(datasource: mockDatasource);
   });
 
+  group('getFilesByParent', () {
+    test('returns Success with list on datasource success', () async {
+      when(
+        () => mockDatasource.getFilesByParent(
+          parentType: any(named: 'parentType'),
+          parentId: any(named: 'parentId'),
+        ),
+      ).thenAnswer((_) async => [tModel]);
+
+      final result = await repository.getFilesByParent(
+        parentType: 'contact',
+        parentId: 'c1',
+      );
+
+      expect(result, isA<Success<List<FileAttachment>, AppFailure>>());
+      expect(result.dataOrNull, [tModel]);
+    });
+
+    test('returns Failure(ServerFailure) on ServerException', () async {
+      when(
+        () => mockDatasource.getFilesByParent(
+          parentType: any(named: 'parentType'),
+          parentId: any(named: 'parentId'),
+        ),
+      ).thenThrow(const ServerException('fail', statusCode: 500));
+
+      final result = await repository.getFilesByParent(
+        parentType: 'contact',
+        parentId: 'c1',
+      );
+
+      expect(result, isA<Failure<List<FileAttachment>, AppFailure>>());
+      expect(result.failureOrNull, isA<ServerFailure>());
+    });
+  });
+
   group('getMetadata', () {
     test('returns Success with FileAttachment on datasource success', () async {
       when(() => mockDatasource.getMetadata(any()))

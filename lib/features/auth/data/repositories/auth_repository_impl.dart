@@ -31,7 +31,10 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
   }) async {
     try {
-      final user = await _remote.signIn(email: email, password: password);
+      final accessToken =
+          await _remote.signIn(email: email, password: password);
+      await _tokenStorage.write(access: accessToken);
+      final user = await _remote.currentUser();
       _controller.add(AuthStatus.authenticated);
       return Success(user);
     } on NetworkException {

@@ -22,12 +22,12 @@ void main() {
     final tResponseData = <String, dynamic>{
       'id': '1',
       'direction': 'outbound',
-      'sender_email': 'me@test.com',
-      'recipient_emails': ['you@test.com'],
+      'from_address': 'me@test.com',
+      'to_addresses': ['you@test.com'],
       'subject': 'Test',
-      'body': 'Body',
+      'body_html': 'Body',
       'creates_record': false,
-      'timestamp': '2026-01-01T00:00:00.000',
+      'created_at': '2026-01-01T00:00:00.000',
     };
 
     test('returns EmailMessageModel on success', () async {
@@ -87,10 +87,10 @@ void main() {
       final tDraftData = <dynamic>[
         {
           'id': 'd1',
-          'recipient_emails': ['you@test.com'],
+          'to_addresses': ['you@test.com'],
           'subject': 'Draft',
-          'body': 'Draft body',
-          'created_by': 'user1',
+          'body_html': 'Draft body',
+          'sent_by_user_id': 'user1',
           'created_at': '2026-01-01T00:00:00.000',
         },
       ];

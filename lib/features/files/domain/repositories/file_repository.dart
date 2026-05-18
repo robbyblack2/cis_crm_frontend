@@ -3,6 +3,11 @@ import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/features/files/domain/entities/file_attachment.dart';
 
 abstract interface class FileRepository {
+  Future<Result<List<FileAttachment>, AppFailure>> getFilesByParent({
+    required String parentType,
+    required String parentId,
+  });
+
   Future<Result<FileAttachment, AppFailure>> upload({
     required String parentType,
     required String parentId,

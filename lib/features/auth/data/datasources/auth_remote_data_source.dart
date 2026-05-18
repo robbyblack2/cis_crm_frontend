@@ -3,7 +3,7 @@ import 'package:cis_crm/features/auth/data/models/user_model.dart';
 import 'package:dio/dio.dart';
 
 abstract class AuthRemoteDataSource {
-  Future<UserModel> signIn({
+  Future<String> signIn({
     required String email,
     required String password,
   });
@@ -19,7 +19,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final Dio _dio;
 
   @override
-  Future<UserModel> signIn({
+  Future<String> signIn({
     required String email,
     required String password,
   }) async {
@@ -32,7 +32,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       if (data == null) {
         throw const ServerException('Empty login response');
       }
-      return UserModel.fromJson(data['user'] as Map<String, dynamic>);
+      final inner = data['data'] as Map<String, dynamic>;
+      return inner['access_token'] as String;
     } on DioException catch (e) {
       if (e.type == DioExceptionType.connectionError ||
           e.type == DioExceptionType.connectionTimeout) {
@@ -73,7 +74,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       if (data == null) {
         throw const ServerException('Empty user response');
       }
-      return UserModel.fromJson(data['user'] as Map<String, dynamic>);
+      return UserModel.fromJson(data['data'] as Map<String, dynamic>);
     } on DioException catch (e) {
       if (e.type == DioExceptionType.connectionError ||
           e.type == DioExceptionType.connectionTimeout) {

@@ -40,13 +40,21 @@ void main() {
   });
 
   group('signIn', () {
-    test('returns Success(User) on successful sign in', () async {
+    void setUpSuccessfulSignIn() {
       when(
         () => remote.signIn(
           email: any(named: 'email'),
           password: any(named: 'password'),
         ),
-      ).thenAnswer((_) async => _testModel);
+      ).thenAnswer((_) async => 'test-jwt-token');
+      when(
+        () => tokenStorage.write(access: any(named: 'access')),
+      ).thenAnswer((_) async {});
+      when(() => remote.currentUser()).thenAnswer((_) async => _testModel);
+    }
+
+    test('returns Success(User) on successful sign in', () async {
+      setUpSuccessfulSignIn();
 
       final result = await repository.signIn(
         email: 'test@example.com',
@@ -55,6 +63,7 @@ void main() {
 
       expect(result, isA<Success<User, AppFailure>>());
       expect(result.dataOrNull, _testModel);
+      verify(() => tokenStorage.write(access: 'test-jwt-token')).called(1);
     });
 
     test('returns Failure(NetworkFailure) on NetworkException', () async {
@@ -110,12 +119,7 @@ void main() {
     });
 
     test('emits authenticated on status stream after sign in', () async {
-      when(
-        () => remote.signIn(
-          email: any(named: 'email'),
-          password: any(named: 'password'),
-        ),
-      ).thenAnswer((_) async => _testModel);
+      setUpSuccessfulSignIn();
 
       // Start listening before signIn so we don't miss the event.
       final statuses = <AuthStatus>[];
