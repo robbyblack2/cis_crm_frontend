@@ -53,17 +53,24 @@ class PipelineRemoteDataSourceImpl implements PipelineRemoteDataSource {
     try {
       final response = await _dio
           .get<Map<String, dynamic>>('/api/pipelines/$pipelineId/kanban');
-      final wrapped = response.data!;
-      final data = wrapped['data'] as Map<String, dynamic>? ?? wrapped;
-      return (
-        pipeline: PipelineModel.fromJson(
-          data['pipeline'] as Map<String, dynamic>,
-        ),
-        stages: (data['stages'] as List<dynamic>)
-            .cast<Map<String, dynamic>>()
-            .map(StageModel.fromJson)
-            .toList(),
+      // Backend returns {"data": [{stage: {...}, records: [...]}, ...]}
+      final list = response.data?['data'] as List<dynamic>? ?? [];
+      final stageGroups = list.cast<Map<String, dynamic>>();
+      final stages = stageGroups
+          .map(
+            (g) =>
+                StageModel.fromJson(g['stage'] as Map<String, dynamic>),
+          )
+          .toList();
+      final pipeline = PipelineModel(
+        id: pipelineId,
+        name: '',
+        sortOrder: 0,
+        pipelineType: PipelineType.sales,
+        isActive: true,
+        createdAt: DateTime.now(),
       );
+      return (pipeline: pipeline, stages: stages);
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to fetch kanban data',
