@@ -82,6 +82,9 @@ class WebSocketCubit extends Cubit<WebSocketStatus> {
   /// Unsubscribes from a server-side channel.
   void unsubscribe(String channel) => _service.unsubscribe(channel);
 
+  /// Broadcast stream of all incoming [WebSocketEvent]s from the service.
+  Stream<WebSocketEvent> get events => _service.events;
+
   @override
   Future<void> close() async {
     await disconnect();

@@ -15,6 +15,10 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
       : _repository = contactRepository,
         super(const ContactsInitial()) {
     on<ContactsLoadRequested>(_onLoadRequested, transformer: restartable());
+    on<ContactsLoadMoreRequested>(
+      _onLoadMoreRequested,
+      transformer: droppable(),
+    );
     on<ContactCreateRequested>(_onCreateRequested, transformer: droppable());
     on<ContactDeleteRequested>(_onDeleteRequested, transformer: droppable());
   }
@@ -29,8 +33,42 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     final result = await _repository.getContacts();
     switch (result) {
       case Success(:final data):
-        emit(ContactsLoaded(contacts: data));
+        emit(ContactsLoaded(
+          contacts: data.items,
+          currentPage: data.page,
+          total: data.total,
+          perPage: data.perPage,
+        ));
       case Failure(:final error):
+        emit(ContactsError(failure: error));
+    }
+  }
+
+  Future<void> _onLoadMoreRequested(
+    ContactsLoadMoreRequested event,
+    Emitter<ContactsState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is! ContactsLoaded || !currentState.hasMore) return;
+    if (currentState.isLoadingMore) return;
+
+    emit(currentState.copyWith(isLoadingMore: true));
+
+    final nextPage = currentState.currentPage + 1;
+    final result = await _repository.getContacts(
+      page: nextPage,
+      perPage: currentState.perPage,
+    );
+    switch (result) {
+      case Success(:final data):
+        emit(ContactsLoaded(
+          contacts: [...currentState.contacts, ...data.items],
+          currentPage: data.page,
+          total: data.total,
+          perPage: data.perPage,
+        ));
+      case Failure(:final error):
+        emit(currentState.copyWith(isLoadingMore: false));
         emit(ContactsError(failure: error));
     }
   }

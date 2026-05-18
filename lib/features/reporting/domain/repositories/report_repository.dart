@@ -1,5 +1,6 @@
 import 'package:cis_crm/core/error/failures.dart';
 import 'package:cis_crm/core/error/result.dart';
+import 'package:cis_crm/features/reporting/domain/entities/pipeline_summary.dart';
 import 'package:cis_crm/features/reporting/domain/entities/report.dart';
 import 'package:cis_crm/features/reporting/domain/entities/report_result.dart';
 
@@ -11,4 +12,7 @@ abstract interface class ReportRepository {
     String? description,
   });
   Future<Result<String, AppFailure>> exportReport(String id);
+  Future<Result<PipelineSummary, AppFailure>> getPipelineSummary(
+    String pipelineId,
+  );
 }

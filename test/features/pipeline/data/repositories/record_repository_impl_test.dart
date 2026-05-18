@@ -1,5 +1,6 @@
 import 'package:cis_crm/core/error/exceptions.dart';
 import 'package:cis_crm/core/error/failures.dart';
+import 'package:cis_crm/core/pagination/paginated_response.dart';
 import 'package:cis_crm/features/pipeline/data/datasources/record_remote_data_source.dart';
 import 'package:cis_crm/features/pipeline/data/models/record_model.dart';
 import 'package:cis_crm/features/pipeline/data/models/stage_transition_model.dart';
@@ -32,6 +33,13 @@ void main() {
     updatedAt: tNow,
   );
 
+  final tPaginatedResponse = PaginatedResponse<RecordModel>(
+    items: [tRecordModel],
+    page: 1,
+    perPage: 25,
+    total: 1,
+  );
+
   final tTransitionModel = StageTransitionModel(
     id: 't1',
     recordId: 'r1',
@@ -42,18 +50,38 @@ void main() {
   );
 
   group('getRecords', () {
-    test('returns Success with records when data source succeeds', () async {
-      when(() => mockDataSource.getRecords())
-          .thenAnswer((_) async => [tRecordModel]);
+    test('returns Success with paginated records when data source succeeds',
+        () async {
+      when(() => mockDataSource.getRecords(page: 1, perPage: 25))
+          .thenAnswer((_) async => tPaginatedResponse);
 
       final result = await repository.getRecords();
 
       expect(result.isSuccess, true);
-      expect(result.dataOrNull, [tRecordModel]);
+      expect(result.dataOrNull!.items, [tRecordModel]);
+      expect(result.dataOrNull!.page, 1);
+      expect(result.dataOrNull!.total, 1);
+    });
+
+    test('passes page and perPage to data source', () async {
+      final page2Response = PaginatedResponse<RecordModel>(
+        items: [tRecordModel],
+        page: 2,
+        perPage: 10,
+        total: 15,
+      );
+      when(() => mockDataSource.getRecords(page: 2, perPage: 10))
+          .thenAnswer((_) async => page2Response);
+
+      final result = await repository.getRecords(page: 2, perPage: 10);
+
+      expect(result.isSuccess, true);
+      expect(result.dataOrNull!.page, 2);
+      verify(() => mockDataSource.getRecords(page: 2, perPage: 10)).called(1);
     });
 
     test('returns Failure(NetworkFailure) on NetworkException', () async {
-      when(() => mockDataSource.getRecords())
+      when(() => mockDataSource.getRecords(page: 1, perPage: 25))
           .thenThrow(const NetworkException());
 
       final result = await repository.getRecords();
@@ -63,7 +91,7 @@ void main() {
     });
 
     test('returns Failure(ServerFailure) on ServerException', () async {
-      when(() => mockDataSource.getRecords())
+      when(() => mockDataSource.getRecords(page: 1, perPage: 25))
           .thenThrow(const ServerException('error'));
 
       final result = await repository.getRecords();

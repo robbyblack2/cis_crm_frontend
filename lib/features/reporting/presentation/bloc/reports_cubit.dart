@@ -31,4 +31,15 @@ class ReportsCubit extends Cubit<ReportsState> {
         emit(ReportsError(error.message));
     }
   }
+
+  Future<void> loadPipelineSummary(String pipelineId) async {
+    emit(const PipelineSummaryLoading());
+    final result = await _repository.getPipelineSummary(pipelineId);
+    switch (result) {
+      case Success(:final data):
+        emit(PipelineSummaryLoaded(data));
+      case Failure(:final error):
+        emit(ReportsError(error.message));
+    }
+  }
 }

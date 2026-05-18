@@ -1,6 +1,7 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:cis_crm/core/error/failures.dart';
 import 'package:cis_crm/core/error/result.dart';
+import 'package:cis_crm/features/reporting/domain/entities/pipeline_summary.dart';
 import 'package:cis_crm/features/reporting/domain/entities/report.dart';
 import 'package:cis_crm/features/reporting/domain/entities/report_result.dart';
 import 'package:cis_crm/features/reporting/domain/repositories/report_repository.dart';
@@ -101,6 +102,51 @@ void main() {
       expect: () => [
         const ReportRunning(),
         const ReportsError('Not found'),
+      ],
+    );
+  });
+
+  group('loadPipelineSummary', () {
+    const tPipelineSummary = PipelineSummary(
+      pipelineId: 'p1',
+      totalRecords: 45,
+      totalValue: 2250000,
+      byStage: [
+        PipelineStageSummary(
+          stageId: 's1',
+          stageName: 'Qualified',
+          count: 10,
+          value: 500000,
+        ),
+      ],
+    );
+
+    blocTest<ReportsCubit, ReportsState>(
+      'emits [PipelineSummaryLoading, PipelineSummaryLoaded] on success',
+      build: () {
+        when(() => mockRepository.getPipelineSummary('p1'))
+            .thenAnswer((_) async => const Success(tPipelineSummary));
+        return cubit;
+      },
+      act: (c) => c.loadPipelineSummary('p1'),
+      expect: () => [
+        const PipelineSummaryLoading(),
+        const PipelineSummaryLoaded(tPipelineSummary),
+      ],
+    );
+
+    blocTest<ReportsCubit, ReportsState>(
+      'emits [PipelineSummaryLoading, Error] on failure',
+      build: () {
+        when(() => mockRepository.getPipelineSummary('p1')).thenAnswer(
+          (_) async => const Failure(ServerFailure('Pipeline not found')),
+        );
+        return cubit;
+      },
+      act: (c) => c.loadPipelineSummary('p1'),
+      expect: () => [
+        const PipelineSummaryLoading(),
+        const ReportsError('Pipeline not found'),
       ],
     );
   });

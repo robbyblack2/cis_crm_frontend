@@ -68,7 +68,8 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Result<User, AppFailure>> currentUser() async {
     try {
       final user = await _remote.currentUser();
-      _controller.add(AuthStatus.authenticated);
+      // Do NOT emit authenticated here — signIn already did that.
+      // Re-emitting would cause an infinite loop with _onStatusChanged.
       return Success(user);
     } on NetworkException {
       return const Failure(NetworkFailure());

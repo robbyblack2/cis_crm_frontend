@@ -1,9 +1,17 @@
 import 'package:cis_crm/app/injection.dart';
+import 'package:cis_crm/core/error/failures.dart';
 import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/core/responsive/breakpoints.dart';
 import 'package:cis_crm/features/contacts/domain/entities/contact.dart';
 import 'package:cis_crm/features/contacts/domain/repositories/contact_repository.dart';
+import 'package:cis_crm/features/contacts/presentation/bloc/contact_form_cubit.dart';
+import 'package:cis_crm/features/files/domain/entities/file_attachment.dart';
+import 'package:cis_crm/features/files/domain/repositories/file_repository.dart';
+import 'package:cis_crm/features/files/presentation/widgets/file_tile.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:formz/formz.dart';
 
 String _fullName(Contact c) => '${c.firstName} ${c.lastName}'.trim();
 
@@ -29,16 +37,12 @@ class ContactDetailPage extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Edit contact',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Coming soon')),
-              );
-            },
+            tooltip: AppLocalizations.of(context)!.editContact,
+            onPressed: () => _showEditDialog(context),
           ),
           IconButton(
             icon: const Icon(Icons.delete_outlined),
-            tooltip: 'Delete contact',
+            tooltip: AppLocalizations.of(context)!.deleteContact,
             onPressed: () => _confirmDelete(context),
           ),
         ],
@@ -60,18 +64,156 @@ class ContactDetailPage extends StatelessWidget {
     );
   }
 
+  void _showEditDialog(BuildContext context) {
+    showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => BlocProvider(
+        create: (_) => ContactFormCubit(
+          contactRepository: getIt<ContactRepository>(),
+          existingContact: contact,
+        ),
+        child: BlocConsumer<ContactFormCubit, ContactFormState>(
+          listener: (ctx, state) {
+            if (state.submissionStatus == FormzSubmissionStatus.success) {
+              Navigator.of(ctx).pop(true);
+            }
+          },
+          builder: (ctx, state) {
+            final cubit = ctx.read<ContactFormCubit>();
+            final isSubmitting =
+                state.submissionStatus == FormzSubmissionStatus.inProgress;
+
+            return AlertDialog(
+              title: Text(AppLocalizations.of(ctx)!.editContact),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: TextEditingController.fromValue(
+                        TextEditingValue(
+                          text: state.firstName.value,
+                          selection: TextSelection.collapsed(
+                            offset: state.firstName.value.length,
+                          ),
+                        ),
+                      ),
+                      decoration: InputDecoration(
+                        labelText: AppLocalizations.of(ctx)!.contactFirstName,
+                        errorText: state.firstName.displayError,
+                      ),
+                      onChanged: cubit.firstNameChanged,
+                      textCapitalization: TextCapitalization.words,
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: TextEditingController.fromValue(
+                        TextEditingValue(
+                          text: state.lastName.value,
+                          selection: TextSelection.collapsed(
+                            offset: state.lastName.value.length,
+                          ),
+                        ),
+                      ),
+                      decoration: InputDecoration(
+                        labelText: AppLocalizations.of(ctx)!.contactLastName,
+                        errorText: state.lastName.displayError,
+                      ),
+                      onChanged: cubit.lastNameChanged,
+                      textCapitalization: TextCapitalization.words,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      initialValue: state.email,
+                      decoration: InputDecoration(
+                        labelText:
+                            AppLocalizations.of(ctx)!.contactEmail,
+                      ),
+                      onChanged: cubit.emailChanged,
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      initialValue: state.phone,
+                      decoration: InputDecoration(
+                        labelText:
+                            AppLocalizations.of(ctx)!.contactPhone,
+                      ),
+                      onChanged: cubit.phoneChanged,
+                      keyboardType: TextInputType.phone,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      initialValue: state.jobTitle,
+                      decoration: InputDecoration(
+                        labelText:
+                            AppLocalizations.of(ctx)!.contactJobTitle,
+                      ),
+                      onChanged: cubit.jobTitleChanged,
+                      textCapitalization: TextCapitalization.words,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      initialValue: state.source,
+                      decoration: InputDecoration(
+                        labelText:
+                            AppLocalizations.of(ctx)!.contactSource,
+                      ),
+                      onChanged: cubit.sourceChanged,
+                    ),
+                    if (state.errorMessage != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        state.errorMessage!,
+                        style: TextStyle(
+                          color: Theme.of(ctx).colorScheme.error,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed:
+                      isSubmitting ? null : () => Navigator.of(ctx).pop(),
+                  child: Text(AppLocalizations.of(ctx)!.cancel),
+                ),
+                FilledButton(
+                  onPressed: isSubmitting ? null : cubit.submitted,
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(AppLocalizations.of(ctx)!.save),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    ).then((saved) {
+      if ((saved ?? false) && context.mounted) {
+        Navigator.of(context).pop();
+      }
+    });
+  }
+
   void _confirmDelete(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete contact?'),
+        title: Text(l10n.contactDeleteTitle),
         content: Text(
-          'Are you sure you want to delete ${_fullName(contact)}?',
+          l10n.contactDeleteConfirmName(_fullName(contact)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () async {
@@ -82,13 +224,13 @@ class ContactDetailPage extends StatelessWidget {
               switch (result) {
                 case Success():
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Contact deleted')),
+                    SnackBar(content: Text(l10n.contactDeleted)),
                   );
                   Navigator.of(context).pop();
                 case Failure(:final error):
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Delete failed: ${error.message}'),
+                      content: Text(l10n.contactDeleteFailed(error.message)),
                     ),
                   );
               }
@@ -96,7 +238,7 @@ class ContactDetailPage extends StatelessWidget {
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text('Delete'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -162,6 +304,7 @@ class _ContactInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -170,25 +313,25 @@ class _ContactInfoCard extends StatelessWidget {
           children: [
             _InfoRow(
               icon: Icons.email_outlined,
-              label: 'Email',
+              label: l10n.contactEmail,
               value: contact.email,
             ),
             if (contact.phone != null)
               _InfoRow(
                 icon: Icons.phone_outlined,
-                label: 'Phone',
+                label: l10n.contactPhone,
                 value: contact.phone!,
               ),
             if (contact.source != null)
               _InfoRow(
                 icon: Icons.source_outlined,
-                label: 'Source',
+                label: l10n.contactSource,
                 value: contact.source!,
               ),
             if (contact.companyId != null)
               _InfoRow(
                 icon: Icons.business_outlined,
-                label: 'Company',
+                label: l10n.contactCompany,
                 value: contact.companyId!,
               ),
           ],
@@ -213,7 +356,7 @@ class _TagsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Tags', style: theme.textTheme.titleMedium),
+            Text(AppLocalizations.of(context)!.contactTags, style: theme.textTheme.titleMedium),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -264,12 +407,13 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final (label, color) = switch (status) {
-      'active' => ('Active', Colors.green),
-      'inactive' => ('Inactive', Colors.grey),
-      'lead' => ('Lead', Colors.orange),
-      'prospect' => ('Prospect', Colors.blue),
-      'customer' => ('Customer', Colors.purple),
+      'active' => (l10n.contactStatusActive, Colors.green),
+      'inactive' => (l10n.contactStatusInactive, Colors.grey),
+      'lead' => (l10n.contactStatusLead, Colors.orange),
+      'prospect' => (l10n.contactStatusProspect, Colors.blue),
+      'customer' => (l10n.contactStatusCustomer, Colors.purple),
       _ => (status, Colors.grey),
     };
 
@@ -279,6 +423,120 @@ class _StatusChip extends StatelessWidget {
       labelStyle: TextStyle(color: color.shade700),
       side: BorderSide.none,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+}
+
+class _FilesSection extends StatelessWidget {
+  const _FilesSection({required this.contactId});
+
+  final String contactId;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text('Files', style: theme.textTheme.titleMedium),
+                const Spacer(),
+                TextButton.icon(
+                  icon: const Icon(Icons.upload_file, size: 18),
+                  label: const Text('Upload'),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'File upload requires file_picker package',
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            FutureBuilder<Result<List<FileAttachment>, AppFailure>>(
+              future: getIt<FileRepository>().getFilesByParent(
+                parentType: 'contact',
+                parentId: contactId,
+              ),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(
+                      'Failed to load files.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                  );
+                }
+
+                final result = snapshot.data;
+                if (result == null) {
+                  return const SizedBox.shrink();
+                }
+
+                return switch (result) {
+                  Success(:final data) when data.isEmpty => Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        'No files attached to this contact.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  Success(:final data) => Column(
+                      children: data
+                          .map(
+                            (file) => FileTile(
+                              file: file,
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Download: ${file.filename}',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  Failure(:final error) => Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        'Error: ${error.message}',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.error,
+                        ),
+                      ),
+                    ),
+                };
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -300,6 +558,8 @@ class _CompactLayout extends StatelessWidget {
           const SizedBox(height: 16),
           _TagsCard(tags: contact.tags),
         ],
+        const SizedBox(height: 16),
+        _FilesSection(contactId: contact.id),
       ],
     );
   }
@@ -328,6 +588,8 @@ class _WideLayout extends StatelessWidget {
                 const SizedBox(height: 16),
                 _TagsCard(tags: contact.tags),
               ],
+              const SizedBox(height: 16),
+              _FilesSection(contactId: contact.id),
             ],
           ),
         ),

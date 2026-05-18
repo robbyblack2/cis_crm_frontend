@@ -1,6 +1,7 @@
 import 'package:cis_crm/core/error/exceptions.dart';
 import 'package:cis_crm/core/error/failures.dart';
 import 'package:cis_crm/features/reporting/data/datasources/report_remote_datasource.dart';
+import 'package:cis_crm/features/reporting/data/models/pipeline_summary_model.dart';
 import 'package:cis_crm/features/reporting/data/models/report_model.dart';
 import 'package:cis_crm/features/reporting/data/models/report_result_model.dart';
 import 'package:cis_crm/features/reporting/data/repositories/report_repository_impl.dart';
@@ -136,6 +137,42 @@ void main() {
 
       expect(result.isSuccess, isTrue);
       expect(result.dataOrNull, 'name,total\nAlice,100');
+    });
+  });
+
+  group('getPipelineSummary', () {
+    const tSummaryModel = PipelineSummaryModel(
+      pipelineId: 'p1',
+      totalRecords: 45,
+      totalValue: 2250000,
+      byStage: [
+        PipelineStageSummaryModel(
+          stageId: 's1',
+          stageName: 'Qualified',
+          count: 10,
+          value: 500000,
+        ),
+      ],
+    );
+
+    test('returns Success with PipelineSummary on success', () async {
+      when(() => mockDataSource.getPipelineSummary('p1'))
+          .thenAnswer((_) async => tSummaryModel);
+
+      final result = await repository.getPipelineSummary('p1');
+
+      expect(result.isSuccess, isTrue);
+      expect(result.dataOrNull, tSummaryModel);
+    });
+
+    test('returns Failure on DioException', () async {
+      when(() => mockDataSource.getPipelineSummary('p1'))
+          .thenThrow(dioError(const ServerException('not found')));
+
+      final result = await repository.getPipelineSummary('p1');
+
+      expect(result.isFailure, isTrue);
+      expect(result.failureOrNull, isA<ServerFailure>());
     });
   });
 }

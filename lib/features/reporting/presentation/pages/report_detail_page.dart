@@ -4,6 +4,7 @@ import 'package:cis_crm/core/widgets/state/page_loading.dart';
 import 'package:cis_crm/features/reporting/domain/entities/report.dart';
 import 'package:cis_crm/features/reporting/presentation/bloc/reports_cubit.dart';
 import 'package:cis_crm/features/reporting/presentation/bloc/reports_state.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -36,10 +37,10 @@ class _ReportDetailView extends StatelessWidget {
             onPressed: () {
               // TODO(export): Implement report export.
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Export not yet implemented')),
+                SnackBar(content: Text(AppLocalizations.of(context)!.exportNotImplemented)),
               );
             },
-            tooltip: 'Export report',
+            tooltip: AppLocalizations.of(context)!.exportReport,
             icon: const Icon(Icons.file_download_outlined),
           ),
         ],
@@ -50,9 +51,9 @@ class _ReportDetailView extends StatelessWidget {
             ReportsInitial() ||
             ReportsLoading() ||
             ReportRunning() =>
-              const PageLoading(label: 'Running report\u2026'),
+              PageLoading(label: AppLocalizations.of(context)!.runningReport),
             ReportsError(:final message) => PageError(
-                title: 'Report failed',
+                title: AppLocalizations.of(context)!.reportFailed,
                 message: message,
                 onRetry: () =>
                     context.read<ReportsCubit>().runReport(report.id),
@@ -60,7 +61,7 @@ class _ReportDetailView extends StatelessWidget {
             ReportLoaded(:final result) => result.rows.isEmpty
                 ? Center(
                     child: Text(
-                      'No data returned',
+                      AppLocalizations.of(context)!.noDataReturned,
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                   )
@@ -92,8 +93,11 @@ class _ReportDetailView extends StatelessWidget {
                       ),
                     ),
                   ),
-            // List states shouldn't appear on this page.
-            ReportsLoaded() => const PageLoading(label: 'Running report\u2026'),
+            // List / pipeline-summary states shouldn't appear on this page.
+            ReportsLoaded() ||
+            PipelineSummaryLoading() ||
+            PipelineSummaryLoaded() =>
+              PageLoading(label: AppLocalizations.of(context)!.runningReport),
           };
         },
       ),

@@ -1,11 +1,15 @@
 import 'package:cis_crm/core/error/exceptions.dart';
+import 'package:cis_crm/core/pagination/paginated_response.dart';
 import 'package:cis_crm/features/pipeline/data/models/record_model.dart';
 import 'package:cis_crm/features/pipeline/data/models/stage_transition_model.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/record.dart';
 import 'package:dio/dio.dart';
 
 abstract class RecordRemoteDataSource {
-  Future<List<RecordModel>> getRecords();
+  Future<PaginatedResponse<RecordModel>> getRecords({
+    int page = 1,
+    int perPage = 25,
+  });
 
   Future<RecordModel> getRecord(String id);
 
@@ -38,13 +42,29 @@ class RecordRemoteDataSourceImpl implements RecordRemoteDataSource {
   final Dio _dio;
 
   @override
-  Future<List<RecordModel>> getRecords() async {
+  Future<PaginatedResponse<RecordModel>> getRecords({
+    int page = 1,
+    int perPage = 25,
+  }) async {
     try {
-      final response = await _dio.get<List<dynamic>>('/api/records');
-      return response.data!
-          .cast<Map<String, dynamic>>()
-          .map(RecordModel.fromJson)
-          .toList();
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/api/records',
+        queryParameters: {'page': page, 'per_page': perPage},
+      );
+      final body = response.data;
+      if (body == null) {
+        throw const ServerException('Empty response body');
+      }
+      final data = (body['data'] as List<dynamic>?) ?? [];
+      final meta = body['meta'] as Map<String, dynamic>? ?? {};
+      final items =
+          data.cast<Map<String, dynamic>>().map(RecordModel.fromJson).toList();
+      return PaginatedResponse<RecordModel>(
+        items: items,
+        page: meta['page'] as int? ?? page,
+        perPage: meta['per_page'] as int? ?? perPage,
+        total: meta['total'] as int? ?? items.length,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to fetch records',

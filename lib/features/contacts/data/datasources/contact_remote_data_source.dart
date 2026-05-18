@@ -1,9 +1,13 @@
 import 'package:cis_crm/core/error/exceptions.dart';
+import 'package:cis_crm/core/pagination/paginated_response.dart';
 import 'package:cis_crm/features/contacts/data/models/contact_model.dart';
 import 'package:dio/dio.dart';
 
 abstract class ContactRemoteDataSource {
-  Future<List<ContactModel>> getContacts();
+  Future<PaginatedResponse<ContactModel>> getContacts({
+    int page = 1,
+    int perPage = 25,
+  });
   Future<ContactModel> getContact(String id);
   Future<ContactModel> createContact(ContactModel contact);
   Future<ContactModel> updateContact(ContactModel contact);
@@ -16,17 +20,29 @@ class ContactRemoteDataSourceImpl implements ContactRemoteDataSource {
   final Dio dio;
 
   @override
-  Future<List<ContactModel>> getContacts() async {
+  Future<PaginatedResponse<ContactModel>> getContacts({
+    int page = 1,
+    int perPage = 25,
+  }) async {
     try {
-      final response = await dio.get<List<dynamic>>('/api/contacts');
-      final data = response.data;
-      if (data == null) {
+      final response = await dio.get<Map<String, dynamic>>(
+        '/api/contacts',
+        queryParameters: {'page': page, 'per_page': perPage},
+      );
+      final body = response.data;
+      if (body == null) {
         throw const ServerException('Empty response body');
       }
-      return data
-          .cast<Map<String, dynamic>>()
-          .map(ContactModel.fromJson)
-          .toList();
+      final data = (body['data'] as List<dynamic>?) ?? [];
+      final meta = body['meta'] as Map<String, dynamic>? ?? {};
+      final items =
+          data.cast<Map<String, dynamic>>().map(ContactModel.fromJson).toList();
+      return PaginatedResponse<ContactModel>(
+        items: items,
+        page: meta['page'] as int? ?? page,
+        perPage: meta['per_page'] as int? ?? perPage,
+        total: meta['total'] as int? ?? items.length,
+      );
     } on DioException catch (e) {
       throw _handleDioException(e);
     }

@@ -1,5 +1,6 @@
 import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/features/email/presentation/bloc/email_bloc.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -43,12 +44,12 @@ class _EmailComposeViewState extends State<_EmailComposeView> {
         switch (state) {
           case EmailLoaded(sentMessage: final msg) when msg != null:
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Email sent successfully')),
+              SnackBar(content: Text(AppLocalizations.of(context)!.emailSentSuccess)),
             );
             Navigator.of(context).pop();
           case EmailLoaded(savedDraft: final draft) when draft != null:
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Draft saved')),
+              SnackBar(content: Text(AppLocalizations.of(context)!.draftSaved)),
             );
           case EmailError(:final failure):
             ScaffoldMessenger.of(context).showSnackBar(
@@ -60,7 +61,7 @@ class _EmailComposeViewState extends State<_EmailComposeView> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Compose Email'),
+          title: Text(AppLocalizations.of(context)!.emailComposeTitle),
           actions: [
             BlocBuilder<EmailBloc, EmailState>(
               builder: (context, state) {
@@ -69,12 +70,12 @@ class _EmailComposeViewState extends State<_EmailComposeView> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      tooltip: 'Save draft',
+                      tooltip: AppLocalizations.of(context)!.saveDraftTooltip,
                       icon: const Icon(Icons.save_outlined),
                       onPressed: isSending ? null : _saveDraft,
                     ),
                     IconButton(
-                      tooltip: 'Send email',
+                      tooltip: AppLocalizations.of(context)!.sendEmailTooltip,
                       icon: const Icon(Icons.send),
                       onPressed: isSending ? null : _sendEmail,
                     ),
@@ -91,15 +92,15 @@ class _EmailComposeViewState extends State<_EmailComposeView> {
             children: [
               TextFormField(
                 controller: _toController,
-                decoration: const InputDecoration(
-                  labelText: 'To',
-                  hintText: 'recipient@example.com',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.emailTo,
+                  hintText: AppLocalizations.of(context)!.emailToHint,
                   prefixIcon: Icon(Icons.person_outlined),
                 ),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Recipient is required';
+                    return AppLocalizations.of(context)!.emailRecipientRequired;
                   }
                   return null;
                 },
@@ -107,13 +108,13 @@ class _EmailComposeViewState extends State<_EmailComposeView> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _subjectController,
-                decoration: const InputDecoration(
-                  labelText: 'Subject',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.emailSubject,
                   prefixIcon: Icon(Icons.subject),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Subject is required';
+                    return AppLocalizations.of(context)!.emailSubjectRequired;
                   }
                   return null;
                 },
@@ -121,8 +122,8 @@ class _EmailComposeViewState extends State<_EmailComposeView> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _bodyController,
-                decoration: const InputDecoration(
-                  labelText: 'Body',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.emailBody,
                   alignLabelWithHint: true,
                   border: OutlineInputBorder(),
                 ),

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/features/settings/presentation/bloc/google_integration_cubit.dart';
 import 'package:cis_crm/features/settings/presentation/bloc/google_integration_state.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -25,7 +26,7 @@ class _IntegrationsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Integrations')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.integrationsTitle)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: const [
@@ -67,17 +68,17 @@ class _GoogleIntegrationCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Google Workspace',
+                            AppLocalizations.of(context)!.googleWorkspace,
                             style: theme.textTheme.titleMedium,
                           ),
                           Text(
-                            'Connect Gmail, Calendar, and Contacts',
+                            AppLocalizations.of(context)!.googleWorkspaceDescription,
                             style: theme.textTheme.bodySmall,
                           ),
                         ],
                       ),
                     ),
-                    _buildStatusChip(state),
+                    _buildStatusChip(context, state),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -91,13 +92,13 @@ class _GoogleIntegrationCard extends StatelessWidget {
                     onPressed: () => context
                         .read<GoogleIntegrationCubit>()
                         .disconnectGoogle(),
-                    child: const Text('Disconnect'),
+                    child: Text(AppLocalizations.of(context)!.disconnect),
                   ),
                 ] else ...[
                   FilledButton.icon(
                     onPressed: () => _handleConnect(context),
                     icon: const Icon(Icons.link),
-                    label: const Text('Connect Google Account'),
+                    label: Text(AppLocalizations.of(context)!.connectGoogleAccount),
                   ),
                 ],
               ],
@@ -108,16 +109,16 @@ class _GoogleIntegrationCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusChip(GoogleIntegrationState state) {
+  Widget _buildStatusChip(BuildContext context, GoogleIntegrationState state) {
     if (state is GoogleIntegrationLoaded && state.connection.connected) {
-      return const Chip(
-        label: Text('Connected'),
-        backgroundColor: Color(0xFFE8F5E9),
+      return Chip(
+        label: Text(AppLocalizations.of(context)!.connected),
+        backgroundColor: const Color(0xFFE8F5E9),
         side: BorderSide.none,
       );
     }
-    return const Chip(
-      label: Text('Not connected'),
+    return Chip(
+      label: Text(AppLocalizations.of(context)!.notConnected),
       side: BorderSide.none,
     );
   }
@@ -145,7 +146,7 @@ class _GoogleIntegrationCard extends StatelessWidget {
               const Icon(Icons.sync, size: 16),
               const SizedBox(width: 8),
               Text(
-                'Last synced: ${_formatDateTime(state.connection.lastSync!)}',
+                AppLocalizations.of(context)!.lastSynced(_formatDateTime(state.connection.lastSync!)),
                 style: theme.textTheme.bodySmall,
               ),
             ],
@@ -170,13 +171,12 @@ class _GoogleIntegrationCard extends StatelessWidget {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Connect Google Account'),
+        title: Text(AppLocalizations.of(dialogContext)!.connectGoogleAccount),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Copy the link below and open it in your browser to '
-              'authorize your Google account:',
+            Text(
+              AppLocalizations.of(dialogContext)!.connectGoogleInstructions,
             ),
             const SizedBox(height: 12),
             SelectableText(
@@ -188,7 +188,7 @@ class _GoogleIntegrationCard extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(dialogContext)!.cancel),
           ),
           FilledButton.icon(
             onPressed: () {
@@ -196,14 +196,14 @@ class _GoogleIntegrationCard extends StatelessWidget {
                 Clipboard.setData(ClipboardData(text: authUrl)).then((_) {
                   if (dialogContext.mounted) {
                     ScaffoldMessenger.of(dialogContext).showSnackBar(
-                      const SnackBar(content: Text('Link copied to clipboard')),
+                      SnackBar(content: Text(AppLocalizations.of(dialogContext)!.linkCopied)),
                     );
                   }
                 }),
               );
             },
             icon: const Icon(Icons.copy),
-            label: const Text('Copy Link'),
+            label: Text(AppLocalizations.of(dialogContext)!.copyLink),
           ),
         ],
       ),

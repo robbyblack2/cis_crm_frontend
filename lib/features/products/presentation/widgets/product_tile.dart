@@ -1,5 +1,6 @@
 import 'package:cis_crm/features/products/domain/entities/product.dart';
 import 'package:cis_crm/features/products/domain/entities/product_type.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class ProductTile extends StatelessWidget {
@@ -59,7 +60,7 @@ class _ActiveBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        isActive ? 'Active' : 'Inactive',
+        isActive ? AppLocalizations.of(context)!.productActive : AppLocalizations.of(context)!.productInactive,
         style: theme.textTheme.labelSmall?.copyWith(
           color: isActive
               ? theme.colorScheme.onPrimaryContainer

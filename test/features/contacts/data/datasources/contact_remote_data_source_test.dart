@@ -1,4 +1,5 @@
 import 'package:cis_crm/core/error/exceptions.dart';
+import 'package:cis_crm/core/pagination/paginated_response.dart';
 import 'package:cis_crm/features/contacts/data/datasources/contact_remote_data_source.dart';
 import 'package:cis_crm/features/contacts/data/models/contact_model.dart';
 import 'package:dio/dio.dart';
@@ -35,10 +36,16 @@ void main() {
   };
 
   group('getContacts', () {
-    test('returns list of ContactModel when response is 200', () async {
-      when(() => mockDio.get<List<dynamic>>(any())).thenAnswer(
+    test('returns PaginatedResponse when response is 200', () async {
+      when(() => mockDio.get<Map<String, dynamic>>(
+            any(),
+            queryParameters: any(named: 'queryParameters'),
+          )).thenAnswer(
         (_) async => Response(
-          data: [tContactJson],
+          data: {
+            'data': [tContactJson],
+            'meta': {'page': 1, 'per_page': 25, 'total': 100},
+          },
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),
@@ -46,14 +53,51 @@ void main() {
 
       final result = await dataSource.getContacts();
 
-      expect(result, isA<List<ContactModel>>());
-      expect(result, hasLength(1));
-      expect(result.first.firstName, equals('John'));
-      verify(() => mockDio.get<List<dynamic>>('/api/contacts')).called(1);
+      expect(result, isA<PaginatedResponse<ContactModel>>());
+      expect(result.items, hasLength(1));
+      expect(result.items.first.firstName, equals('John'));
+      expect(result.page, equals(1));
+      expect(result.perPage, equals(25));
+      expect(result.total, equals(100));
+      expect(result.hasMore, isTrue);
+      verify(() => mockDio.get<Map<String, dynamic>>(
+            '/api/contacts',
+            queryParameters: {'page': 1, 'per_page': 25},
+          )).called(1);
+    });
+
+    test('passes page and perPage as query parameters', () async {
+      when(() => mockDio.get<Map<String, dynamic>>(
+            any(),
+            queryParameters: any(named: 'queryParameters'),
+          )).thenAnswer(
+        (_) async => Response(
+          data: {
+            'data': <dynamic>[],
+            'meta': {'page': 3, 'per_page': 10, 'total': 25},
+          },
+          statusCode: 200,
+          requestOptions: RequestOptions(),
+        ),
+      );
+
+      final result = await dataSource.getContacts(page: 3, perPage: 10);
+
+      expect(result.page, equals(3));
+      expect(result.perPage, equals(10));
+      expect(result.total, equals(25));
+      expect(result.hasMore, isFalse);
+      verify(() => mockDio.get<Map<String, dynamic>>(
+            '/api/contacts',
+            queryParameters: {'page': 3, 'per_page': 10},
+          )).called(1);
     });
 
     test('throws ServerException when response data is null', () async {
-      when(() => mockDio.get<List<dynamic>>(any())).thenAnswer(
+      when(() => mockDio.get<Map<String, dynamic>>(
+            any(),
+            queryParameters: any(named: 'queryParameters'),
+          )).thenAnswer(
         (_) async => Response(
           statusCode: 200,
           requestOptions: RequestOptions(),
@@ -67,7 +111,10 @@ void main() {
     });
 
     test('throws NetworkException on connection error', () async {
-      when(() => mockDio.get<List<dynamic>>(any())).thenThrow(
+      when(() => mockDio.get<Map<String, dynamic>>(
+            any(),
+            queryParameters: any(named: 'queryParameters'),
+          )).thenThrow(
         DioException(
           type: DioExceptionType.connectionError,
           requestOptions: RequestOptions(),
@@ -81,7 +128,10 @@ void main() {
     });
 
     test('throws UnauthorizedException on 401 response', () async {
-      when(() => mockDio.get<List<dynamic>>(any())).thenThrow(
+      when(() => mockDio.get<Map<String, dynamic>>(
+            any(),
+            queryParameters: any(named: 'queryParameters'),
+          )).thenThrow(
         DioException(
           type: DioExceptionType.badResponse,
           response: Response(
@@ -99,7 +149,10 @@ void main() {
     });
 
     test('throws ServerException on 500 response', () async {
-      when(() => mockDio.get<List<dynamic>>(any())).thenThrow(
+      when(() => mockDio.get<Map<String, dynamic>>(
+            any(),
+            queryParameters: any(named: 'queryParameters'),
+          )).thenThrow(
         DioException(
           type: DioExceptionType.badResponse,
           message: 'Internal Server Error',

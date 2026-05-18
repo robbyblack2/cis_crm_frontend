@@ -13,7 +13,7 @@ class WebSocketEvent {
   factory WebSocketEvent.fromJson(String raw) {
     final map = jsonDecode(raw) as Map<String, dynamic>;
     return WebSocketEvent(
-      type: map['type'] as String? ?? '',
+      type: map['event'] as String? ?? map['type'] as String? ?? '',
       data: map['data'] as Map<String, dynamic>? ?? const {},
     );
   }

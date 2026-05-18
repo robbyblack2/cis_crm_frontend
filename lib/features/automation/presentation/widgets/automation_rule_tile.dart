@@ -1,4 +1,5 @@
 import 'package:cis_crm/features/automation/domain/entities/automation_rule.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class AutomationRuleTile extends StatelessWidget {
@@ -33,7 +34,7 @@ class AutomationRuleTile extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
       ),
       trailing: Tooltip(
-        message: rule.isActive ? 'Deactivate rule' : 'Activate rule',
+        message: rule.isActive ? AppLocalizations.of(context)!.deactivateRule : AppLocalizations.of(context)!.activateRule,
         child: Switch(
           value: rule.isActive,
           onChanged: onToggle,

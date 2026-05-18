@@ -1,6 +1,7 @@
 import 'package:cis_crm/features/activity/domain/entities/call_direction.dart';
 import 'package:cis_crm/features/activity/domain/entities/call_log.dart';
 import 'package:cis_crm/features/activity/domain/entities/call_outcome.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class CallLogTile extends StatelessWidget {
@@ -15,12 +16,13 @@ class CallLogTile extends StatelessWidget {
     };
   }
 
-  String _outcomeLabel(CallOutcome outcome) {
+  String _outcomeLabel(BuildContext context, CallOutcome outcome) {
+    final l10n = AppLocalizations.of(context)!;
     return switch (outcome) {
-      CallOutcome.connected => 'Connected',
-      CallOutcome.voicemail => 'Voicemail',
-      CallOutcome.noAnswer => 'No Answer',
-      CallOutcome.busy => 'Busy',
+      CallOutcome.connected => l10n.callOutcomeConnected,
+      CallOutcome.voicemail => l10n.callOutcomeVoicemail,
+      CallOutcome.noAnswer => l10n.callOutcomeNoAnswer,
+      CallOutcome.busy => l10n.callOutcomeBusy,
     };
   }
 
@@ -54,7 +56,7 @@ class CallLogTile extends StatelessWidget {
         style: theme.textTheme.bodyLarge,
       ),
       subtitle: Text(
-        '${_outcomeLabel(log.outcome)}'
+        '${_outcomeLabel(context, log.outcome)}'
         ' \u2022 ${_formatDuration(log.durationSeconds)}',
         style: theme.textTheme.bodySmall,
       ),

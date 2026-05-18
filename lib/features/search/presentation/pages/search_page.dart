@@ -4,6 +4,7 @@ import 'package:cis_crm/core/widgets/state/page_error.dart';
 import 'package:cis_crm/features/search/domain/entities/search_result.dart';
 import 'package:cis_crm/features/search/presentation/bloc/search_bloc.dart';
 import 'package:cis_crm/features/search/presentation/widgets/search_result_group.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -43,10 +44,10 @@ class _SearchViewState extends State<_SearchView> {
           controller: _controller,
           autofocus: true,
           decoration: InputDecoration(
-            hintText: 'Search contacts, deals, files...',
+            hintText: AppLocalizations.of(context)!.searchFieldHint,
             border: InputBorder.none,
             suffixIcon: IconButton(
-              tooltip: 'Clear search',
+              tooltip: AppLocalizations.of(context)!.clearSearch,
               icon: const Icon(Icons.clear),
               onPressed: () {
                 _controller.clear();
@@ -62,10 +63,10 @@ class _SearchViewState extends State<_SearchView> {
       body: BlocBuilder<SearchBloc, SearchState>(
         builder: (context, state) {
           return switch (state) {
-            SearchInitial() => const EmptyState(
+            SearchInitial() => EmptyState(
                 icon: Icons.search,
-                title: 'Search your CRM',
-                message: 'Find contacts, deals, files, and more.',
+                title: AppLocalizations.of(context)!.searchCrmTitle,
+                message: AppLocalizations.of(context)!.searchCrmMessage,
               ),
             SearchLoading() => const Center(
                 child: CircularProgressIndicator(),
@@ -75,11 +76,11 @@ class _SearchViewState extends State<_SearchView> {
               ),
             SearchEmpty(:final query) => EmptyState(
                 icon: Icons.search_off,
-                title: 'No results',
-                message: 'No matches found for "$query".',
+                title: AppLocalizations.of(context)!.searchNoResultsTitle,
+                message: AppLocalizations.of(context)!.searchNoMatchesFor(query),
               ),
             SearchError(:final failure) => PageError(
-                title: 'Search failed',
+                title: AppLocalizations.of(context)!.searchFailed,
                 message: failure.message,
                 onRetry: () {
                   final query = _controller.text;

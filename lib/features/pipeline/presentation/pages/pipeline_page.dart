@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:cis_crm/app/injection.dart';
+import 'package:cis_crm/core/network/web_socket_cubit.dart';
+import 'package:cis_crm/core/network/web_socket_event.dart';
 import 'package:cis_crm/core/responsive/breakpoints.dart';
 import 'package:cis_crm/core/widgets/state/empty_state.dart';
 import 'package:cis_crm/core/widgets/state/page_error.dart';
@@ -9,6 +13,7 @@ import 'package:cis_crm/features/pipeline/presentation/bloc/pipeline_bloc.dart';
 import 'package:cis_crm/features/pipeline/presentation/bloc/record_bloc.dart';
 import 'package:cis_crm/features/pipeline/presentation/pages/record_detail_page.dart';
 import 'package:cis_crm/features/pipeline/presentation/widgets/stage_column.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -32,8 +37,59 @@ class PipelinePage extends StatelessWidget {
   }
 }
 
-class _PipelineView extends StatelessWidget {
+class _PipelineView extends StatefulWidget {
   const _PipelineView();
+
+  @override
+  State<_PipelineView> createState() => _PipelineViewState();
+}
+
+/// Event types that should trigger a record reload.
+const _recordEventTypes = {
+  'record.created',
+  'record.updated',
+  'record.moved',
+};
+
+class _PipelineViewState extends State<_PipelineView> {
+  StreamSubscription<WebSocketEvent>? _wsSub;
+  String? _subscribedChannel;
+
+  @override
+  void dispose() {
+    _unsubscribeChannel();
+    _wsSub?.cancel();
+    super.dispose();
+  }
+
+  void _subscribeToChannel(String pipelineId) {
+    final channel = 'pipeline:$pipelineId';
+    if (_subscribedChannel == channel) return;
+
+    _unsubscribeChannel();
+    _subscribedChannel = channel;
+
+    final wsCubit = context.read<WebSocketCubit>()
+      ..subscribe(channel);
+
+    _wsSub?.cancel();
+    _wsSub = wsCubit.events.listen((event) {
+      if (_recordEventTypes.contains(event.type) && mounted) {
+        context.read<RecordBloc>().add(const RecordLoadRequested());
+      }
+    });
+  }
+
+  void _unsubscribeChannel() {
+    if (_subscribedChannel != null) {
+      try {
+        context.read<WebSocketCubit>().unsubscribe(_subscribedChannel!);
+      } catch (_) {
+        // Context may not be valid during dispose.
+      }
+      _subscribedChannel = null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,15 +102,20 @@ class _PipelineView extends StatelessWidget {
                   PipelineKanbanRequested(pipelineId: firstPipeline.id),
                 );
           }
+          // Subscribe to the active pipeline's WebSocket channel.
+          final activePipelineId =
+              state.kanbanPipeline?.id ?? firstPipeline.id;
+          _subscribeToChannel(activePipelineId);
         }
       },
       builder: (context, state) {
+        final l10n = AppLocalizations.of(context)!;
         return switch (state) {
           PipelineInitial() =>
-            const PageLoading(label: 'Initializing pipeline...'),
-          PipelineLoading() => const PageLoading(label: 'Loading pipelines...'),
+            PageLoading(label: l10n.pipelineInitializing),
+          PipelineLoading() => PageLoading(label: l10n.pipelineLoading),
           PipelineError(:final message) => PageError(
-              title: 'Failed to load pipelines',
+              title: l10n.failedToLoadPipelines,
               message: message,
               onRetry: () => context
                   .read<PipelineBloc>()
@@ -79,7 +140,7 @@ class _LoadedPipelineView extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pipeline'),
+        title: Text(AppLocalizations.of(context)!.pipelineTitle),
         actions: [
           if (state.pipelines.length > 1)
             Padding(
@@ -130,7 +191,7 @@ class _LoadedPipelineView extends StatelessWidget {
                           .read<RecordBloc>()
                           .add(const RecordLoadRequested()),
                       icon: const Icon(Icons.refresh),
-                      label: const Text('Retry'),
+                      label: Text(AppLocalizations.of(context)!.retry),
                     ),
                   ],
                 ),
@@ -146,8 +207,8 @@ class _LoadedPipelineView extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showCreateRecordDialog(context),
         icon: const Icon(Icons.add),
-        label: const Text('New Record'),
-        tooltip: 'Add a new record',
+        label: Text(AppLocalizations.of(context)!.newRecord),
+        tooltip: AppLocalizations.of(context)!.addNewRecord,
       ),
     );
   }
@@ -168,16 +229,17 @@ class _LoadedPipelineView extends StatelessWidget {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setState) {
+            final l10n = AppLocalizations.of(context)!;
             return AlertDialog(
-              title: const Text('New Record'),
+              title: Text(l10n.newRecord),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
                     controller: titleController,
-                    decoration: const InputDecoration(
-                      labelText: 'Title',
-                      hintText: 'Enter record title',
+                    decoration: InputDecoration(
+                      labelText: l10n.title,
+                      hintText: l10n.enterRecordTitle,
                     ),
                     autofocus: true,
                     textCapitalization: TextCapitalization.sentences,
@@ -185,8 +247,8 @@ class _LoadedPipelineView extends StatelessWidget {
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     initialValue: selectedStageId,
-                    decoration: const InputDecoration(
-                      labelText: 'Stage',
+                    decoration: InputDecoration(
+                      labelText: l10n.stage,
                     ),
                     items: stages
                         .map(
@@ -207,7 +269,7 @@ class _LoadedPipelineView extends StatelessWidget {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
+                  child: Text(l10n.cancel),
                 ),
                 FilledButton(
                   onPressed: () {
@@ -223,7 +285,7 @@ class _LoadedPipelineView extends StatelessWidget {
                     );
                     Navigator.of(dialogContext).pop();
                   },
-                  child: const Text('Create'),
+                  child: Text(l10n.create),
                 ),
               ],
             );
@@ -248,10 +310,11 @@ class _KanbanBoard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (stages.isEmpty) {
-      return const EmptyState(
+      final l10n = AppLocalizations.of(context)!;
+      return EmptyState(
         icon: Icons.view_kanban_outlined,
-        title: 'No stages configured',
-        message: 'Add stages to this pipeline to start tracking records.',
+        title: l10n.noStagesConfigured,
+        message: l10n.noStagesConfiguredMessage,
       );
     }
 

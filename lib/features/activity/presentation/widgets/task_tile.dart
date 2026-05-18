@@ -8,12 +8,14 @@ class TaskTile extends StatelessWidget {
     required this.task,
     required this.onStatusToggled,
     required this.onDeleted,
+    this.onTap,
     super.key,
   });
 
   final CrmTask task;
   final ValueChanged<CrmTask> onStatusToggled;
   final ValueChanged<String> onDeleted;
+  final VoidCallback? onTap;
 
   Color _priorityColor(TaskPriority priority) {
     return switch (priority) {
@@ -39,6 +41,7 @@ class TaskTile extends StatelessWidget {
       ),
       onDismissed: (_) => onDeleted(task.id),
       child: ListTile(
+        onTap: onTap,
         leading: Checkbox(
           value: isDone,
           onChanged: (_) {

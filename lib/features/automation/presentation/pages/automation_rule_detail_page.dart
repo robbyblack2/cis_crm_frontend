@@ -1,3 +1,4 @@
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class AutomationRuleDetailPage extends StatelessWidget {
@@ -10,10 +11,10 @@ class AutomationRuleDetailPage extends StatelessWidget {
     // NOTE: The detail view is a placeholder; the bloc no longer has a
     // detail-load event.  Just show a simple scaffold.
     return Scaffold(
-      appBar: AppBar(title: const Text('Rule Detail')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.ruleDetail)),
       body: Center(
         child: Text(
-          'Detail for rule $ruleId — coming soon.',
+          AppLocalizations.of(context)!.ruleDetailComingSoon(ruleId),
           style: Theme.of(context).textTheme.bodyLarge,
         ),
       ),

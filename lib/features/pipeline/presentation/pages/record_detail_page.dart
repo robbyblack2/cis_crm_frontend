@@ -3,6 +3,7 @@ import 'package:cis_crm/features/pipeline/domain/entities/record.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/stage.dart';
 import 'package:cis_crm/features/pipeline/presentation/bloc/pipeline_bloc.dart';
 import 'package:cis_crm/features/pipeline/presentation/bloc/record_bloc.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -23,9 +24,10 @@ class RecordDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<RecordBloc, RecordState>(
       builder: (context, recordState) {
+        final l10n = AppLocalizations.of(context)!;
         if (recordState is! RecordLoaded) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Record')),
+            appBar: AppBar(title: Text(l10n.record)),
             body: const Center(child: CircularProgressIndicator()),
           );
         }
@@ -37,8 +39,8 @@ class RecordDetailPage extends StatelessWidget {
 
         if (record == null) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Record')),
-            body: const Center(child: Text('Record not found')),
+            appBar: AppBar(title: Text(l10n.record)),
+            body: Center(child: Text(l10n.recordNotFound)),
           );
         }
 
@@ -82,37 +84,40 @@ class _RecordDetailScaffold extends StatelessWidget {
               ),
             ),
           PopupMenuButton<String>(
-            tooltip: 'More actions',
+            tooltip: AppLocalizations.of(context)!.moreActions,
             onSelected: (action) => _handleMenuAction(context, action),
-            itemBuilder: (_) => const [
-              PopupMenuItem(
-                value: 'edit',
-                child: ListTile(
-                  leading: Icon(Icons.edit_outlined),
-                  title: Text('Edit'),
-                  contentPadding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
+            itemBuilder: (menuContext) {
+              final l10n = AppLocalizations.of(menuContext)!;
+              return [
+                PopupMenuItem(
+                  value: 'edit',
+                  child: ListTile(
+                    leading: const Icon(Icons.edit_outlined),
+                    title: Text(l10n.edit),
+                    contentPadding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ),
-              ),
-              PopupMenuItem(
-                value: 'move',
-                child: ListTile(
-                  leading: Icon(Icons.drive_file_move_outlined),
-                  title: Text('Move to stage'),
-                  contentPadding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
+                PopupMenuItem(
+                  value: 'move',
+                  child: ListTile(
+                    leading: const Icon(Icons.drive_file_move_outlined),
+                    title: Text(l10n.moveToStage),
+                    contentPadding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ),
-              ),
-              PopupMenuItem(
-                value: 'delete',
-                child: ListTile(
-                  leading: Icon(Icons.delete_outlined),
-                  title: Text('Delete'),
-                  contentPadding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
+                PopupMenuItem(
+                  value: 'delete',
+                  child: ListTile(
+                    leading: const Icon(Icons.delete_outlined),
+                    title: Text(l10n.delete),
+                    contentPadding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ),
-              ),
-            ],
+              ];
+            },
           ),
         ],
       ),
@@ -129,7 +134,7 @@ class _RecordDetailScaffold extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Details',
+                      AppLocalizations.of(context)!.details,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -137,36 +142,36 @@ class _RecordDetailScaffold extends StatelessWidget {
                     const Divider(height: 24),
                     _DetailRow(
                       icon: Icons.title,
-                      label: 'Title',
+                      label: AppLocalizations.of(context)!.title,
                       value: record.title,
                     ),
                     if (pipelineName != null)
                       _DetailRow(
                         icon: Icons.view_kanban_outlined,
-                        label: 'Pipeline',
+                        label: AppLocalizations.of(context)!.pipeline,
                         value: pipelineName,
                       ),
                     if (stage != null)
                       _DetailRow(
                         icon: Icons.flag_outlined,
-                        label: 'Stage',
+                        label: AppLocalizations.of(context)!.stage,
                         value: stage.name,
                       ),
                     if (record.contactId != null)
                       _DetailRow(
                         icon: Icons.person_outline,
-                        label: 'Contact',
+                        label: AppLocalizations.of(context)!.contact,
                         value: record.contactId!,
                       ),
                     if (record.ownerId != null)
                       _DetailRow(
                         icon: Icons.assignment_ind_outlined,
-                        label: 'Owner',
+                        label: AppLocalizations.of(context)!.owner,
                         value: record.ownerId!,
                       ),
                     _DetailRow(
                       icon: Icons.source_outlined,
-                      label: 'Source',
+                      label: AppLocalizations.of(context)!.source,
                       value: record.source.name,
                     ),
                     if (record.tags.isNotEmpty) ...[
@@ -207,12 +212,12 @@ class _RecordDetailScaffold extends StatelessWidget {
                     const SizedBox(height: 8),
                     _DetailRow(
                       icon: Icons.calendar_today_outlined,
-                      label: 'Created',
+                      label: AppLocalizations.of(context)!.created,
                       value: _formatDate(record.createdAt),
                     ),
                     _DetailRow(
                       icon: Icons.update_outlined,
-                      label: 'Updated',
+                      label: AppLocalizations.of(context)!.updated,
                       value: _formatDate(record.updatedAt),
                     ),
                   ],
@@ -229,7 +234,7 @@ class _RecordDetailScaffold extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Timeline',
+                      AppLocalizations.of(context)!.timeline,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -247,7 +252,7 @@ class _RecordDetailScaffold extends StatelessWidget {
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              'Activity timeline coming soon',
+                              AppLocalizations.of(context)!.activityTimelineComingSoon,
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: colorScheme.onSurfaceVariant,
                               ),
@@ -295,6 +300,7 @@ class _RecordDetailScaffold extends StatelessWidget {
   void _handleMenuAction(BuildContext context, String action) {
     switch (action) {
       case 'edit':
+        _showEditDialog(context);
       case 'move':
       case 'delete':
         ScaffoldMessenger.of(context).showSnackBar(
@@ -306,6 +312,46 @@ class _RecordDetailScaffold extends StatelessWidget {
           ),
         );
     }
+  }
+
+  void _showEditDialog(BuildContext context) {
+    final titleController = TextEditingController(text: record.title);
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Edit Record'),
+        content: TextField(
+          controller: titleController,
+          decoration: const InputDecoration(
+            labelText: 'Title',
+            hintText: 'Enter record title',
+          ),
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final title = titleController.text.trim();
+              if (title.isEmpty) return;
+              context.read<RecordBloc>().add(
+                    RecordUpdateRequested(
+                      id: record.id,
+                      title: title,
+                    ),
+                  );
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

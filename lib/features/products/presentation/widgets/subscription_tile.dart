@@ -1,5 +1,6 @@
 import 'package:cis_crm/features/products/domain/entities/subscription.dart';
 import 'package:cis_crm/features/products/domain/entities/subscription_status.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class SubscriptionTile extends StatelessWidget {
@@ -52,13 +53,14 @@ class _StatusChip extends StatelessWidget {
     SubscriptionStatus status,
   ) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return switch (status) {
-      SubscriptionStatus.active => ('Active', cs.primary),
-      SubscriptionStatus.trialing => ('Trialing', cs.tertiary),
-      SubscriptionStatus.pastDue => ('Past Due', cs.error),
-      SubscriptionStatus.paused => ('Paused', cs.outline),
-      SubscriptionStatus.cancelled => ('Cancelled', cs.onSurfaceVariant),
-      SubscriptionStatus.expired => ('Expired', cs.error),
+      SubscriptionStatus.active => (l10n.statusActive, cs.primary),
+      SubscriptionStatus.trialing => (l10n.statusTrialing, cs.tertiary),
+      SubscriptionStatus.pastDue => (l10n.statusPastDue, cs.error),
+      SubscriptionStatus.paused => (l10n.statusPaused, cs.outline),
+      SubscriptionStatus.cancelled => (l10n.statusCancelled, cs.onSurfaceVariant),
+      SubscriptionStatus.expired => (l10n.statusExpired, cs.error),
     };
   }
 }

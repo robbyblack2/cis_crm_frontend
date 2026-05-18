@@ -1,4 +1,5 @@
 import 'package:cis_crm/features/reporting/data/datasources/report_remote_datasource.dart';
+import 'package:cis_crm/features/reporting/data/models/pipeline_summary_model.dart';
 import 'package:cis_crm/features/reporting/data/models/report_model.dart';
 import 'package:cis_crm/features/reporting/data/models/report_result_model.dart';
 import 'package:dio/dio.dart';
@@ -109,5 +110,47 @@ void main() {
 
       expect(result, 'name,total\nAlice,100');
     });
+  });
+
+  group('getPipelineSummary', () {
+    test(
+      'returns PipelineSummaryModel from GET /api/reports/pipeline-summary/:id',
+      () async {
+        when(
+          () => mockDio.get<Map<String, dynamic>>(
+            '/api/reports/pipeline-summary/p1',
+          ),
+        ).thenAnswer(
+          (_) async => Response(
+            data: {
+              'data': {
+                'pipeline_id': 'p1',
+                'total_records': 45,
+                'total_value': 2250000,
+                'by_stage': [
+                  {
+                    'stage_id': 's1',
+                    'stage_name': 'Qualified',
+                    'count': 10,
+                    'value': 500000,
+                  },
+                ],
+              },
+            },
+            statusCode: 200,
+            requestOptions: RequestOptions(),
+          ),
+        );
+
+        final result = await dataSource.getPipelineSummary('p1');
+
+        expect(result, isA<PipelineSummaryModel>());
+        expect(result.pipelineId, 'p1');
+        expect(result.totalRecords, 45);
+        expect(result.totalValue, 2250000);
+        expect(result.byStage.length, 1);
+        expect(result.byStage.first.stageName, 'Qualified');
+      },
+    );
   });
 }

@@ -5,6 +5,7 @@ import 'package:cis_crm/features/contacts/domain/entities/contact.dart';
 import 'package:cis_crm/features/contacts/presentation/bloc/contacts_bloc.dart';
 import 'package:cis_crm/features/contacts/presentation/pages/contact_detail_page.dart';
 import 'package:cis_crm/features/contacts/presentation/widgets/contact_tile.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -25,13 +26,14 @@ class _ContactsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Contacts'),
+        title: Text(l10n.contactsTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
-            tooltip: 'Search contacts',
+            tooltip: l10n.contactSearch,
             onPressed: () => _openSearch(context),
           ),
         ],
@@ -47,17 +49,17 @@ class _ContactsView extends StatelessWidget {
             ContactsLoaded(:final contacts) => contacts.isEmpty
                 ? EmptyState(
                     icon: Icons.contacts_outlined,
-                    title: 'No contacts yet',
-                    message: 'Tap the + button to add your first contact.',
+                    title: l10n.contactsEmpty,
+                    message: l10n.contactsEmptyAction,
                     action: FilledButton.icon(
                       onPressed: () => _addContact(context),
                       icon: const Icon(Icons.add),
-                      label: const Text('Add Contact'),
+                      label: Text(l10n.addContact),
                     ),
                   )
-                : _ContactsList(contacts: contacts),
+                : _ContactsList(state: state),
             ContactsError(:final failure) => PageError(
-                title: 'Failed to load contacts',
+                title: l10n.failedToLoadContacts,
                 message: failure.message,
                 onRetry: () => context
                     .read<ContactsBloc>()
@@ -67,7 +69,7 @@ class _ContactsView extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        tooltip: 'Add contact',
+        tooltip: l10n.addContactTooltip,
         onPressed: () => _addContact(context),
         child: const Icon(Icons.add),
       ),
@@ -92,17 +94,62 @@ class _ContactsView extends StatelessWidget {
   }
 }
 
-class _ContactsList extends StatelessWidget {
-  const _ContactsList({required this.contacts});
+class _ContactsList extends StatefulWidget {
+  const _ContactsList({required this.state});
 
-  final List<Contact> contacts;
+  final ContactsLoaded state;
+
+  @override
+  State<_ContactsList> createState() => _ContactsListState();
+}
+
+class _ContactsListState extends State<_ContactsList> {
+  final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_isNearBottom) {
+      context.read<ContactsBloc>().add(const ContactsLoadMoreRequested());
+    }
+  }
+
+  bool get _isNearBottom {
+    if (!_scrollController.hasClients) return false;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    return currentScroll >= maxScroll - 200;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final contacts = widget.state.contacts;
+    final hasMore = widget.state.hasMore;
+    final isLoadingMore = widget.state.isLoadingMore;
+
     return ListView.separated(
-      itemCount: contacts.length,
+      controller: _scrollController,
+      itemCount: contacts.length + (hasMore ? 1 : 0),
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
+        if (index >= contacts.length) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
         final contact = contacts[index];
         return ContactTile(
           contact: contact,
@@ -127,10 +174,11 @@ class _ContactSearchDelegate extends SearchDelegate<Contact?> {
 
   @override
   List<Widget>? buildActions(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return [
       IconButton(
         icon: const Icon(Icons.clear),
-        tooltip: 'Clear search',
+        tooltip: l10n.clearSearch,
         onPressed: () {
           query = '';
           showSuggestions(context);
@@ -141,9 +189,10 @@ class _ContactSearchDelegate extends SearchDelegate<Contact?> {
 
   @override
   Widget? buildLeading(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return IconButton(
       icon: const Icon(Icons.arrow_back),
-      tooltip: 'Back',
+      tooltip: l10n.back,
       onPressed: () => close(context, null),
     );
   }
@@ -155,6 +204,7 @@ class _ContactSearchDelegate extends SearchDelegate<Contact?> {
   Widget buildSuggestions(BuildContext context) => _buildList(context);
 
   Widget _buildList(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final lowerQuery = query.toLowerCase();
     final filtered = contacts.where((c) {
       final fullName = '${c.firstName} ${c.lastName}'.trim();
@@ -164,10 +214,10 @@ class _ContactSearchDelegate extends SearchDelegate<Contact?> {
     }).toList();
 
     if (filtered.isEmpty) {
-      return const EmptyState(
+      return EmptyState(
         icon: Icons.search_off,
-        title: 'No results',
-        message: 'Try a different search term.',
+        title: l10n.searchNoResultsTitle,
+        message: l10n.searchNoResultsMessage,
       );
     }
 

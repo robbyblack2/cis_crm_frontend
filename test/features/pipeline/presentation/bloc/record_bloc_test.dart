@@ -1,6 +1,7 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:cis_crm/core/error/failures.dart';
 import 'package:cis_crm/core/error/result.dart';
+import 'package:cis_crm/core/pagination/paginated_response.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/record.dart';
 import 'package:cis_crm/features/pipeline/domain/repositories/record_repository.dart';
 import 'package:cis_crm/features/pipeline/presentation/bloc/record_bloc.dart';
@@ -28,6 +29,13 @@ void main() {
     updatedAt: tNow,
   );
 
+  final tPaginatedResponse = PaginatedResponse<PipelineRecord>(
+    items: [tRecord],
+    page: 1,
+    perPage: 25,
+    total: 1,
+  );
+
   group('RecordBloc', () {
     test('initial state is RecordInitial', () {
       final bloc = RecordBloc(recordRepository: mockRepository);
@@ -40,13 +48,17 @@ void main() {
         'emits [RecordLoading, RecordLoaded] when getRecords succeeds',
         setUp: () {
           when(() => mockRepository.getRecords())
-              .thenAnswer((_) async => Success([tRecord]));
+              .thenAnswer((_) async => Success(tPaginatedResponse));
         },
         build: () => RecordBloc(recordRepository: mockRepository),
         act: (bloc) => bloc.add(const RecordLoadRequested()),
         expect: () => [
           const RecordLoading(),
-          RecordLoaded(records: [tRecord]),
+          RecordLoaded(
+            records: [tRecord],
+            currentPage: 1,
+            total: 1,
+          ),
         ],
         verify: (_) {
           verify(() => mockRepository.getRecords()).called(1);
@@ -69,6 +81,81 @@ void main() {
       );
     });
 
+    group('RecordLoadMoreRequested', () {
+      final tRecord2 = PipelineRecord(
+        id: 'r2',
+        pipelineId: 'p1',
+        stageId: 's1',
+        title: 'Another Deal',
+        source: RecordSource.manual,
+        tags: const [],
+        createdAt: tNow,
+        updatedAt: tNow,
+      );
+
+      final tPage2Response = PaginatedResponse<PipelineRecord>(
+        items: [tRecord2],
+        page: 2,
+        perPage: 25,
+        total: 50,
+      );
+
+      blocTest<RecordBloc, RecordState>(
+        'appends items when load more succeeds',
+        seed: () => RecordLoaded(
+          records: [tRecord],
+          currentPage: 1,
+          total: 50,
+          perPage: 25,
+        ),
+        setUp: () {
+          when(() => mockRepository.getRecords(page: 2, perPage: 25))
+              .thenAnswer((_) async => Success(tPage2Response));
+        },
+        build: () => RecordBloc(recordRepository: mockRepository),
+        act: (bloc) => bloc.add(const RecordLoadMoreRequested()),
+        expect: () => [
+          RecordLoaded(
+            records: [tRecord],
+            currentPage: 1,
+            total: 50,
+            perPage: 25,
+            isLoadingMore: true,
+          ),
+          RecordLoaded(
+            records: [tRecord, tRecord2],
+            currentPage: 2,
+            total: 50,
+            perPage: 25,
+          ),
+        ],
+        verify: (_) {
+          verify(() => mockRepository.getRecords(page: 2, perPage: 25))
+              .called(1);
+        },
+      );
+
+      blocTest<RecordBloc, RecordState>(
+        'does nothing when there are no more pages',
+        seed: () => RecordLoaded(
+          records: [tRecord],
+          currentPage: 1,
+          total: 1,
+          perPage: 25,
+        ),
+        build: () => RecordBloc(recordRepository: mockRepository),
+        act: (bloc) => bloc.add(const RecordLoadMoreRequested()),
+        expect: () => <RecordState>[],
+      );
+
+      blocTest<RecordBloc, RecordState>(
+        'does nothing when state is not RecordLoaded',
+        build: () => RecordBloc(recordRepository: mockRepository),
+        act: (bloc) => bloc.add(const RecordLoadMoreRequested()),
+        expect: () => <RecordState>[],
+      );
+    });
+
     group('RecordCreateRequested', () {
       blocTest<RecordBloc, RecordState>(
         'emits [RecordLoading, RecordLoaded] when create + reload succeeds',
@@ -82,7 +169,7 @@ void main() {
             ),
           ).thenAnswer((_) async => Success(tRecord));
           when(() => mockRepository.getRecords())
-              .thenAnswer((_) async => Success([tRecord]));
+              .thenAnswer((_) async => Success(tPaginatedResponse));
         },
         build: () => RecordBloc(recordRepository: mockRepository),
         act: (bloc) => bloc.add(
@@ -95,7 +182,11 @@ void main() {
         ),
         expect: () => [
           const RecordLoading(),
-          RecordLoaded(records: [tRecord]),
+          RecordLoaded(
+            records: [tRecord],
+            currentPage: 1,
+            total: 1,
+          ),
         ],
       );
 
@@ -129,6 +220,62 @@ void main() {
       );
     });
 
+    group('RecordUpdateRequested', () {
+      blocTest<RecordBloc, RecordState>(
+        'emits [RecordLoading, RecordLoaded] when update + reload succeeds',
+        setUp: () {
+          when(
+            () => mockRepository.updateRecord(
+              id: 'r1',
+              title: 'Updated Deal',
+            ),
+          ).thenAnswer((_) async => Success(tRecord));
+          when(() => mockRepository.getRecords())
+              .thenAnswer((_) async => Success(tPaginatedResponse));
+        },
+        build: () => RecordBloc(recordRepository: mockRepository),
+        act: (bloc) => bloc.add(
+          const RecordUpdateRequested(
+            id: 'r1',
+            title: 'Updated Deal',
+          ),
+        ),
+        expect: () => [
+          const RecordLoading(),
+          RecordLoaded(
+            records: [tRecord],
+            currentPage: 1,
+            total: 1,
+          ),
+        ],
+      );
+
+      blocTest<RecordBloc, RecordState>(
+        'emits [RecordLoading, RecordError] when update fails',
+        setUp: () {
+          when(
+            () => mockRepository.updateRecord(
+              id: 'r1',
+              title: 'Updated Deal',
+            ),
+          ).thenAnswer(
+            (_) async => const Failure(ServerFailure('Update failed')),
+          );
+        },
+        build: () => RecordBloc(recordRepository: mockRepository),
+        act: (bloc) => bloc.add(
+          const RecordUpdateRequested(
+            id: 'r1',
+            title: 'Updated Deal',
+          ),
+        ),
+        expect: () => const [
+          RecordLoading(),
+          RecordError(message: 'Update failed'),
+        ],
+      );
+    });
+
     group('RecordMoveRequested', () {
       blocTest<RecordBloc, RecordState>(
         'emits [RecordLoading, RecordLoaded] when move + reload succeeds',
@@ -137,7 +284,7 @@ void main() {
             () => mockRepository.moveRecord(id: 'r1', toStageId: 's2'),
           ).thenAnswer((_) async => Success(tRecord));
           when(() => mockRepository.getRecords())
-              .thenAnswer((_) async => Success([tRecord]));
+              .thenAnswer((_) async => Success(tPaginatedResponse));
         },
         build: () => RecordBloc(recordRepository: mockRepository),
         act: (bloc) => bloc.add(
@@ -145,7 +292,11 @@ void main() {
         ),
         expect: () => [
           const RecordLoading(),
-          RecordLoaded(records: [tRecord]),
+          RecordLoaded(
+            records: [tRecord],
+            currentPage: 1,
+            total: 1,
+          ),
         ],
       );
 

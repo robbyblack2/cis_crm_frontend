@@ -5,6 +5,7 @@ import 'package:cis_crm/core/widgets/state/page_loading.dart';
 import 'package:cis_crm/features/activity/domain/entities/call_log.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/call_log_cubit.dart';
 import 'package:cis_crm/features/activity/presentation/widgets/call_log_tile.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -30,9 +31,9 @@ class _CallLogView extends StatelessWidget {
         return switch (state) {
           CallLogInitial() ||
           CallLogLoading() =>
-            const PageLoading(label: 'Loading call logs...'),
+            PageLoading(label: AppLocalizations.of(context)!.callLogLoading),
           CallLogError(:final message) => PageError(
-              title: 'Failed to load call logs',
+              title: AppLocalizations.of(context)!.failedToLoadCallLogs,
               message: message,
               onRetry: () => context.read<CallLogCubit>().loadCallLogs(),
             ),
@@ -44,19 +45,19 @@ class _CallLogView extends StatelessWidget {
 
   Widget _buildLoaded(BuildContext context, List<CallLog> logs) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Call Log')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.callLogTitle)),
       body: logs.isEmpty
-          ? const EmptyState(
+          ? EmptyState(
               icon: Icons.phone_missed,
-              title: 'No call logs',
-              message: 'Tap + to log your first call.',
+              title: AppLocalizations.of(context)!.callLogEmpty,
+              message: AppLocalizations.of(context)!.callLogEmptyMessage,
             )
           : ListView.builder(
               itemCount: logs.length,
               itemBuilder: (context, index) => CallLogTile(log: logs[index]),
             ),
       floatingActionButton: FloatingActionButton(
-        tooltip: 'Log a call',
+        tooltip: AppLocalizations.of(context)!.logCall,
         onPressed: () {
           // TODO(nav): Navigate to call logging form.
         },

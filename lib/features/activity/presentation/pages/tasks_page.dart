@@ -7,6 +7,7 @@ import 'package:cis_crm/features/activity/domain/entities/task_priority.dart';
 import 'package:cis_crm/features/activity/domain/entities/task_status.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/tasks_bloc.dart';
 import 'package:cis_crm/features/activity/presentation/widgets/task_tile.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -39,9 +40,9 @@ class _TasksViewState extends State<_TasksView> {
         return switch (state) {
           TasksInitial() ||
           TasksLoading() =>
-            const PageLoading(label: 'Loading tasks...'),
+            PageLoading(label: AppLocalizations.of(context)!.tasksLoading),
           TasksError(:final message) => PageError(
-              title: 'Failed to load tasks',
+              title: AppLocalizations.of(context)!.failedToLoadTasks,
               message: message,
               onRetry: () =>
                   context.read<TasksBloc>().add(const TasksLoadRequested()),
@@ -60,15 +61,15 @@ class _TasksViewState extends State<_TasksView> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => AlertDialog(
-          title: const Text('Create Task'),
+          title: Text(AppLocalizations.of(dialogContext)!.createTask),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Title',
-                  hintText: 'Enter task title',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(dialogContext)!.title,
+                  hintText: AppLocalizations.of(dialogContext)!.enterTaskTitle,
                 ),
                 autofocus: true,
                 textCapitalization: TextCapitalization.sentences,
@@ -76,8 +77,8 @@ class _TasksViewState extends State<_TasksView> {
               const SizedBox(height: 16),
               DropdownButtonFormField<TaskPriority>(
                 initialValue: selectedPriority,
-                decoration: const InputDecoration(
-                  labelText: 'Priority',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(dialogContext)!.priority,
                 ),
                 items: TaskPriority.values
                     .map(
@@ -101,7 +102,7 @@ class _TasksViewState extends State<_TasksView> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(dialogContext)!.cancel),
             ),
             FilledButton(
               onPressed: () {
@@ -122,7 +123,112 @@ class _TasksViewState extends State<_TasksView> {
                 context.read<TasksBloc>().add(TaskCreateRequested(task: task));
                 Navigator.of(dialogContext).pop();
               },
-              child: const Text('Create'),
+              child: Text(AppLocalizations.of(dialogContext)!.create),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditTaskDialog(BuildContext context, CrmTask task) {
+    final titleController = TextEditingController(text: task.title);
+    var selectedPriority = task.priority;
+    var selectedStatus = task.status;
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Edit Task'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                  hintText: 'Enter task title',
+                ),
+                autofocus: true,
+                textCapitalization: TextCapitalization.sentences,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<TaskPriority>(
+                initialValue: selectedPriority,
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(dialogContext)!.priority,
+                ),
+                items: TaskPriority.values
+                    .map(
+                      (p) => DropdownMenuItem(
+                        value: p,
+                        child: Text(
+                          p.name[0].toUpperCase() + p.name.substring(1),
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setDialogState(() => selectedPriority = value);
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<TaskStatus>(
+                initialValue: selectedStatus,
+                decoration: const InputDecoration(
+                  labelText: 'Status',
+                ),
+                items: TaskStatus.values
+                    .map(
+                      (s) => DropdownMenuItem(
+                        value: s,
+                        child: Text(
+                          s.name[0].toUpperCase() + s.name.substring(1),
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setDialogState(() => selectedStatus = value);
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final title = titleController.text.trim();
+                if (title.isEmpty) return;
+                final updated = CrmTask(
+                  id: task.id,
+                  title: title,
+                  status: selectedStatus,
+                  priority: selectedPriority,
+                  parentType: task.parentType,
+                  parentId: task.parentId,
+                  createdBy: task.createdBy,
+                  createdAt: task.createdAt,
+                  updatedAt: DateTime.now(),
+                  description: task.description,
+                  assigneeId: task.assigneeId,
+                  dueDate: task.dueDate,
+                  completedAt: task.completedAt,
+                );
+                context.read<TasksBloc>().add(
+                      TaskUpdateRequested(task: updated),
+                    );
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Save'),
             ),
           ],
         ),
@@ -137,7 +243,7 @@ class _TasksViewState extends State<_TasksView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tasks'),
+        title: Text(AppLocalizations.of(context)!.tasksTitle),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
           child: _FilterChips(
@@ -147,10 +253,10 @@ class _TasksViewState extends State<_TasksView> {
         ),
       ),
       body: filtered.isEmpty
-          ? const EmptyState(
+          ? EmptyState(
               icon: Icons.task_alt,
-              title: 'No tasks yet',
-              message: 'Tap + to create your first task.',
+              title: AppLocalizations.of(context)!.tasksEmpty,
+              message: AppLocalizations.of(context)!.tasksEmptyAction,
             )
           : ListView.builder(
               itemCount: filtered.length,
@@ -158,6 +264,7 @@ class _TasksViewState extends State<_TasksView> {
                 final task = filtered[index];
                 return TaskTile(
                   task: task,
+                  onTap: () => _showEditTaskDialog(context, task),
                   onStatusToggled: (updated) =>
                       context.read<TasksBloc>().add(TaskUpdated(updated)),
                   onDeleted: (id) =>
@@ -166,7 +273,7 @@ class _TasksViewState extends State<_TasksView> {
               },
             ),
       floatingActionButton: FloatingActionButton(
-        tooltip: 'Add task',
+        tooltip: AppLocalizations.of(context)!.addTask,
         onPressed: () => _showCreateTaskDialog(context),
         child: const Icon(Icons.add),
       ),
@@ -188,20 +295,25 @@ class _FilterChips extends StatelessWidget {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          _chip(context, label: 'All', value: null),
-          const SizedBox(width: 8),
-          _chip(context, label: 'Todo', value: TaskStatus.todo),
-          const SizedBox(width: 8),
-          _chip(
-            context,
-            label: 'In Progress',
-            value: TaskStatus.inProgress,
-          ),
-          const SizedBox(width: 8),
-          _chip(context, label: 'Done', value: TaskStatus.done),
-        ],
+      child: Builder(
+        builder: (context) {
+          final l10n = AppLocalizations.of(context)!;
+          return Row(
+            children: [
+              _chip(context, label: l10n.filterAll, value: null),
+              const SizedBox(width: 8),
+              _chip(context, label: l10n.filterTodo, value: TaskStatus.todo),
+              const SizedBox(width: 8),
+              _chip(
+                context,
+                label: l10n.filterInProgress,
+                value: TaskStatus.inProgress,
+              ),
+              const SizedBox(width: 8),
+              _chip(context, label: l10n.filterDone, value: TaskStatus.done),
+            ],
+          );
+        },
       ),
     );
   }

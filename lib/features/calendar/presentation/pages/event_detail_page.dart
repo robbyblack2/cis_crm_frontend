@@ -1,4 +1,5 @@
 import 'package:cis_crm/features/calendar/domain/entities/calendar_event.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class EventDetailPage extends StatelessWidget {
@@ -19,7 +20,7 @@ class EventDetailPage extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Event Details')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.eventDetails)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -27,20 +28,20 @@ class EventDetailPage extends StatelessWidget {
           const SizedBox(height: 16),
           _DetailRow(
             icon: Icons.access_time,
-            label: 'Start',
+            label: AppLocalizations.of(context)!.start,
             value: _formatDateTime(event.start),
           ),
           const SizedBox(height: 8),
           _DetailRow(
             icon: Icons.access_time_filled,
-            label: 'End',
+            label: AppLocalizations.of(context)!.end,
             value: _formatDateTime(event.end),
           ),
           if (event.location != null) ...[
             const SizedBox(height: 8),
             _DetailRow(
               icon: Icons.location_on,
-              label: 'Location',
+              label: AppLocalizations.of(context)!.eventLocation,
               value: event.location!,
             ),
           ],
@@ -52,7 +53,7 @@ class EventDetailPage extends StatelessWidget {
             const SizedBox(height: 8),
             _DetailRow(
               icon: Icons.link,
-              label: 'Linked Record',
+              label: AppLocalizations.of(context)!.linkedRecord,
               value: event.linkedRecordId!,
             ),
           ],
@@ -120,7 +121,7 @@ class _MeetingLinkRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Meeting Link',
+                AppLocalizations.of(context)!.eventMeetingLink,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),

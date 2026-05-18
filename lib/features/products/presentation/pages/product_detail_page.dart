@@ -1,5 +1,6 @@
 import 'package:cis_crm/features/products/domain/entities/product.dart';
 import 'package:cis_crm/features/products/domain/entities/product_type.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class ProductDetailPage extends StatelessWidget {
@@ -21,24 +22,24 @@ class ProductDetailPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _DetailRow(
-                  label: 'Name',
+                  label: AppLocalizations.of(context)!.productNameLabel,
                   value: product.name,
                 ),
                 const Divider(),
                 _DetailRow(
-                  label: 'Type',
+                  label: AppLocalizations.of(context)!.productType,
                   value: product.type.name,
                   icon: _iconForType(product.type),
                 ),
                 const Divider(),
                 _DetailRow(
-                  label: 'Default Price',
+                  label: AppLocalizations.of(context)!.productDefaultPrice,
                   value: '${product.currency} '
                       '${product.defaultPrice?.toStringAsFixed(2) ?? 'N/A'}',
                 ),
                 const Divider(),
                 _DetailRow(
-                  label: 'Status',
+                  label: AppLocalizations.of(context)!.productStatus,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -51,7 +52,7 @@ class ProductDetailPage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      product.isActive ? 'Active' : 'Inactive',
+                      product.isActive ? AppLocalizations.of(context)!.productActive : AppLocalizations.of(context)!.productInactive,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: product.isActive
                             ? theme.colorScheme.onPrimaryContainer
@@ -62,7 +63,7 @@ class ProductDetailPage extends StatelessWidget {
                 ),
                 if (product.tags.isNotEmpty) ...[
                   const Divider(),
-                  Text('Tags', style: theme.textTheme.labelMedium),
+                  Text(AppLocalizations.of(context)!.contactTags, style: theme.textTheme.labelMedium),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,

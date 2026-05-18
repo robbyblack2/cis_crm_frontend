@@ -1,6 +1,7 @@
 import 'package:cis_crm/core/error/exceptions.dart';
 import 'package:cis_crm/core/error/failures.dart';
 import 'package:cis_crm/core/error/result.dart';
+import 'package:cis_crm/core/pagination/paginated_response.dart';
 import 'package:cis_crm/features/pipeline/data/datasources/record_remote_data_source.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/record.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/stage_transition.dart';
@@ -14,10 +15,16 @@ class RecordRepositoryImpl implements RecordRepository {
   final RecordRemoteDataSource _remoteDataSource;
 
   @override
-  Future<Result<List<PipelineRecord>, AppFailure>> getRecords() async {
+  Future<Result<PaginatedResponse<PipelineRecord>, AppFailure>> getRecords({
+    int page = 1,
+    int perPage = 25,
+  }) async {
     try {
-      final records = await _remoteDataSource.getRecords();
-      return Success(records);
+      final response = await _remoteDataSource.getRecords(
+        page: page,
+        perPage: perPage,
+      );
+      return Success(response);
     } on NetworkException {
       return const Failure(NetworkFailure());
     } on UnauthorizedException {

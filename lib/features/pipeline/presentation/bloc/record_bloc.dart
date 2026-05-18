@@ -20,6 +20,10 @@ final class RecordLoadRequested extends RecordEvent {
   const RecordLoadRequested();
 }
 
+final class RecordLoadMoreRequested extends RecordEvent {
+  const RecordLoadMoreRequested();
+}
+
 final class RecordCreateRequested extends RecordEvent {
   const RecordCreateRequested({
     required this.pipelineId,
@@ -50,6 +54,21 @@ final class RecordMoveRequested extends RecordEvent {
   List<Object?> get props => [recordId, toStageId];
 }
 
+final class RecordUpdateRequested extends RecordEvent {
+  const RecordUpdateRequested({
+    required this.id,
+    required this.title,
+    this.tags,
+  });
+
+  final String id;
+  final String title;
+  final List<String>? tags;
+
+  @override
+  List<Object?> get props => [id, title, tags];
+}
+
 // ── States ──────────────────────────────────────────────────────────────────
 
 @immutable
@@ -69,12 +88,41 @@ final class RecordLoading extends RecordState {
 }
 
 final class RecordLoaded extends RecordState {
-  const RecordLoaded({required this.records});
+  const RecordLoaded({
+    required this.records,
+    required this.currentPage,
+    required this.total,
+    this.perPage = 25,
+    this.isLoadingMore = false,
+  });
 
   final List<PipelineRecord> records;
+  final int currentPage;
+  final int total;
+  final int perPage;
+  final bool isLoadingMore;
+
+  bool get hasMore => currentPage * perPage < total;
+
+  RecordLoaded copyWith({
+    List<PipelineRecord>? records,
+    int? currentPage,
+    int? total,
+    int? perPage,
+    bool? isLoadingMore,
+  }) {
+    return RecordLoaded(
+      records: records ?? this.records,
+      currentPage: currentPage ?? this.currentPage,
+      total: total ?? this.total,
+      perPage: perPage ?? this.perPage,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+    );
+  }
 
   @override
-  List<Object?> get props => [records];
+  List<Object?> get props =>
+      [records, currentPage, total, perPage, isLoadingMore];
 }
 
 final class RecordError extends RecordState {
@@ -93,8 +141,10 @@ class RecordBloc extends Bloc<RecordEvent, RecordState> {
       : _repository = recordRepository,
         super(const RecordInitial()) {
     on<RecordLoadRequested>(_onLoad, transformer: restartable());
+    on<RecordLoadMoreRequested>(_onLoadMore, transformer: droppable());
     on<RecordCreateRequested>(_onCreate, transformer: droppable());
     on<RecordMoveRequested>(_onMove, transformer: droppable());
+    on<RecordUpdateRequested>(_onUpdate, transformer: droppable());
   }
 
   final RecordRepository _repository;
@@ -107,8 +157,41 @@ class RecordBloc extends Bloc<RecordEvent, RecordState> {
     final result = await _repository.getRecords();
     switch (result) {
       case Success(:final data):
-        emit(RecordLoaded(records: data));
+        emit(
+          RecordLoaded(
+            records: data.items,
+            currentPage: data.page,
+            total: data.total,
+            perPage: data.perPage,
+          ),
+        );
       case Failure(:final error):
+        emit(RecordError(message: error.message));
+    }
+  }
+
+  Future<void> _onLoadMore(
+    RecordLoadMoreRequested event,
+    Emitter<RecordState> emit,
+  ) async {
+    final current = state;
+    if (current is! RecordLoaded || !current.hasMore || current.isLoadingMore) {
+      return;
+    }
+    emit(current.copyWith(isLoadingMore: true));
+    final result = await _repository.getRecords(page: current.currentPage + 1);
+    switch (result) {
+      case Success(:final data):
+        emit(
+          RecordLoaded(
+            records: [...current.records, ...data.items],
+            currentPage: data.page,
+            total: data.total,
+            perPage: data.perPage,
+          ),
+        );
+      case Failure(:final error):
+        emit(current.copyWith(isLoadingMore: false));
         emit(RecordError(message: error.message));
     }
   }
@@ -129,7 +212,14 @@ class RecordBloc extends Bloc<RecordEvent, RecordState> {
         final listResult = await _repository.getRecords();
         switch (listResult) {
           case Success(:final data):
-            emit(RecordLoaded(records: data));
+            emit(
+              RecordLoaded(
+                records: data.items,
+                currentPage: data.page,
+                total: data.total,
+                perPage: data.perPage,
+              ),
+            );
           case Failure(:final error):
             emit(RecordError(message: error.message));
         }
@@ -152,7 +242,45 @@ class RecordBloc extends Bloc<RecordEvent, RecordState> {
         final listResult = await _repository.getRecords();
         switch (listResult) {
           case Success(:final data):
-            emit(RecordLoaded(records: data));
+            emit(
+              RecordLoaded(
+                records: data.items,
+                currentPage: data.page,
+                total: data.total,
+                perPage: data.perPage,
+              ),
+            );
+          case Failure(:final error):
+            emit(RecordError(message: error.message));
+        }
+      case Failure(:final error):
+        emit(RecordError(message: error.message));
+    }
+  }
+
+  Future<void> _onUpdate(
+    RecordUpdateRequested event,
+    Emitter<RecordState> emit,
+  ) async {
+    emit(const RecordLoading());
+    final result = await _repository.updateRecord(
+      id: event.id,
+      title: event.title,
+      tags: event.tags,
+    );
+    switch (result) {
+      case Success():
+        final listResult = await _repository.getRecords();
+        switch (listResult) {
+          case Success(:final data):
+            emit(
+              RecordLoaded(
+                records: data.items,
+                currentPage: data.page,
+                total: data.total,
+                perPage: data.perPage,
+              ),
+            );
           case Failure(:final error):
             emit(RecordError(message: error.message));
         }

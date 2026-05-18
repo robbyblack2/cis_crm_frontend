@@ -1,5 +1,6 @@
 import 'package:cis_crm/core/error/exceptions.dart';
 import 'package:cis_crm/core/error/failures.dart';
+import 'package:cis_crm/core/pagination/paginated_response.dart';
 import 'package:cis_crm/features/contacts/data/datasources/contact_remote_data_source.dart';
 import 'package:cis_crm/features/contacts/data/models/contact_model.dart';
 import 'package:cis_crm/features/contacts/data/repositories/contact_repository_impl.dart';
@@ -29,21 +30,49 @@ void main() {
     updatedAt: DateTime(2024),
   );
 
+  final tPaginatedResponse = PaginatedResponse<ContactModel>(
+    items: [tContactModel],
+    page: 1,
+    perPage: 25,
+    total: 1,
+  );
+
   group('getContacts', () {
-    test('returns Success with contacts when data source succeeds', () async {
-      when(() => mockDataSource.getContacts())
-          .thenAnswer((_) async => [tContactModel]);
+    test('returns Success with paginated contacts when data source succeeds',
+        () async {
+      when(() => mockDataSource.getContacts(page: 1, perPage: 25))
+          .thenAnswer((_) async => tPaginatedResponse);
 
       final result = await repository.getContacts();
 
       expect(result.isSuccess, isTrue);
-      expect(result.dataOrNull, equals([tContactModel]));
-      verify(() => mockDataSource.getContacts()).called(1);
+      expect(result.dataOrNull!.items, equals([tContactModel]));
+      expect(result.dataOrNull!.total, equals(1));
+      expect(result.dataOrNull!.page, equals(1));
+      verify(() => mockDataSource.getContacts(page: 1, perPage: 25)).called(1);
+    });
+
+    test('passes page and perPage to data source', () async {
+      final page2Response = PaginatedResponse<ContactModel>(
+        items: [tContactModel],
+        page: 2,
+        perPage: 10,
+        total: 15,
+      );
+      when(() => mockDataSource.getContacts(page: 2, perPage: 10))
+          .thenAnswer((_) async => page2Response);
+
+      final result = await repository.getContacts(page: 2, perPage: 10);
+
+      expect(result.isSuccess, isTrue);
+      expect(result.dataOrNull!.page, equals(2));
+      expect(result.dataOrNull!.perPage, equals(10));
+      verify(() => mockDataSource.getContacts(page: 2, perPage: 10)).called(1);
     });
 
     test('returns Failure(ServerFailure) when ServerException is thrown',
         () async {
-      when(() => mockDataSource.getContacts())
+      when(() => mockDataSource.getContacts(page: 1, perPage: 25))
           .thenThrow(const ServerException('Server error', statusCode: 500));
 
       final result = await repository.getContacts();
@@ -59,7 +88,7 @@ void main() {
 
     test('returns Failure(NetworkFailure) when NetworkException is thrown',
         () async {
-      when(() => mockDataSource.getContacts())
+      when(() => mockDataSource.getContacts(page: 1, perPage: 25))
           .thenThrow(const NetworkException());
 
       final result = await repository.getContacts();
@@ -71,7 +100,7 @@ void main() {
     test(
         'returns Failure(UnauthorizedFailure) when '
         'UnauthorizedException is thrown', () async {
-      when(() => mockDataSource.getContacts())
+      when(() => mockDataSource.getContacts(page: 1, perPage: 25))
           .thenThrow(const UnauthorizedException());
 
       final result = await repository.getContacts();

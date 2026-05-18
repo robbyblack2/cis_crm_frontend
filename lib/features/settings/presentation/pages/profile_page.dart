@@ -1,3 +1,4 @@
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -14,7 +15,7 @@ class ProfilePage extends StatelessWidget {
     const initials = 'CU';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.profileTitle)),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         children: [
@@ -48,26 +49,26 @@ class ProfilePage extends StatelessWidget {
             child: Chip(label: Text(role)),
           ),
           const SizedBox(height: 32),
-          const _SectionHeader(title: 'Security'),
-          const ListTile(
-            leading: Icon(Icons.lock_outline),
-            title: Text('Change Password'),
-            subtitle: Text('Coming soon'),
-            trailing: Icon(Icons.chevron_right),
+          _SectionHeader(title: AppLocalizations.of(context)!.security),
+          ListTile(
+            leading: const Icon(Icons.lock_outline),
+            title: Text(AppLocalizations.of(context)!.changePassword),
+            subtitle: Text(AppLocalizations.of(context)!.comingSoon),
+            trailing: const Icon(Icons.chevron_right),
           ),
           const SizedBox(height: 16),
-          const _SectionHeader(title: 'Preferences'),
-          const ListTile(
-            leading: Icon(Icons.schedule),
-            title: Text('Timezone'),
-            subtitle: Text('Coming soon'),
-            trailing: Icon(Icons.chevron_right),
+          _SectionHeader(title: AppLocalizations.of(context)!.preferences),
+          ListTile(
+            leading: const Icon(Icons.schedule),
+            title: Text(AppLocalizations.of(context)!.timezone),
+            subtitle: Text(AppLocalizations.of(context)!.comingSoon),
+            trailing: const Icon(Icons.chevron_right),
           ),
-          const ListTile(
-            leading: Icon(Icons.calendar_today_outlined),
-            title: Text('Calendar Filters'),
-            subtitle: Text('Coming soon'),
-            trailing: Icon(Icons.chevron_right),
+          ListTile(
+            leading: const Icon(Icons.calendar_today_outlined),
+            title: Text(AppLocalizations.of(context)!.calendarFilters),
+            subtitle: Text(AppLocalizations.of(context)!.comingSoon),
+            trailing: const Icon(Icons.chevron_right),
           ),
         ],
       ),

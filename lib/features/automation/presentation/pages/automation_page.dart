@@ -4,6 +4,7 @@ import 'package:cis_crm/core/widgets/state/page_error.dart';
 import 'package:cis_crm/core/widgets/state/page_loading.dart';
 import 'package:cis_crm/features/automation/presentation/bloc/automation_bloc.dart';
 import 'package:cis_crm/features/automation/presentation/widgets/automation_rule_tile.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -26,9 +27,9 @@ class _AutomationView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Automation')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.automationTitle)),
       floatingActionButton: FloatingActionButton(
-        tooltip: 'Create rule',
+        tooltip: AppLocalizations.of(context)!.createRule,
         onPressed: () {
           // TODO(automation): Navigate to create rule page.
         },
@@ -39,10 +40,10 @@ class _AutomationView extends StatelessWidget {
           return switch (state) {
             AutomationInitial() || AutomationLoading() => const PageLoading(),
             AutomationLoaded(:final rules) when rules.isEmpty =>
-              const EmptyState(
+              EmptyState(
                 icon: Icons.bolt_outlined,
-                title: 'No automation rules',
-                message: 'Create your first automation rule.',
+                title: AppLocalizations.of(context)!.automationEmpty,
+                message: AppLocalizations.of(context)!.automationEmptyMessage,
               ),
             AutomationLoaded(:final rules) => ListView.builder(
                 itemCount: rules.length,
@@ -62,7 +63,7 @@ class _AutomationView extends StatelessWidget {
                 },
               ),
             AutomationError(:final message) => PageError(
-                title: 'Failed to load rules',
+                title: AppLocalizations.of(context)!.failedToLoadRules,
                 message: message,
                 onRetry: () {
                   context

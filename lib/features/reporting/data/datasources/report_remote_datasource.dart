@@ -1,3 +1,4 @@
+import 'package:cis_crm/features/reporting/data/models/pipeline_summary_model.dart';
 import 'package:cis_crm/features/reporting/data/models/report_model.dart';
 import 'package:cis_crm/features/reporting/data/models/report_result_model.dart';
 import 'package:dio/dio.dart';
@@ -10,6 +11,7 @@ abstract interface class ReportRemoteDataSource {
     String? description,
   });
   Future<String> exportReport(String id);
+  Future<PipelineSummaryModel> getPipelineSummary(String pipelineId);
 }
 
 class ReportRemoteDataSourceImpl implements ReportRemoteDataSource {
@@ -49,5 +51,13 @@ class ReportRemoteDataSourceImpl implements ReportRemoteDataSource {
     final response =
         await _dio.get<Map<String, dynamic>>('/api/reports/$id/export');
     return response.data!['csv'] as String;
+  }
+
+  @override
+  Future<PipelineSummaryModel> getPipelineSummary(String pipelineId) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/api/reports/pipeline-summary/$pipelineId',
+    );
+    return PipelineSummaryModel.fromJson(response.data!);
   }
 }

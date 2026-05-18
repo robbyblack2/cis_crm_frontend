@@ -12,6 +12,10 @@ final class ContactsLoadRequested extends ContactsEvent {
   const ContactsLoadRequested();
 }
 
+final class ContactsLoadMoreRequested extends ContactsEvent {
+  const ContactsLoadMoreRequested();
+}
+
 final class ContactCreateRequested extends ContactsEvent {
   const ContactCreateRequested(this.contact);
 

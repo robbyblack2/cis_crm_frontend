@@ -1,5 +1,6 @@
 import 'package:cis_crm/features/automation/domain/entities/execution_log.dart';
 import 'package:cis_crm/features/automation/domain/entities/execution_status.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class ExecutionLogTile extends StatelessWidget {
@@ -25,7 +26,7 @@ class ExecutionLogTile extends StatelessWidget {
       subtitle: Text(_formatTimestamp(log.createdAt)),
       trailing: Chip(
         label: Text(
-          _labelForStatus(log.status),
+          _labelForStatus(context, log.status),
           style: theme.textTheme.labelSmall?.copyWith(
             color: _colorForStatus(log.status, theme),
           ),
@@ -54,12 +55,13 @@ class ExecutionLogTile extends StatelessWidget {
     };
   }
 
-  static String _labelForStatus(ExecutionStatus status) {
+  static String _labelForStatus(BuildContext context, ExecutionStatus status) {
+    final l10n = AppLocalizations.of(context)!;
     return switch (status) {
-      ExecutionStatus.success => 'Success',
-      ExecutionStatus.partialFailure => 'Partial',
-      ExecutionStatus.failed => 'Failed',
-      ExecutionStatus.dryRun => 'Dry Run',
+      ExecutionStatus.success => l10n.executionSuccess,
+      ExecutionStatus.partialFailure => l10n.executionPartial,
+      ExecutionStatus.failed => l10n.executionFailed,
+      ExecutionStatus.dryRun => l10n.executionDryRun,
     };
   }
 

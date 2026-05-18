@@ -1,6 +1,7 @@
 import 'package:cis_crm/core/error/exceptions.dart';
 import 'package:cis_crm/core/error/failures.dart';
 import 'package:cis_crm/core/error/result.dart';
+import 'package:cis_crm/core/pagination/paginated_response.dart';
 import 'package:cis_crm/features/contacts/data/datasources/contact_remote_data_source.dart';
 import 'package:cis_crm/features/contacts/data/models/contact_model.dart';
 import 'package:cis_crm/features/contacts/domain/entities/contact.dart';
@@ -12,10 +13,16 @@ class ContactRepositoryImpl implements ContactRepository {
   final ContactRemoteDataSource remoteDataSource;
 
   @override
-  Future<Result<List<Contact>, AppFailure>> getContacts() async {
+  Future<Result<PaginatedResponse<Contact>, AppFailure>> getContacts({
+    int page = 1,
+    int perPage = 25,
+  }) async {
     try {
-      final contacts = await remoteDataSource.getContacts();
-      return Success(contacts);
+      final response = await remoteDataSource.getContacts(
+        page: page,
+        perPage: perPage,
+      );
+      return Success(response);
     } on AppException catch (e) {
       return Failure(_mapExceptionToFailure(e));
     }

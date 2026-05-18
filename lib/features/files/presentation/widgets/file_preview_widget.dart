@@ -1,4 +1,5 @@
 import 'package:cis_crm/features/files/domain/entities/file_attachment.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class FilePreviewWidget extends StatelessWidget {
@@ -40,7 +41,7 @@ class FilePreviewWidget extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Uploaded by ${file.uploadedBy}',
+              AppLocalizations.of(context)!.uploadedBy(file.uploadedBy),
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 16),
@@ -49,7 +50,7 @@ class FilePreviewWidget extends StatelessWidget {
                 // TODO(files): Implement file download/preview.
               },
               icon: const Icon(Icons.open_in_new),
-              label: const Text('Open Preview'),
+              label: Text(AppLocalizations.of(context)!.openPreview),
             ),
           ],
         ),

@@ -1,10 +1,14 @@
 import 'package:cis_crm/core/error/failures.dart';
 import 'package:cis_crm/core/error/result.dart';
+import 'package:cis_crm/core/pagination/paginated_response.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/record.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/stage_transition.dart';
 
 abstract class RecordRepository {
-  Future<Result<List<PipelineRecord>, AppFailure>> getRecords();
+  Future<Result<PaginatedResponse<PipelineRecord>, AppFailure>> getRecords({
+    int page = 1,
+    int perPage = 25,
+  });
 
   Future<Result<PipelineRecord, AppFailure>> getRecord(String id);
 

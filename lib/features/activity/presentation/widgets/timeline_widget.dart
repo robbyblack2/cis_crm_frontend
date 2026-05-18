@@ -1,4 +1,5 @@
 import 'package:cis_crm/features/activity/domain/entities/timeline_entry.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class TimelineWidget extends StatelessWidget {
@@ -43,7 +44,7 @@ class TimelineWidget extends StatelessWidget {
     if (entries.isEmpty) {
       return Center(
         child: Text(
-          'No timeline entries',
+          AppLocalizations.of(context)!.noTimelineEntries,
           style: theme.textTheme.bodyMedium,
         ),
       );

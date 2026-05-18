@@ -1,4 +1,5 @@
 import 'package:cis_crm/app/injection.dart';
+import 'package:cis_crm/core/network/web_socket_cubit.dart';
 import 'package:cis_crm/core/theme/app_theme.dart';
 import 'package:cis_crm/core/theme/theme_cubit.dart';
 import 'package:cis_crm/features/auth/presentation/bloc/auth_bloc.dart';
@@ -18,15 +19,22 @@ class App extends StatelessWidget {
       providers: [
         BlocProvider<AuthBloc>.value(value: getIt<AuthBloc>()),
         BlocProvider<ThemeCubit>(create: (_) => getIt<ThemeCubit>()),
+        BlocProvider<WebSocketCubit>.value(value: getIt<WebSocketCubit>()),
       ],
       child: MultiBlocListener(
         listeners: [
           BlocListener<AuthBloc, AuthState>(
             listenWhen: (prev, curr) =>
+                curr is AuthAuthenticated && prev is! AuthAuthenticated,
+            listener: (context, state) {
+              context.read<WebSocketCubit>().connect();
+            },
+          ),
+          BlocListener<AuthBloc, AuthState>(
+            listenWhen: (prev, curr) =>
                 curr is AuthUnauthenticated && prev is! AuthUnauthenticated,
             listener: (context, state) {
-              // TODO(auth): Dispatch XxxCleared to user-scoped blocs as
-              // they are added.
+              context.read<WebSocketCubit>().disconnect();
             },
           ),
         ],

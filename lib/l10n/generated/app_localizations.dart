@@ -118,6 +118,12 @@ abstract class AppLocalizations {
   /// **'Dismiss'**
   String get dismiss;
 
+  /// Placeholder label for features not yet implemented.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon'**
+  String get comingSoon;
+
   /// No description provided for @failure_network.
   ///
   /// In en, this message translates to:
@@ -274,6 +280,30 @@ abstract class AppLocalizations {
   /// **'Are you sure you want to delete this item? This action cannot be undone.'**
   String get confirmDeleteMessage;
 
+  /// Section header for a details card.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get details;
+
+  /// Section header for an activity timeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Timeline'**
+  String get timeline;
+
+  /// Empty-state text when a timeline has no entries.
+  ///
+  /// In en, this message translates to:
+  /// **'No timeline entries'**
+  String get noTimelineEntries;
+
+  /// Placeholder text for the record detail timeline section.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity timeline coming soon'**
+  String get activityTimelineComingSoon;
+
   /// Title shown on the login page.
   ///
   /// In en, this message translates to:
@@ -327,6 +357,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add your first contact to get started.'**
   String get contactsEmptyMessage;
+
+  /// Call-to-action when the contacts list is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the + button to add your first contact.'**
+  String get contactsEmptyAction;
 
   /// Placeholder text for the contacts search field.
   ///
@@ -388,6 +424,120 @@ abstract class AppLocalizations {
   /// **'Are you sure you want to delete this contact?'**
   String get contactDeleteConfirm;
 
+  /// Title for the contact delete confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete contact?'**
+  String get contactDeleteTitle;
+
+  /// Confirmation message before deleting a named contact.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete {name}?'**
+  String contactDeleteConfirmName(String name);
+
+  /// Snackbar message after successfully deleting a contact.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact deleted'**
+  String get contactDeleted;
+
+  /// Snackbar message when contact deletion fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete failed: {message}'**
+  String contactDeleteFailed(String message);
+
+  /// Button label for adding a new contact.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Contact'**
+  String get addContact;
+
+  /// Tooltip for the edit contact button.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit contact'**
+  String get editContact;
+
+  /// Tooltip for the delete contact button.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete contact'**
+  String get deleteContact;
+
+  /// Tooltip for the floating action button to add a contact.
+  ///
+  /// In en, this message translates to:
+  /// **'Add contact'**
+  String get addContactTooltip;
+
+  /// Tooltip for clearing the search field.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search'**
+  String get clearSearch;
+
+  /// Tooltip for the back navigation button.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get back;
+
+  /// Title when a search yields no results.
+  ///
+  /// In en, this message translates to:
+  /// **'No results'**
+  String get searchNoResultsTitle;
+
+  /// Body text when a search yields no results.
+  ///
+  /// In en, this message translates to:
+  /// **'Try a different search term.'**
+  String get searchNoResultsMessage;
+
+  /// Label for the contact company field.
+  ///
+  /// In en, this message translates to:
+  /// **'Company'**
+  String get contactCompany;
+
+  /// Contact status label for active contacts.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get contactStatusActive;
+
+  /// Contact status label for inactive contacts.
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive'**
+  String get contactStatusInactive;
+
+  /// Contact status label for leads.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead'**
+  String get contactStatusLead;
+
+  /// Contact status label for prospects.
+  ///
+  /// In en, this message translates to:
+  /// **'Prospect'**
+  String get contactStatusProspect;
+
+  /// Contact status label for customers.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer'**
+  String get contactStatusCustomer;
+
+  /// Error title when contacts fail to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load contacts'**
+  String get failedToLoadContacts;
+
   /// Page title for the pipeline/deals view.
   ///
   /// In en, this message translates to:
@@ -399,6 +549,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No deals in your pipeline'**
   String get pipelineEmpty;
+
+  /// Loading label when pipeline is initializing.
+  ///
+  /// In en, this message translates to:
+  /// **'Initializing pipeline...'**
+  String get pipelineInitializing;
+
+  /// Loading label when pipelines are being fetched.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading pipelines...'**
+  String get pipelineLoading;
+
+  /// Error title when pipelines fail to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load pipelines'**
+  String get failedToLoadPipelines;
+
+  /// Button and dialog title for creating a new pipeline record.
+  ///
+  /// In en, this message translates to:
+  /// **'New Record'**
+  String get newRecord;
+
+  /// Tooltip for the new record floating action button.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a new record'**
+  String get addNewRecord;
+
+  /// Hint text for the record title input field.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter record title'**
+  String get enterRecordTitle;
+
+  /// Label for the pipeline stage field.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage'**
+  String get stage;
+
+  /// Empty-state title when a pipeline has no stages.
+  ///
+  /// In en, this message translates to:
+  /// **'No stages configured'**
+  String get noStagesConfigured;
+
+  /// Empty-state body when a pipeline has no stages.
+  ///
+  /// In en, this message translates to:
+  /// **'Add stages to this pipeline to start tracking records.'**
+  String get noStagesConfiguredMessage;
+
+  /// Empty-state text for a Kanban column with no records.
+  ///
+  /// In en, this message translates to:
+  /// **'No records'**
+  String get noRecords;
 
   /// Button label for creating a new pipeline record/deal.
   ///
@@ -442,6 +652,72 @@ abstract class AppLocalizations {
   /// **'Lost'**
   String get stageLost;
 
+  /// Generic label for a pipeline record.
+  ///
+  /// In en, this message translates to:
+  /// **'Record'**
+  String get record;
+
+  /// Message when a pipeline record cannot be found.
+  ///
+  /// In en, this message translates to:
+  /// **'Record not found'**
+  String get recordNotFound;
+
+  /// Menu item label for moving a record to another stage.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to stage'**
+  String get moveToStage;
+
+  /// Tooltip for the more actions popup menu.
+  ///
+  /// In en, this message translates to:
+  /// **'More actions'**
+  String get moreActions;
+
+  /// Label for the pipeline field on record detail.
+  ///
+  /// In en, this message translates to:
+  /// **'Pipeline'**
+  String get pipeline;
+
+  /// Label for the contact field on record detail.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact'**
+  String get contact;
+
+  /// Label for the owner field on record detail.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner'**
+  String get owner;
+
+  /// Label for the source field.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get source;
+
+  /// Label for the created date field.
+  ///
+  /// In en, this message translates to:
+  /// **'Created'**
+  String get created;
+
+  /// Label for the updated date field.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated'**
+  String get updated;
+
+  /// Generic title field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get title;
+
   /// Page title for the tasks view.
   ///
   /// In en, this message translates to:
@@ -459,6 +735,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create a task to start tracking your work.'**
   String get tasksEmptyMessage;
+
+  /// Call-to-action when the tasks list is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap + to create your first task.'**
+  String get tasksEmptyAction;
+
+  /// Loading label when tasks are being fetched.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading tasks...'**
+  String get tasksLoading;
+
+  /// Error title when tasks fail to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load tasks'**
+  String get failedToLoadTasks;
+
+  /// Dialog title for creating a new task.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Task'**
+  String get createTask;
+
+  /// Hint text for the task title input field.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter task title'**
+  String get enterTaskTitle;
+
+  /// Label for the priority field.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority'**
+  String get priority;
+
+  /// Tooltip for the floating action button to add a task.
+  ///
+  /// In en, this message translates to:
+  /// **'Add task'**
+  String get addTask;
+
+  /// Label for the filter chip that shows all items.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get filterAll;
+
+  /// Label for the filter chip for to-do tasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Todo'**
+  String get filterTodo;
+
+  /// Label for the filter chip for in-progress tasks.
+  ///
+  /// In en, this message translates to:
+  /// **'In Progress'**
+  String get filterInProgress;
+
+  /// Label for the filter chip for done tasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get filterDone;
 
   /// Label for the to-do task status.
   ///
@@ -532,11 +874,29 @@ abstract class AppLocalizations {
   /// **'No events scheduled'**
   String get calendarEmpty;
 
+  /// Loading label when calendar events are being fetched.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading calendar...'**
+  String get calendarLoading;
+
+  /// Error title when the calendar fails to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load calendar'**
+  String get failedToLoadCalendar;
+
   /// Button label to jump to today's date in the calendar.
   ///
   /// In en, this message translates to:
   /// **'Today'**
   String get calendarToday;
+
+  /// Tooltip for the go-to-today button.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to today'**
+  String get goToToday;
 
   /// Calendar view selector: day view.
   ///
@@ -556,6 +916,54 @@ abstract class AppLocalizations {
   /// **'Month'**
   String get viewMonth;
 
+  /// Dialog title for creating a new calendar event.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Event'**
+  String get createEvent;
+
+  /// Hint text for the event title input field.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter event title'**
+  String get enterEventTitle;
+
+  /// Label for the event start date/time field.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get start;
+
+  /// Label for the event end date/time field.
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get end;
+
+  /// Tooltip for the floating action button to create an event.
+  ///
+  /// In en, this message translates to:
+  /// **'Create event'**
+  String get createEventTooltip;
+
+  /// Empty-state title when there are no calendar events.
+  ///
+  /// In en, this message translates to:
+  /// **'No events'**
+  String get noEvents;
+
+  /// Call-to-action when there are no calendar events.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap + to create your first event.'**
+  String get noEventsMessage;
+
+  /// Page title for the event detail view.
+  ///
+  /// In en, this message translates to:
+  /// **'Event Details'**
+  String get eventDetails;
+
   /// Label for the calendar event title field.
   ///
   /// In en, this message translates to:
@@ -574,11 +982,47 @@ abstract class AppLocalizations {
   /// **'Meeting link'**
   String get eventMeetingLink;
 
+  /// Label for a linked pipeline record on an event.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked Record'**
+  String get linkedRecord;
+
   /// Page title for the products view.
   ///
   /// In en, this message translates to:
   /// **'Products'**
   String get productsTitle;
+
+  /// Loading label when products are being fetched.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading products…'**
+  String get productsLoading;
+
+  /// Error title when products fail to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load products'**
+  String get failedToLoadProducts;
+
+  /// Empty-state title when the product catalog is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'No products yet'**
+  String get productsEmpty;
+
+  /// Call-to-action when the product catalog is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap + to add your first product.'**
+  String get productsEmptyMessage;
+
+  /// Tooltip for the floating action button to add a product.
+  ///
+  /// In en, this message translates to:
+  /// **'Add product'**
+  String get addProduct;
 
   /// Tab label for the product catalog.
   ///
@@ -591,6 +1035,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Subscriptions'**
   String get subscriptionsTab;
+
+  /// Loading label when subscriptions are being fetched.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading subscriptions…'**
+  String get subscriptionsLoading;
+
+  /// Error title when subscriptions fail to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load subscriptions'**
+  String get failedToLoadSubscriptions;
+
+  /// Empty-state title when there are no subscriptions.
+  ///
+  /// In en, this message translates to:
+  /// **'No subscriptions'**
+  String get subscriptionsEmpty;
+
+  /// Body text when there are no subscriptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscriptions will appear here.'**
+  String get subscriptionsEmptyMessage;
+
+  /// Page title for the standalone subscriptions page.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscriptions'**
+  String get subscriptionsPageTitle;
+
+  /// Message when subscriptions have not been loaded yet.
+  ///
+  /// In en, this message translates to:
+  /// **'No subscriptions loaded.'**
+  String get noSubscriptionsLoaded;
+
+  /// Page title for the subscription detail view.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription {systemId}'**
+  String subscriptionTitle(String systemId);
 
   /// Label for the product name field.
   ///
@@ -622,6 +1108,24 @@ abstract class AppLocalizations {
   /// **'Inactive'**
   String get productInactive;
 
+  /// Label for the product default price field.
+  ///
+  /// In en, this message translates to:
+  /// **'Default Price'**
+  String get productDefaultPrice;
+
+  /// Label for the product status field.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get productStatus;
+
+  /// Short label for the product name in detail view.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get productNameLabel;
+
   /// Label for the subscription system-ID field.
   ///
   /// In en, this message translates to:
@@ -633,6 +1137,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Subscription status'**
   String get subscriptionStatus;
+
+  /// Label for the subscription company field.
+  ///
+  /// In en, this message translates to:
+  /// **'Company'**
+  String get subscriptionCompany;
+
+  /// Label for the subscription product type field.
+  ///
+  /// In en, this message translates to:
+  /// **'Product Type'**
+  String get subscriptionProductType;
+
+  /// Generic status field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get status;
+
+  /// Section header for subscription line items.
+  ///
+  /// In en, this message translates to:
+  /// **'Line Items'**
+  String get lineItems;
+
+  /// Empty-state text when there are no line items.
+  ///
+  /// In en, this message translates to:
+  /// **'No line items'**
+  String get noLineItems;
 
   /// Subscription status: trialing.
   ///
@@ -670,6 +1204,12 @@ abstract class AppLocalizations {
   /// **'Expired'**
   String get statusExpired;
 
+  /// Page title for the email compose view.
+  ///
+  /// In en, this message translates to:
+  /// **'Compose Email'**
+  String get emailComposeTitle;
+
   /// Button label for composing a new email.
   ///
   /// In en, this message translates to:
@@ -681,6 +1221,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Send'**
   String get emailSend;
+
+  /// Snackbar message after successfully sending an email.
+  ///
+  /// In en, this message translates to:
+  /// **'Email sent successfully'**
+  String get emailSentSuccess;
+
+  /// Snackbar message after successfully saving a draft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft saved'**
+  String get draftSaved;
+
+  /// Tooltip for the save draft button.
+  ///
+  /// In en, this message translates to:
+  /// **'Save draft'**
+  String get saveDraftTooltip;
+
+  /// Tooltip for the send email button.
+  ///
+  /// In en, this message translates to:
+  /// **'Send email'**
+  String get sendEmailTooltip;
 
   /// Button label for saving an email as a draft.
   ///
@@ -694,11 +1258,29 @@ abstract class AppLocalizations {
   /// **'To'**
   String get emailTo;
 
+  /// Hint text for the email recipient field.
+  ///
+  /// In en, this message translates to:
+  /// **'recipient@example.com'**
+  String get emailToHint;
+
+  /// Validation error when the email recipient is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Recipient is required'**
+  String get emailRecipientRequired;
+
   /// Label for the email subject field.
   ///
   /// In en, this message translates to:
   /// **'Subject'**
   String get emailSubject;
+
+  /// Validation error when the email subject is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Subject is required'**
+  String get emailSubjectRequired;
 
   /// Label for the email body field.
   ///
@@ -712,11 +1294,41 @@ abstract class AppLocalizations {
   /// **'Templates'**
   String get emailTemplates;
 
+  /// Page title for the email templates view.
+  ///
+  /// In en, this message translates to:
+  /// **'Email Templates'**
+  String get emailTemplatesTitle;
+
   /// Empty-state text when there are no email templates.
   ///
   /// In en, this message translates to:
   /// **'No templates available'**
   String get emailTemplatesEmpty;
+
+  /// Empty-state title when there are no email templates.
+  ///
+  /// In en, this message translates to:
+  /// **'No templates'**
+  String get emailTemplatesEmptyTitle;
+
+  /// Empty-state body when there are no email templates.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your first email template.'**
+  String get emailTemplatesEmptyMessage;
+
+  /// Error title when email templates fail to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load templates'**
+  String get failedToLoadTemplates;
+
+  /// Tooltip for the floating action button to create a template.
+  ///
+  /// In en, this message translates to:
+  /// **'Create template'**
+  String get createTemplate;
 
   /// Page title for the files view.
   ///
@@ -730,6 +1342,36 @@ abstract class AppLocalizations {
   /// **'No files uploaded'**
   String get filesEmpty;
 
+  /// Empty-state title when there are no files.
+  ///
+  /// In en, this message translates to:
+  /// **'No files'**
+  String get filesEmptyTitle;
+
+  /// Empty-state body when there are no files.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload your first file to get started.'**
+  String get filesEmptyMessage;
+
+  /// Empty-state title when no parent entity is selected for files.
+  ///
+  /// In en, this message translates to:
+  /// **'No parent context'**
+  String get filesNoParentContext;
+
+  /// Message prompting the user to select a parent entity.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a contact or record to view its files.'**
+  String get filesSelectParent;
+
+  /// Error title when files fail to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load files'**
+  String get failedToLoadFiles;
+
   /// Button label for uploading a file.
   ///
   /// In en, this message translates to:
@@ -742,6 +1384,18 @@ abstract class AppLocalizations {
   /// **'Delete file'**
   String get deleteFile;
 
+  /// Button label for opening a file preview.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Preview'**
+  String get openPreview;
+
+  /// Label showing who uploaded a file.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploaded by {name}'**
+  String uploadedBy(String name);
+
   /// Page title for the automation rules view.
   ///
   /// In en, this message translates to:
@@ -753,6 +1407,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No automation rules'**
   String get automationEmpty;
+
+  /// Empty-state body when there are no automation rules.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your first automation rule.'**
+  String get automationEmptyMessage;
+
+  /// Error title when automation rules fail to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load rules'**
+  String get failedToLoadRules;
+
+  /// Tooltip for the floating action button to create an automation rule.
+  ///
+  /// In en, this message translates to:
+  /// **'Create rule'**
+  String get createRule;
+
+  /// Page title for the automation rule detail view.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule Detail'**
+  String get ruleDetail;
+
+  /// Placeholder text for the rule detail page.
+  ///
+  /// In en, this message translates to:
+  /// **'Detail for rule {ruleId} — coming soon.'**
+  String ruleDetailComingSoon(String ruleId);
+
+  /// Tooltip when an automation rule is active and can be deactivated.
+  ///
+  /// In en, this message translates to:
+  /// **'Deactivate rule'**
+  String get deactivateRule;
+
+  /// Tooltip when an automation rule is inactive and can be activated.
+  ///
+  /// In en, this message translates to:
+  /// **'Activate rule'**
+  String get activateRule;
 
   /// Status label for an active automation rule.
   ///
@@ -778,11 +1474,23 @@ abstract class AppLocalizations {
   /// **'Success'**
   String get executionSuccess;
 
+  /// Label for a partially failed automation execution.
+  ///
+  /// In en, this message translates to:
+  /// **'Partial'**
+  String get executionPartial;
+
   /// Label for a failed automation execution.
   ///
   /// In en, this message translates to:
   /// **'Failed'**
   String get executionFailed;
+
+  /// Label for a dry-run automation execution.
+  ///
+  /// In en, this message translates to:
+  /// **'Dry Run'**
+  String get executionDryRun;
 
   /// Page title for the reports view.
   ///
@@ -796,6 +1504,30 @@ abstract class AppLocalizations {
   /// **'No reports available'**
   String get reportsEmpty;
 
+  /// Empty-state title when there are no reports.
+  ///
+  /// In en, this message translates to:
+  /// **'No reports'**
+  String get reportsEmptyTitle;
+
+  /// Empty-state body when there are no reports.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports will appear here once created.'**
+  String get reportsEmptyMessage;
+
+  /// Loading label when reports are being fetched.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading reports…'**
+  String get reportsLoading;
+
+  /// Error title when reports fail to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load reports'**
+  String get failedToLoadReports;
+
   /// Button label for running/generating a report.
   ///
   /// In en, this message translates to:
@@ -807,6 +1539,228 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Export'**
   String get reportExport;
+
+  /// Tooltip for the export report button.
+  ///
+  /// In en, this message translates to:
+  /// **'Export report'**
+  String get exportReport;
+
+  /// Snackbar message when export is not yet available.
+  ///
+  /// In en, this message translates to:
+  /// **'Export not yet implemented'**
+  String get exportNotImplemented;
+
+  /// Loading label when a report is being run.
+  ///
+  /// In en, this message translates to:
+  /// **'Running report…'**
+  String get runningReport;
+
+  /// Error title when a report run fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Report failed'**
+  String get reportFailed;
+
+  /// Empty-state text when a report returns no data.
+  ///
+  /// In en, this message translates to:
+  /// **'No data returned'**
+  String get noDataReturned;
+
+  /// Page title for the settings view.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settingsTitle;
+
+  /// Page title for the profile view and settings label.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get profileTitle;
+
+  /// Page title for the integrations view.
+  ///
+  /// In en, this message translates to:
+  /// **'Integrations'**
+  String get integrationsTitle;
+
+  /// Section header for security settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get security;
+
+  /// Section header for user preferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences'**
+  String get preferences;
+
+  /// Label for the change password setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Password'**
+  String get changePassword;
+
+  /// Label for the timezone setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Timezone'**
+  String get timezone;
+
+  /// Label for the calendar filters setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar Filters'**
+  String get calendarFilters;
+
+  /// Title for the Google Workspace integration card.
+  ///
+  /// In en, this message translates to:
+  /// **'Google Workspace'**
+  String get googleWorkspace;
+
+  /// Description for the Google Workspace integration.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect Gmail, Calendar, and Contacts'**
+  String get googleWorkspaceDescription;
+
+  /// Status label for a connected integration.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get connected;
+
+  /// Status label for a disconnected integration.
+  ///
+  /// In en, this message translates to:
+  /// **'Not connected'**
+  String get notConnected;
+
+  /// Button label for disconnecting an integration.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect'**
+  String get disconnect;
+
+  /// Button and dialog title for connecting a Google account.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect Google Account'**
+  String get connectGoogleAccount;
+
+  /// Instructions for connecting a Google account via OAuth.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy the link below and open it in your browser to authorize your Google account:'**
+  String get connectGoogleInstructions;
+
+  /// Button label for copying a link to the clipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy Link'**
+  String get copyLink;
+
+  /// Snackbar message after a link is copied to the clipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied to clipboard'**
+  String get linkCopied;
+
+  /// Label showing the last sync time for an integration.
+  ///
+  /// In en, this message translates to:
+  /// **'Last synced: {dateTime}'**
+  String lastSynced(String dateTime);
+
+  /// Page title for the call log view.
+  ///
+  /// In en, this message translates to:
+  /// **'Call Log'**
+  String get callLogTitle;
+
+  /// Loading label when call logs are being fetched.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading call logs...'**
+  String get callLogLoading;
+
+  /// Error title when call logs fail to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load call logs'**
+  String get failedToLoadCallLogs;
+
+  /// Empty-state title when the call log is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'No call logs'**
+  String get callLogEmpty;
+
+  /// Call-to-action when the call log is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap + to log your first call.'**
+  String get callLogEmptyMessage;
+
+  /// Tooltip for the floating action button to log a call.
+  ///
+  /// In en, this message translates to:
+  /// **'Log a call'**
+  String get logCall;
+
+  /// Call outcome label for a connected call.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get callOutcomeConnected;
+
+  /// Call outcome label for a voicemail.
+  ///
+  /// In en, this message translates to:
+  /// **'Voicemail'**
+  String get callOutcomeVoicemail;
+
+  /// Call outcome label for a no-answer call.
+  ///
+  /// In en, this message translates to:
+  /// **'No Answer'**
+  String get callOutcomeNoAnswer;
+
+  /// Call outcome label for a busy call.
+  ///
+  /// In en, this message translates to:
+  /// **'Busy'**
+  String get callOutcomeBusy;
+
+  /// Title for the initial search state.
+  ///
+  /// In en, this message translates to:
+  /// **'Search your CRM'**
+  String get searchCrmTitle;
+
+  /// Body text for the initial search state.
+  ///
+  /// In en, this message translates to:
+  /// **'Find contacts, deals, files, and more.'**
+  String get searchCrmMessage;
+
+  /// Hint text for the search input field.
+  ///
+  /// In en, this message translates to:
+  /// **'Search contacts, deals, files...'**
+  String get searchFieldHint;
+
+  /// Error title when a search fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Search failed'**
+  String get searchFailed;
 
   /// Hint text for the global search field.
   ///
@@ -825,6 +1779,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No results match your search'**
   String get searchNoResults;
+
+  /// Empty-state message when search yields no results for a specific query.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches found for \"{query}\".'**
+  String searchNoMatchesFor(String query);
+
+  /// Generic error message with a prefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {message}'**
+  String errorPrefix(String message);
 }
 
 class _AppLocalizationsDelegate

@@ -8,6 +8,7 @@ import 'package:cis_crm/features/products/presentation/pages/product_detail_page
 import 'package:cis_crm/features/products/presentation/pages/subscription_detail_page.dart';
 import 'package:cis_crm/features/products/presentation/widgets/product_tile.dart';
 import 'package:cis_crm/features/products/presentation/widgets/subscription_tile.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -41,11 +42,11 @@ class _ProductsView extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Products'),
-          bottom: const TabBar(
+          title: Text(AppLocalizations.of(context)!.productsTitle),
+          bottom: TabBar(
             tabs: [
-              Tab(text: 'Catalog'),
-              Tab(text: 'Subscriptions'),
+              Tab(text: AppLocalizations.of(context)!.catalogTab),
+              Tab(text: AppLocalizations.of(context)!.subscriptionsTab),
             ],
           ),
         ),
@@ -59,7 +60,7 @@ class _ProductsView extends StatelessWidget {
           onPressed: () {
             // TODO(nav): Navigate to add product form.
           },
-          tooltip: 'Add product',
+          tooltip: AppLocalizations.of(context)!.addProduct,
           child: const Icon(Icons.add),
         ),
       ),
@@ -79,19 +80,19 @@ class _CatalogTab extends StatelessWidget {
         return switch (state) {
           ProductsInitial() ||
           ProductsLoading() =>
-            const PageLoading(label: 'Loading products\u2026'),
+            PageLoading(label: AppLocalizations.of(context)!.productsLoading),
           ProductsError(:final message) => PageError(
-              title: 'Failed to load products',
+              title: AppLocalizations.of(context)!.failedToLoadProducts,
               message: message,
               onRetry: () => context
                   .read<ProductsBloc>()
                   .add(const ProductsLoadRequested()),
             ),
           ProductsLoaded(:final products) => products.isEmpty
-              ? const EmptyState(
+              ? EmptyState(
                   icon: Icons.inventory_2_outlined,
-                  title: 'No products yet',
-                  message: 'Tap + to add your first product.',
+                  title: AppLocalizations.of(context)!.productsEmpty,
+                  message: AppLocalizations.of(context)!.productsEmptyMessage,
                 )
               : ListView.separated(
                   itemCount: products.length,
@@ -127,19 +128,19 @@ class _SubscriptionsTab extends StatelessWidget {
         return switch (state) {
           SubscriptionsInitial() ||
           SubscriptionsLoading() =>
-            const PageLoading(label: 'Loading subscriptions\u2026'),
+            PageLoading(label: AppLocalizations.of(context)!.subscriptionsLoading),
           SubscriptionsError(:final message) => PageError(
-              title: 'Failed to load subscriptions',
+              title: AppLocalizations.of(context)!.failedToLoadSubscriptions,
               message: message,
               onRetry: () => context
                   .read<SubscriptionsBloc>()
                   .add(const SubscriptionsLoadRequested()),
             ),
           SubscriptionsLoaded(:final subscriptions) => subscriptions.isEmpty
-              ? const EmptyState(
+              ? EmptyState(
                   icon: Icons.subscriptions_outlined,
-                  title: 'No subscriptions',
-                  message: 'Subscriptions will appear here.',
+                  title: AppLocalizations.of(context)!.subscriptionsEmpty,
+                  message: AppLocalizations.of(context)!.subscriptionsEmptyMessage,
                 )
               : ListView.separated(
                   itemCount: subscriptions.length,

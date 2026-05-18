@@ -4,6 +4,7 @@ import 'package:cis_crm/core/widgets/state/page_error.dart';
 import 'package:cis_crm/core/widgets/state/page_loading.dart';
 import 'package:cis_crm/features/files/presentation/cubit/files_cubit.dart';
 import 'package:cis_crm/features/files/presentation/widgets/file_tile.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -25,12 +26,12 @@ class _FilesView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Files')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.filesTitle)),
       floatingActionButton: FloatingActionButton(
-        tooltip: 'Upload file',
+        tooltip: AppLocalizations.of(context)!.uploadFile,
         onPressed: () {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Coming soon')),
+            SnackBar(content: Text(AppLocalizations.of(context)!.comingSoon)),
           );
         },
         child: const Icon(Icons.upload_file),
@@ -38,19 +39,18 @@ class _FilesView extends StatelessWidget {
       body: BlocBuilder<FilesCubit, FilesState>(
         builder: (context, state) {
           return switch (state) {
-            FilesInitial() => const EmptyState(
+            FilesInitial() => EmptyState(
                 icon: Icons.folder_open,
-                title: 'No parent context',
-                message:
-                    'Select a contact or record to view its files.',
+                title: AppLocalizations.of(context)!.filesNoParentContext,
+                message: AppLocalizations.of(context)!.filesSelectParent,
               ),
             FilesLoading() ||
             FilesUploading() =>
               const PageLoading(),
-            FilesLoaded(:final files) when files.isEmpty => const EmptyState(
+            FilesLoaded(:final files) when files.isEmpty => EmptyState(
                 icon: Icons.folder_open,
-                title: 'No files',
-                message: 'Upload your first file to get started.',
+                title: AppLocalizations.of(context)!.filesEmptyTitle,
+                message: AppLocalizations.of(context)!.filesEmptyMessage,
               ),
             FilesLoaded(:final files) => ListView.builder(
                 padding: const EdgeInsets.all(8),
@@ -66,14 +66,14 @@ class _FilesView extends StatelessWidget {
                 },
               ),
             FilesError(:final failure) => PageError(
-                title: 'Failed to load files',
+                title: AppLocalizations.of(context)!.failedToLoadFiles,
                 message: failure.message,
                 onRetry: () {
                   // No parent context available from standalone files page.
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text(
-                        'Select a contact or record to view its files.',
+                        AppLocalizations.of(context)!.filesSelectParent,
                       ),
                     ),
                   );

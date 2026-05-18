@@ -2,6 +2,7 @@ import 'package:cis_crm/features/products/domain/entities/line_item.dart';
 import 'package:cis_crm/features/products/domain/entities/subscription.dart';
 import 'package:cis_crm/features/products/domain/entities/subscription_status.dart';
 import 'package:cis_crm/features/products/presentation/widgets/line_item_tile.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class SubscriptionDetailPage extends StatelessWidget {
@@ -19,7 +20,7 @@ class SubscriptionDetailPage extends StatelessWidget {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Subscription ${subscription.systemId}'),
+        title: Text(AppLocalizations.of(context)!.subscriptionTitle(subscription.systemId)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -34,29 +35,29 @@ class SubscriptionDetailPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Details',
+                      AppLocalizations.of(context)!.details,
                       style: theme.textTheme.titleMedium,
                     ),
                     const SizedBox(height: 12),
                     _DetailRow(
-                      label: 'System ID',
+                      label: AppLocalizations.of(context)!.subscriptionSystemId,
                       value: subscription.systemId,
                     ),
                     const Divider(),
                     _DetailRow(
-                      label: 'Company',
+                      label: AppLocalizations.of(context)!.subscriptionCompany,
                       value: subscription.companyId,
                     ),
                     const Divider(),
                     _DetailRow(
-                      label: 'Product Type',
+                      label: AppLocalizations.of(context)!.subscriptionProductType,
                       value: subscription.productType,
                     ),
                     const Divider(),
                     _StatusRow(status: subscription.status),
                     if (subscription.tags.isNotEmpty) ...[
                       const Divider(),
-                      Text('Tags', style: theme.textTheme.labelMedium),
+                      Text(AppLocalizations.of(context)!.contactTags, style: theme.textTheme.labelMedium),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
@@ -84,7 +85,7 @@ class SubscriptionDetailPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Line Items',
+                      AppLocalizations.of(context)!.lineItems,
                       style: theme.textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
@@ -93,7 +94,7 @@ class SubscriptionDetailPage extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 24),
                         child: Center(
                           child: Text(
-                            'No line items',
+                            AppLocalizations.of(context)!.noLineItems,
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -154,7 +155,7 @@ class _StatusRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final (label, color) = _labelAndColor(theme.colorScheme, status);
+    final (label, color) = _labelAndColor(context, theme.colorScheme, status);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -162,7 +163,7 @@ class _StatusRow extends StatelessWidget {
           SizedBox(
             width: 120,
             child: Text(
-              'Status',
+              AppLocalizations.of(context)!.status,
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -181,16 +182,18 @@ class _StatusRow extends StatelessWidget {
   }
 
   static (String, Color) _labelAndColor(
+    BuildContext context,
     ColorScheme cs,
     SubscriptionStatus status,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     return switch (status) {
-      SubscriptionStatus.active => ('Active', cs.primary),
-      SubscriptionStatus.trialing => ('Trialing', cs.tertiary),
-      SubscriptionStatus.pastDue => ('Past Due', cs.error),
-      SubscriptionStatus.paused => ('Paused', cs.outline),
-      SubscriptionStatus.cancelled => ('Cancelled', cs.onSurfaceVariant),
-      SubscriptionStatus.expired => ('Expired', cs.error),
+      SubscriptionStatus.active => (l10n.statusActive, cs.primary),
+      SubscriptionStatus.trialing => (l10n.statusTrialing, cs.tertiary),
+      SubscriptionStatus.pastDue => (l10n.statusPastDue, cs.error),
+      SubscriptionStatus.paused => (l10n.statusPaused, cs.outline),
+      SubscriptionStatus.cancelled => (l10n.statusCancelled, cs.onSurfaceVariant),
+      SubscriptionStatus.expired => (l10n.statusExpired, cs.error),
     };
   }
 }

@@ -21,6 +21,11 @@
     "description": "Dismiss/close button label on banners and dialogs."
   },
 
+  "comingSoon": "Coming soon",
+  "@comingSoon": {
+    "description": "Placeholder label for features not yet implemented."
+  },
+
 
   "failure_network": "No internet connection. Check your network and try again.",
   "@failure_network": {},
@@ -141,6 +146,26 @@
     "description": "Body text for a generic delete confirmation dialog."
   },
 
+  "details": "Details",
+  "@details": {
+    "description": "Section header for a details card."
+  },
+
+  "timeline": "Timeline",
+  "@timeline": {
+    "description": "Section header for an activity timeline."
+  },
+
+  "noTimelineEntries": "No timeline entries",
+  "@noTimelineEntries": {
+    "description": "Empty-state text when a timeline has no entries."
+  },
+
+  "activityTimelineComingSoon": "Activity timeline coming soon",
+  "@activityTimelineComingSoon": {
+    "description": "Placeholder text for the record detail timeline section."
+  },
+
 
   "loginTitle": "Sign in to CIS CRM",
   "@loginTitle": {
@@ -186,6 +211,11 @@
   "contactsEmptyMessage": "Add your first contact to get started.",
   "@contactsEmptyMessage": {
     "description": "Empty-state body when the contacts list is empty."
+  },
+
+  "contactsEmptyAction": "Tap the + button to add your first contact.",
+  "@contactsEmptyAction": {
+    "description": "Call-to-action when the contacts list is empty."
   },
 
   "contactSearch": "Search contacts",
@@ -238,6 +268,113 @@
     "description": "Confirmation message before deleting a contact."
   },
 
+  "contactDeleteTitle": "Delete contact?",
+  "@contactDeleteTitle": {
+    "description": "Title for the contact delete confirmation dialog."
+  },
+
+  "contactDeleteConfirmName": "Are you sure you want to delete {name}?",
+  "@contactDeleteConfirmName": {
+    "description": "Confirmation message before deleting a named contact.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "John Doe"
+      }
+    }
+  },
+
+  "contactDeleted": "Contact deleted",
+  "@contactDeleted": {
+    "description": "Snackbar message after successfully deleting a contact."
+  },
+
+  "contactDeleteFailed": "Delete failed: {message}",
+  "@contactDeleteFailed": {
+    "description": "Snackbar message when contact deletion fails.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Network error"
+      }
+    }
+  },
+
+  "addContact": "Add Contact",
+  "@addContact": {
+    "description": "Button label for adding a new contact."
+  },
+
+  "editContact": "Edit contact",
+  "@editContact": {
+    "description": "Tooltip for the edit contact button."
+  },
+
+  "deleteContact": "Delete contact",
+  "@deleteContact": {
+    "description": "Tooltip for the delete contact button."
+  },
+
+  "addContactTooltip": "Add contact",
+  "@addContactTooltip": {
+    "description": "Tooltip for the floating action button to add a contact."
+  },
+
+  "clearSearch": "Clear search",
+  "@clearSearch": {
+    "description": "Tooltip for clearing the search field."
+  },
+
+  "back": "Back",
+  "@back": {
+    "description": "Tooltip for the back navigation button."
+  },
+
+  "searchNoResultsTitle": "No results",
+  "@searchNoResultsTitle": {
+    "description": "Title when a search yields no results."
+  },
+
+  "searchNoResultsMessage": "Try a different search term.",
+  "@searchNoResultsMessage": {
+    "description": "Body text when a search yields no results."
+  },
+
+  "contactCompany": "Company",
+  "@contactCompany": {
+    "description": "Label for the contact company field."
+  },
+
+  "contactStatusActive": "Active",
+  "@contactStatusActive": {
+    "description": "Contact status label for active contacts."
+  },
+
+  "contactStatusInactive": "Inactive",
+  "@contactStatusInactive": {
+    "description": "Contact status label for inactive contacts."
+  },
+
+  "contactStatusLead": "Lead",
+  "@contactStatusLead": {
+    "description": "Contact status label for leads."
+  },
+
+  "contactStatusProspect": "Prospect",
+  "@contactStatusProspect": {
+    "description": "Contact status label for prospects."
+  },
+
+  "contactStatusCustomer": "Customer",
+  "@contactStatusCustomer": {
+    "description": "Contact status label for customers."
+  },
+
+  "failedToLoadContacts": "Failed to load contacts",
+  "@failedToLoadContacts": {
+    "description": "Error title when contacts fail to load."
+  },
+
 
   "pipelineTitle": "Pipeline",
   "@pipelineTitle": {
@@ -247,6 +384,56 @@
   "pipelineEmpty": "No deals in your pipeline",
   "@pipelineEmpty": {
     "description": "Empty-state text when the pipeline has no deals."
+  },
+
+  "pipelineInitializing": "Initializing pipeline...",
+  "@pipelineInitializing": {
+    "description": "Loading label when pipeline is initializing."
+  },
+
+  "pipelineLoading": "Loading pipelines...",
+  "@pipelineLoading": {
+    "description": "Loading label when pipelines are being fetched."
+  },
+
+  "failedToLoadPipelines": "Failed to load pipelines",
+  "@failedToLoadPipelines": {
+    "description": "Error title when pipelines fail to load."
+  },
+
+  "newRecord": "New Record",
+  "@newRecord": {
+    "description": "Button and dialog title for creating a new pipeline record."
+  },
+
+  "addNewRecord": "Add a new record",
+  "@addNewRecord": {
+    "description": "Tooltip for the new record floating action button."
+  },
+
+  "enterRecordTitle": "Enter record title",
+  "@enterRecordTitle": {
+    "description": "Hint text for the record title input field."
+  },
+
+  "stage": "Stage",
+  "@stage": {
+    "description": "Label for the pipeline stage field."
+  },
+
+  "noStagesConfigured": "No stages configured",
+  "@noStagesConfigured": {
+    "description": "Empty-state title when a pipeline has no stages."
+  },
+
+  "noStagesConfiguredMessage": "Add stages to this pipeline to start tracking records.",
+  "@noStagesConfiguredMessage": {
+    "description": "Empty-state body when a pipeline has no stages."
+  },
+
+  "noRecords": "No records",
+  "@noRecords": {
+    "description": "Empty-state text for a Kanban column with no records."
   },
 
   "recordCreate": "Create record",
@@ -284,6 +471,61 @@
     "description": "Label for the lost/closed-lost pipeline stage."
   },
 
+  "record": "Record",
+  "@record": {
+    "description": "Generic label for a pipeline record."
+  },
+
+  "recordNotFound": "Record not found",
+  "@recordNotFound": {
+    "description": "Message when a pipeline record cannot be found."
+  },
+
+  "moveToStage": "Move to stage",
+  "@moveToStage": {
+    "description": "Menu item label for moving a record to another stage."
+  },
+
+  "moreActions": "More actions",
+  "@moreActions": {
+    "description": "Tooltip for the more actions popup menu."
+  },
+
+  "pipeline": "Pipeline",
+  "@pipeline": {
+    "description": "Label for the pipeline field on record detail."
+  },
+
+  "contact": "Contact",
+  "@contact": {
+    "description": "Label for the contact field on record detail."
+  },
+
+  "owner": "Owner",
+  "@owner": {
+    "description": "Label for the owner field on record detail."
+  },
+
+  "source": "Source",
+  "@source": {
+    "description": "Label for the source field."
+  },
+
+  "created": "Created",
+  "@created": {
+    "description": "Label for the created date field."
+  },
+
+  "updated": "Updated",
+  "@updated": {
+    "description": "Label for the updated date field."
+  },
+
+  "title": "Title",
+  "@title": {
+    "description": "Generic title field label."
+  },
+
 
   "tasksTitle": "Tasks",
   "@tasksTitle": {
@@ -298,6 +540,61 @@
   "tasksEmptyMessage": "Create a task to start tracking your work.",
   "@tasksEmptyMessage": {
     "description": "Empty-state body when the tasks list is empty."
+  },
+
+  "tasksEmptyAction": "Tap + to create your first task.",
+  "@tasksEmptyAction": {
+    "description": "Call-to-action when the tasks list is empty."
+  },
+
+  "tasksLoading": "Loading tasks...",
+  "@tasksLoading": {
+    "description": "Loading label when tasks are being fetched."
+  },
+
+  "failedToLoadTasks": "Failed to load tasks",
+  "@failedToLoadTasks": {
+    "description": "Error title when tasks fail to load."
+  },
+
+  "createTask": "Create Task",
+  "@createTask": {
+    "description": "Dialog title for creating a new task."
+  },
+
+  "enterTaskTitle": "Enter task title",
+  "@enterTaskTitle": {
+    "description": "Hint text for the task title input field."
+  },
+
+  "priority": "Priority",
+  "@priority": {
+    "description": "Label for the priority field."
+  },
+
+  "addTask": "Add task",
+  "@addTask": {
+    "description": "Tooltip for the floating action button to add a task."
+  },
+
+  "filterAll": "All",
+  "@filterAll": {
+    "description": "Label for the filter chip that shows all items."
+  },
+
+  "filterTodo": "Todo",
+  "@filterTodo": {
+    "description": "Label for the filter chip for to-do tasks."
+  },
+
+  "filterInProgress": "In Progress",
+  "@filterInProgress": {
+    "description": "Label for the filter chip for in-progress tasks."
+  },
+
+  "filterDone": "Done",
+  "@filterDone": {
+    "description": "Label for the filter chip for done tasks."
   },
 
   "taskTodo": "To do",
@@ -361,9 +658,24 @@
     "description": "Empty-state text when the calendar has no events."
   },
 
+  "calendarLoading": "Loading calendar...",
+  "@calendarLoading": {
+    "description": "Loading label when calendar events are being fetched."
+  },
+
+  "failedToLoadCalendar": "Failed to load calendar",
+  "@failedToLoadCalendar": {
+    "description": "Error title when the calendar fails to load."
+  },
+
   "calendarToday": "Today",
   "@calendarToday": {
     "description": "Button label to jump to today's date in the calendar."
+  },
+
+  "goToToday": "Go to today",
+  "@goToToday": {
+    "description": "Tooltip for the go-to-today button."
   },
 
   "viewDay": "Day",
@@ -381,6 +693,46 @@
     "description": "Calendar view selector: month view."
   },
 
+  "createEvent": "Create Event",
+  "@createEvent": {
+    "description": "Dialog title for creating a new calendar event."
+  },
+
+  "enterEventTitle": "Enter event title",
+  "@enterEventTitle": {
+    "description": "Hint text for the event title input field."
+  },
+
+  "start": "Start",
+  "@start": {
+    "description": "Label for the event start date/time field."
+  },
+
+  "end": "End",
+  "@end": {
+    "description": "Label for the event end date/time field."
+  },
+
+  "createEventTooltip": "Create event",
+  "@createEventTooltip": {
+    "description": "Tooltip for the floating action button to create an event."
+  },
+
+  "noEvents": "No events",
+  "@noEvents": {
+    "description": "Empty-state title when there are no calendar events."
+  },
+
+  "noEventsMessage": "Tap + to create your first event.",
+  "@noEventsMessage": {
+    "description": "Call-to-action when there are no calendar events."
+  },
+
+  "eventDetails": "Event Details",
+  "@eventDetails": {
+    "description": "Page title for the event detail view."
+  },
+
   "eventTitle": "Event title",
   "@eventTitle": {
     "description": "Label for the calendar event title field."
@@ -396,10 +748,40 @@
     "description": "Label for the calendar event meeting-link field."
   },
 
+  "linkedRecord": "Linked Record",
+  "@linkedRecord": {
+    "description": "Label for a linked pipeline record on an event."
+  },
+
 
   "productsTitle": "Products",
   "@productsTitle": {
     "description": "Page title for the products view."
+  },
+
+  "productsLoading": "Loading products\u2026",
+  "@productsLoading": {
+    "description": "Loading label when products are being fetched."
+  },
+
+  "failedToLoadProducts": "Failed to load products",
+  "@failedToLoadProducts": {
+    "description": "Error title when products fail to load."
+  },
+
+  "productsEmpty": "No products yet",
+  "@productsEmpty": {
+    "description": "Empty-state title when the product catalog is empty."
+  },
+
+  "productsEmptyMessage": "Tap + to add your first product.",
+  "@productsEmptyMessage": {
+    "description": "Call-to-action when the product catalog is empty."
+  },
+
+  "addProduct": "Add product",
+  "@addProduct": {
+    "description": "Tooltip for the floating action button to add a product."
   },
 
   "catalogTab": "Catalog",
@@ -410,6 +792,47 @@
   "subscriptionsTab": "Subscriptions",
   "@subscriptionsTab": {
     "description": "Tab label for the subscriptions list."
+  },
+
+  "subscriptionsLoading": "Loading subscriptions\u2026",
+  "@subscriptionsLoading": {
+    "description": "Loading label when subscriptions are being fetched."
+  },
+
+  "failedToLoadSubscriptions": "Failed to load subscriptions",
+  "@failedToLoadSubscriptions": {
+    "description": "Error title when subscriptions fail to load."
+  },
+
+  "subscriptionsEmpty": "No subscriptions",
+  "@subscriptionsEmpty": {
+    "description": "Empty-state title when there are no subscriptions."
+  },
+
+  "subscriptionsEmptyMessage": "Subscriptions will appear here.",
+  "@subscriptionsEmptyMessage": {
+    "description": "Body text when there are no subscriptions."
+  },
+
+  "subscriptionsPageTitle": "Subscriptions",
+  "@subscriptionsPageTitle": {
+    "description": "Page title for the standalone subscriptions page."
+  },
+
+  "noSubscriptionsLoaded": "No subscriptions loaded.",
+  "@noSubscriptionsLoaded": {
+    "description": "Message when subscriptions have not been loaded yet."
+  },
+
+  "subscriptionTitle": "Subscription {systemId}",
+  "@subscriptionTitle": {
+    "description": "Page title for the subscription detail view.",
+    "placeholders": {
+      "systemId": {
+        "type": "String",
+        "example": "SUB-001"
+      }
+    }
   },
 
   "productName": "Product name",
@@ -437,6 +860,21 @@
     "description": "Status label for an inactive product."
   },
 
+  "productDefaultPrice": "Default Price",
+  "@productDefaultPrice": {
+    "description": "Label for the product default price field."
+  },
+
+  "productStatus": "Status",
+  "@productStatus": {
+    "description": "Label for the product status field."
+  },
+
+  "productNameLabel": "Name",
+  "@productNameLabel": {
+    "description": "Short label for the product name in detail view."
+  },
+
   "subscriptionSystemId": "System ID",
   "@subscriptionSystemId": {
     "description": "Label for the subscription system-ID field."
@@ -445,6 +883,31 @@
   "subscriptionStatus": "Subscription status",
   "@subscriptionStatus": {
     "description": "Label for the subscription status field."
+  },
+
+  "subscriptionCompany": "Company",
+  "@subscriptionCompany": {
+    "description": "Label for the subscription company field."
+  },
+
+  "subscriptionProductType": "Product Type",
+  "@subscriptionProductType": {
+    "description": "Label for the subscription product type field."
+  },
+
+  "status": "Status",
+  "@status": {
+    "description": "Generic status field label."
+  },
+
+  "lineItems": "Line Items",
+  "@lineItems": {
+    "description": "Section header for subscription line items."
+  },
+
+  "noLineItems": "No line items",
+  "@noLineItems": {
+    "description": "Empty-state text when there are no line items."
   },
 
   "statusTrialing": "Trialing",
@@ -478,6 +941,11 @@
   },
 
 
+  "emailComposeTitle": "Compose Email",
+  "@emailComposeTitle": {
+    "description": "Page title for the email compose view."
+  },
+
   "emailCompose": "Compose",
   "@emailCompose": {
     "description": "Button label for composing a new email."
@@ -486,6 +954,26 @@
   "emailSend": "Send",
   "@emailSend": {
     "description": "Button label for sending an email."
+  },
+
+  "emailSentSuccess": "Email sent successfully",
+  "@emailSentSuccess": {
+    "description": "Snackbar message after successfully sending an email."
+  },
+
+  "draftSaved": "Draft saved",
+  "@draftSaved": {
+    "description": "Snackbar message after successfully saving a draft."
+  },
+
+  "saveDraftTooltip": "Save draft",
+  "@saveDraftTooltip": {
+    "description": "Tooltip for the save draft button."
+  },
+
+  "sendEmailTooltip": "Send email",
+  "@sendEmailTooltip": {
+    "description": "Tooltip for the send email button."
   },
 
   "emailSaveDraft": "Save draft",
@@ -498,9 +986,24 @@
     "description": "Label for the email recipient field."
   },
 
+  "emailToHint": "recipient@example.com",
+  "@emailToHint": {
+    "description": "Hint text for the email recipient field."
+  },
+
+  "emailRecipientRequired": "Recipient is required",
+  "@emailRecipientRequired": {
+    "description": "Validation error when the email recipient is empty."
+  },
+
   "emailSubject": "Subject",
   "@emailSubject": {
     "description": "Label for the email subject field."
+  },
+
+  "emailSubjectRequired": "Subject is required",
+  "@emailSubjectRequired": {
+    "description": "Validation error when the email subject is empty."
   },
 
   "emailBody": "Body",
@@ -513,9 +1016,34 @@
     "description": "Label for the email templates section."
   },
 
+  "emailTemplatesTitle": "Email Templates",
+  "@emailTemplatesTitle": {
+    "description": "Page title for the email templates view."
+  },
+
   "emailTemplatesEmpty": "No templates available",
   "@emailTemplatesEmpty": {
     "description": "Empty-state text when there are no email templates."
+  },
+
+  "emailTemplatesEmptyTitle": "No templates",
+  "@emailTemplatesEmptyTitle": {
+    "description": "Empty-state title when there are no email templates."
+  },
+
+  "emailTemplatesEmptyMessage": "Create your first email template.",
+  "@emailTemplatesEmptyMessage": {
+    "description": "Empty-state body when there are no email templates."
+  },
+
+  "failedToLoadTemplates": "Failed to load templates",
+  "@failedToLoadTemplates": {
+    "description": "Error title when email templates fail to load."
+  },
+
+  "createTemplate": "Create template",
+  "@createTemplate": {
+    "description": "Tooltip for the floating action button to create a template."
   },
 
 
@@ -529,6 +1057,31 @@
     "description": "Empty-state text when there are no files."
   },
 
+  "filesEmptyTitle": "No files",
+  "@filesEmptyTitle": {
+    "description": "Empty-state title when there are no files."
+  },
+
+  "filesEmptyMessage": "Upload your first file to get started.",
+  "@filesEmptyMessage": {
+    "description": "Empty-state body when there are no files."
+  },
+
+  "filesNoParentContext": "No parent context",
+  "@filesNoParentContext": {
+    "description": "Empty-state title when no parent entity is selected for files."
+  },
+
+  "filesSelectParent": "Select a contact or record to view its files.",
+  "@filesSelectParent": {
+    "description": "Message prompting the user to select a parent entity."
+  },
+
+  "failedToLoadFiles": "Failed to load files",
+  "@failedToLoadFiles": {
+    "description": "Error title when files fail to load."
+  },
+
   "uploadFile": "Upload file",
   "@uploadFile": {
     "description": "Button label for uploading a file."
@@ -537,6 +1090,22 @@
   "deleteFile": "Delete file",
   "@deleteFile": {
     "description": "Button label for deleting a file."
+  },
+
+  "openPreview": "Open Preview",
+  "@openPreview": {
+    "description": "Button label for opening a file preview."
+  },
+
+  "uploadedBy": "Uploaded by {name}",
+  "@uploadedBy": {
+    "description": "Label showing who uploaded a file.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "John Doe"
+      }
+    }
   },
 
 
@@ -548,6 +1117,47 @@
   "automationEmpty": "No automation rules",
   "@automationEmpty": {
     "description": "Empty-state text when there are no automation rules."
+  },
+
+  "automationEmptyMessage": "Create your first automation rule.",
+  "@automationEmptyMessage": {
+    "description": "Empty-state body when there are no automation rules."
+  },
+
+  "failedToLoadRules": "Failed to load rules",
+  "@failedToLoadRules": {
+    "description": "Error title when automation rules fail to load."
+  },
+
+  "createRule": "Create rule",
+  "@createRule": {
+    "description": "Tooltip for the floating action button to create an automation rule."
+  },
+
+  "ruleDetail": "Rule Detail",
+  "@ruleDetail": {
+    "description": "Page title for the automation rule detail view."
+  },
+
+  "ruleDetailComingSoon": "Detail for rule {ruleId} — coming soon.",
+  "@ruleDetailComingSoon": {
+    "description": "Placeholder text for the rule detail page.",
+    "placeholders": {
+      "ruleId": {
+        "type": "String",
+        "example": "rule-123"
+      }
+    }
+  },
+
+  "deactivateRule": "Deactivate rule",
+  "@deactivateRule": {
+    "description": "Tooltip when an automation rule is active and can be deactivated."
+  },
+
+  "activateRule": "Activate rule",
+  "@activateRule": {
+    "description": "Tooltip when an automation rule is inactive and can be activated."
   },
 
   "automationRuleActive": "Active",
@@ -570,9 +1180,19 @@
     "description": "Label for a successful automation execution."
   },
 
+  "executionPartial": "Partial",
+  "@executionPartial": {
+    "description": "Label for a partially failed automation execution."
+  },
+
   "executionFailed": "Failed",
   "@executionFailed": {
     "description": "Label for a failed automation execution."
+  },
+
+  "executionDryRun": "Dry Run",
+  "@executionDryRun": {
+    "description": "Label for a dry-run automation execution."
   },
 
 
@@ -586,6 +1206,26 @@
     "description": "Empty-state text when there are no reports."
   },
 
+  "reportsEmptyTitle": "No reports",
+  "@reportsEmptyTitle": {
+    "description": "Empty-state title when there are no reports."
+  },
+
+  "reportsEmptyMessage": "Reports will appear here once created.",
+  "@reportsEmptyMessage": {
+    "description": "Empty-state body when there are no reports."
+  },
+
+  "reportsLoading": "Loading reports\u2026",
+  "@reportsLoading": {
+    "description": "Loading label when reports are being fetched."
+  },
+
+  "failedToLoadReports": "Failed to load reports",
+  "@failedToLoadReports": {
+    "description": "Error title when reports fail to load."
+  },
+
   "reportRun": "Run report",
   "@reportRun": {
     "description": "Button label for running/generating a report."
@@ -596,6 +1236,199 @@
     "description": "Button label for exporting a report."
   },
 
+  "exportReport": "Export report",
+  "@exportReport": {
+    "description": "Tooltip for the export report button."
+  },
+
+  "exportNotImplemented": "Export not yet implemented",
+  "@exportNotImplemented": {
+    "description": "Snackbar message when export is not yet available."
+  },
+
+  "runningReport": "Running report\u2026",
+  "@runningReport": {
+    "description": "Loading label when a report is being run."
+  },
+
+  "reportFailed": "Report failed",
+  "@reportFailed": {
+    "description": "Error title when a report run fails."
+  },
+
+  "noDataReturned": "No data returned",
+  "@noDataReturned": {
+    "description": "Empty-state text when a report returns no data."
+  },
+
+
+  "settingsTitle": "Settings",
+  "@settingsTitle": {
+    "description": "Page title for the settings view."
+  },
+
+  "profileTitle": "Profile",
+  "@profileTitle": {
+    "description": "Page title for the profile view and settings label."
+  },
+
+  "integrationsTitle": "Integrations",
+  "@integrationsTitle": {
+    "description": "Page title for the integrations view."
+  },
+
+  "security": "Security",
+  "@security": {
+    "description": "Section header for security settings."
+  },
+
+  "preferences": "Preferences",
+  "@preferences": {
+    "description": "Section header for user preferences."
+  },
+
+  "changePassword": "Change Password",
+  "@changePassword": {
+    "description": "Label for the change password setting."
+  },
+
+  "timezone": "Timezone",
+  "@timezone": {
+    "description": "Label for the timezone setting."
+  },
+
+  "calendarFilters": "Calendar Filters",
+  "@calendarFilters": {
+    "description": "Label for the calendar filters setting."
+  },
+
+  "googleWorkspace": "Google Workspace",
+  "@googleWorkspace": {
+    "description": "Title for the Google Workspace integration card."
+  },
+
+  "googleWorkspaceDescription": "Connect Gmail, Calendar, and Contacts",
+  "@googleWorkspaceDescription": {
+    "description": "Description for the Google Workspace integration."
+  },
+
+  "connected": "Connected",
+  "@connected": {
+    "description": "Status label for a connected integration."
+  },
+
+  "notConnected": "Not connected",
+  "@notConnected": {
+    "description": "Status label for a disconnected integration."
+  },
+
+  "disconnect": "Disconnect",
+  "@disconnect": {
+    "description": "Button label for disconnecting an integration."
+  },
+
+  "connectGoogleAccount": "Connect Google Account",
+  "@connectGoogleAccount": {
+    "description": "Button and dialog title for connecting a Google account."
+  },
+
+  "connectGoogleInstructions": "Copy the link below and open it in your browser to authorize your Google account:",
+  "@connectGoogleInstructions": {
+    "description": "Instructions for connecting a Google account via OAuth."
+  },
+
+  "copyLink": "Copy Link",
+  "@copyLink": {
+    "description": "Button label for copying a link to the clipboard."
+  },
+
+  "linkCopied": "Link copied to clipboard",
+  "@linkCopied": {
+    "description": "Snackbar message after a link is copied to the clipboard."
+  },
+
+  "lastSynced": "Last synced: {dateTime}",
+  "@lastSynced": {
+    "description": "Label showing the last sync time for an integration.",
+    "placeholders": {
+      "dateTime": {
+        "type": "String",
+        "example": "2024-01-15 14:30"
+      }
+    }
+  },
+
+
+  "callLogTitle": "Call Log",
+  "@callLogTitle": {
+    "description": "Page title for the call log view."
+  },
+
+  "callLogLoading": "Loading call logs...",
+  "@callLogLoading": {
+    "description": "Loading label when call logs are being fetched."
+  },
+
+  "failedToLoadCallLogs": "Failed to load call logs",
+  "@failedToLoadCallLogs": {
+    "description": "Error title when call logs fail to load."
+  },
+
+  "callLogEmpty": "No call logs",
+  "@callLogEmpty": {
+    "description": "Empty-state title when the call log is empty."
+  },
+
+  "callLogEmptyMessage": "Tap + to log your first call.",
+  "@callLogEmptyMessage": {
+    "description": "Call-to-action when the call log is empty."
+  },
+
+  "logCall": "Log a call",
+  "@logCall": {
+    "description": "Tooltip for the floating action button to log a call."
+  },
+
+  "callOutcomeConnected": "Connected",
+  "@callOutcomeConnected": {
+    "description": "Call outcome label for a connected call."
+  },
+
+  "callOutcomeVoicemail": "Voicemail",
+  "@callOutcomeVoicemail": {
+    "description": "Call outcome label for a voicemail."
+  },
+
+  "callOutcomeNoAnswer": "No Answer",
+  "@callOutcomeNoAnswer": {
+    "description": "Call outcome label for a no-answer call."
+  },
+
+  "callOutcomeBusy": "Busy",
+  "@callOutcomeBusy": {
+    "description": "Call outcome label for a busy call."
+  },
+
+
+  "searchCrmTitle": "Search your CRM",
+  "@searchCrmTitle": {
+    "description": "Title for the initial search state."
+  },
+
+  "searchCrmMessage": "Find contacts, deals, files, and more.",
+  "@searchCrmMessage": {
+    "description": "Body text for the initial search state."
+  },
+
+  "searchFieldHint": "Search contacts, deals, files...",
+  "@searchFieldHint": {
+    "description": "Hint text for the search input field."
+  },
+
+  "searchFailed": "Search failed",
+  "@searchFailed": {
+    "description": "Error title when a search fails."
+  },
 
   "searchHint": "Search...",
   "@searchHint": {
@@ -610,5 +1443,27 @@
   "searchNoResults": "No results match your search",
   "@searchNoResults": {
     "description": "Empty-state text when a search returns no results."
+  },
+
+  "searchNoMatchesFor": "No matches found for \"{query}\".",
+  "@searchNoMatchesFor": {
+    "description": "Empty-state message when search yields no results for a specific query.",
+    "placeholders": {
+      "query": {
+        "type": "String",
+        "example": "example"
+      }
+    }
+  },
+
+  "errorPrefix": "Error: {message}",
+  "@errorPrefix": {
+    "description": "Generic error message with a prefix.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Something went wrong"
+      }
+    }
   }
 }

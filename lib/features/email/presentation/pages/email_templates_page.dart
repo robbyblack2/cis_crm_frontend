@@ -4,6 +4,7 @@ import 'package:cis_crm/core/widgets/state/page_error.dart';
 import 'package:cis_crm/core/widgets/state/page_loading.dart';
 import 'package:cis_crm/features/email/presentation/bloc/email_bloc.dart';
 import 'package:cis_crm/features/email/presentation/widgets/email_template_tile.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -25,9 +26,9 @@ class _EmailTemplatesView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Email Templates')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.emailTemplatesTitle)),
       floatingActionButton: FloatingActionButton(
-        tooltip: 'Create template',
+        tooltip: AppLocalizations.of(context)!.createTemplate,
         onPressed: () {
           // TODO(email): Navigate to create template page.
         },
@@ -38,10 +39,10 @@ class _EmailTemplatesView extends StatelessWidget {
           return switch (state) {
             EmailInitial() || EmailLoading() => const PageLoading(),
             EmailLoaded(templates: final templates?) when templates.isEmpty =>
-              const EmptyState(
+              EmptyState(
                 icon: Icons.description_outlined,
-                title: 'No templates',
-                message: 'Create your first email template.',
+                title: AppLocalizations.of(context)!.emailTemplatesEmptyTitle,
+                message: AppLocalizations.of(context)!.emailTemplatesEmptyMessage,
               ),
             EmailLoaded(templates: final templates?) => ListView.builder(
                 itemCount: templates.length,
@@ -50,7 +51,7 @@ class _EmailTemplatesView extends StatelessWidget {
                 },
               ),
             EmailError(:final failure) => PageError(
-                title: 'Failed to load templates',
+                title: AppLocalizations.of(context)!.failedToLoadTemplates,
                 message: failure.message,
                 onRetry: () {
                   context.read<EmailBloc>().add(const TemplatesLoadRequested());

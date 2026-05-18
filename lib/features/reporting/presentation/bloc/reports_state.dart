@@ -1,3 +1,4 @@
+import 'package:cis_crm/features/reporting/domain/entities/pipeline_summary.dart';
 import 'package:cis_crm/features/reporting/domain/entities/report.dart';
 import 'package:cis_crm/features/reporting/domain/entities/report_result.dart';
 import 'package:equatable/equatable.dart';
@@ -39,6 +40,19 @@ final class ReportLoaded extends ReportsState {
 
   @override
   List<Object?> get props => [result];
+}
+
+final class PipelineSummaryLoading extends ReportsState {
+  const PipelineSummaryLoading();
+}
+
+final class PipelineSummaryLoaded extends ReportsState {
+  const PipelineSummaryLoaded(this.summary);
+
+  final PipelineSummary summary;
+
+  @override
+  List<Object?> get props => [summary];
 }
 
 final class ReportsError extends ReportsState {

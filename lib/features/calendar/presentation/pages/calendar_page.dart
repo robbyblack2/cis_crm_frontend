@@ -6,6 +6,7 @@ import 'package:cis_crm/features/calendar/domain/entities/calendar_event.dart';
 import 'package:cis_crm/features/calendar/presentation/bloc/calendar_bloc.dart';
 import 'package:cis_crm/features/calendar/presentation/pages/event_detail_page.dart';
 import 'package:cis_crm/features/calendar/presentation/widgets/event_tile.dart';
+import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -40,9 +41,9 @@ class _CalendarViewState extends State<_CalendarView> {
         return switch (state) {
           CalendarInitial() ||
           CalendarLoading() =>
-            const PageLoading(label: 'Loading calendar...'),
+            PageLoading(label: AppLocalizations.of(context)!.calendarLoading),
           CalendarError(:final failure) => PageError(
-              title: 'Failed to load calendar',
+              title: AppLocalizations.of(context)!.failedToLoadCalendar,
               message: failure.message,
               onRetry: () => context
                   .read<CalendarBloc>()
@@ -63,16 +64,16 @@ class _CalendarViewState extends State<_CalendarView> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => AlertDialog(
-          title: const Text('Create Event'),
+          title: Text(AppLocalizations.of(dialogContext)!.createEvent),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Title',
-                    hintText: 'Enter event title',
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(dialogContext)!.title,
+                    hintText: AppLocalizations.of(dialogContext)!.enterEventTitle,
                   ),
                   autofocus: true,
                   textCapitalization: TextCapitalization.sentences,
@@ -80,7 +81,7 @@ class _CalendarViewState extends State<_CalendarView> {
                 const SizedBox(height: 16),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Start'),
+                  title: Text(AppLocalizations.of(dialogContext)!.start),
                   subtitle: Text(
                     _formatDateTime(startDate),
                   ),
@@ -114,7 +115,7 @@ class _CalendarViewState extends State<_CalendarView> {
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('End'),
+                  title: Text(AppLocalizations.of(dialogContext)!.end),
                   subtitle: Text(
                     _formatDateTime(endDate),
                   ),
@@ -149,7 +150,7 @@ class _CalendarViewState extends State<_CalendarView> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(dialogContext)!.cancel),
             ),
             FilledButton(
               onPressed: () {
@@ -167,7 +168,7 @@ class _CalendarViewState extends State<_CalendarView> {
                     .add(CalendarEventCreateRequested(event: event));
                 Navigator.of(dialogContext).pop();
               },
-              child: const Text('Create'),
+              child: Text(AppLocalizations.of(dialogContext)!.create),
             ),
           ],
         ),
@@ -188,13 +189,13 @@ class _CalendarViewState extends State<_CalendarView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Calendar'),
+        title: Text(AppLocalizations.of(context)!.calendarTitle),
         actions: [
           IconButton(
-            tooltip: 'Go to today',
+            tooltip: AppLocalizations.of(context)!.goToToday,
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Coming soon')),
+                SnackBar(content: Text(AppLocalizations.of(context)!.comingSoon)),
               );
             },
             icon: const Icon(Icons.today),
@@ -205,18 +206,18 @@ class _CalendarViewState extends State<_CalendarView> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: SegmentedButton<_CalendarViewMode>(
-              segments: const [
+              segments: [
                 ButtonSegment(
                   value: _CalendarViewMode.day,
-                  label: Text('Day'),
+                  label: Text(AppLocalizations.of(context)!.viewDay),
                 ),
                 ButtonSegment(
                   value: _CalendarViewMode.week,
-                  label: Text('Week'),
+                  label: Text(AppLocalizations.of(context)!.viewWeek),
                 ),
                 ButtonSegment(
                   value: _CalendarViewMode.month,
-                  label: Text('Month'),
+                  label: Text(AppLocalizations.of(context)!.viewMonth),
                 ),
               ],
               selected: {_viewMode},
@@ -228,10 +229,10 @@ class _CalendarViewState extends State<_CalendarView> {
         ),
       ),
       body: events.isEmpty
-          ? const EmptyState(
+          ? EmptyState(
               icon: Icons.calendar_month,
-              title: 'No events',
-              message: 'Tap + to create your first event.',
+              title: AppLocalizations.of(context)!.noEvents,
+              message: AppLocalizations.of(context)!.noEventsMessage,
             )
           : ListView.builder(
               itemCount: sortedDates.length,
@@ -245,7 +246,7 @@ class _CalendarViewState extends State<_CalendarView> {
               },
             ),
       floatingActionButton: FloatingActionButton(
-        tooltip: 'Create event',
+        tooltip: AppLocalizations.of(context)!.createEventTooltip,
         onPressed: () => _showCreateEventDialog(context),
         child: const Icon(Icons.add),
       ),

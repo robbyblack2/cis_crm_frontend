@@ -2,6 +2,7 @@ import 'package:cis_crm/core/error/exceptions.dart';
 import 'package:cis_crm/core/error/failures.dart';
 import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/features/reporting/data/datasources/report_remote_datasource.dart';
+import 'package:cis_crm/features/reporting/domain/entities/pipeline_summary.dart';
 import 'package:cis_crm/features/reporting/domain/entities/report.dart';
 import 'package:cis_crm/features/reporting/domain/entities/report_result.dart';
 import 'package:cis_crm/features/reporting/domain/repositories/report_repository.dart';
@@ -54,6 +55,18 @@ class ReportRepositoryImpl implements ReportRepository {
     try {
       final csv = await _dataSource.exportReport(id);
       return Success(csv);
+    } on DioException catch (e) {
+      return Failure(_mapException(e));
+    }
+  }
+
+  @override
+  Future<Result<PipelineSummary, AppFailure>> getPipelineSummary(
+    String pipelineId,
+  ) async {
+    try {
+      final summary = await _dataSource.getPipelineSummary(pipelineId);
+      return Success(summary);
     } on DioException catch (e) {
       return Failure(_mapException(e));
     }
