@@ -66,7 +66,9 @@ class EmailRemoteDataSourceImpl implements EmailRemoteDataSource {
           'body': body,
         },
       );
-      return EmailMessageModel.fromJson(response.data!);
+      return EmailMessageModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to send email',
@@ -90,7 +92,9 @@ class EmailRemoteDataSourceImpl implements EmailRemoteDataSource {
           'body': body,
         },
       );
-      return EmailDraftModel.fromJson(response.data!);
+      return EmailDraftModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to save draft',
@@ -102,8 +106,11 @@ class EmailRemoteDataSourceImpl implements EmailRemoteDataSource {
   @override
   Future<List<EmailDraftModel>> getDrafts() async {
     try {
-      final response = await _dio.get<List<dynamic>>('/api/email/drafts');
-      return response.data!
+      final response =
+          await _dio.get<Map<String, dynamic>>('/api/email/drafts');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list
           .cast<Map<String, dynamic>>()
           .map(EmailDraftModel.fromJson)
           .toList();
@@ -131,7 +138,9 @@ class EmailRemoteDataSourceImpl implements EmailRemoteDataSource {
           'body': body,
         },
       );
-      return EmailDraftModel.fromJson(response.data!);
+      return EmailDraftModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to update draft',
@@ -146,7 +155,9 @@ class EmailRemoteDataSourceImpl implements EmailRemoteDataSource {
       final response = await _dio.post<Map<String, dynamic>>(
         '/api/email/drafts/$id/send',
       );
-      return EmailMessageModel.fromJson(response.data!);
+      return EmailMessageModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to send draft',
@@ -158,8 +169,11 @@ class EmailRemoteDataSourceImpl implements EmailRemoteDataSource {
   @override
   Future<List<EmailTemplateModel>> getTemplates() async {
     try {
-      final response = await _dio.get<List<dynamic>>('/api/email/templates');
-      return response.data!
+      final response =
+          await _dio.get<Map<String, dynamic>>('/api/email/templates');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list
           .cast<Map<String, dynamic>>()
           .map(EmailTemplateModel.fromJson)
           .toList();
@@ -182,7 +196,9 @@ class EmailRemoteDataSourceImpl implements EmailRemoteDataSource {
         '/api/email/templates',
         data: {'name': name, 'subject': subject, 'body': body},
       );
-      return EmailTemplateModel.fromJson(response.data!);
+      return EmailTemplateModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to create template',
@@ -203,7 +219,9 @@ class EmailRemoteDataSourceImpl implements EmailRemoteDataSource {
         '/api/email/templates/$id',
         data: {'name': name, 'subject': subject, 'body': body},
       );
-      return EmailTemplateModel.fromJson(response.data!);
+      return EmailTemplateModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to update template',

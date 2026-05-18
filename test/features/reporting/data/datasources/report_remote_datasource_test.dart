@@ -35,9 +35,9 @@ void main() {
 
   group('getReports', () {
     test('returns list of ReportModel from GET /api/reports', () async {
-      when(() => mockDio.get<List<dynamic>>('/api/reports')).thenAnswer(
+      when(() => mockDio.get<Map<String, dynamic>>('/api/reports')).thenAnswer(
         (_) async => Response(
-          data: [tReportJson],
+          data: <String, dynamic>{'data': [tReportJson]},
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),
@@ -56,7 +56,7 @@ void main() {
       when(() => mockDio.get<Map<String, dynamic>>('/api/reports/1'))
           .thenAnswer(
         (_) async => Response(
-          data: tResultJson,
+          data: <String, dynamic>{'data': tResultJson},
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),
@@ -78,7 +78,7 @@ void main() {
         ),
       ).thenAnswer(
         (_) async => Response(
-          data: tReportJson,
+          data: <String, dynamic>{'data': tReportJson},
           statusCode: 201,
           requestOptions: RequestOptions(),
         ),
@@ -100,7 +100,9 @@ void main() {
         () => mockDio.get<Map<String, dynamic>>('/api/reports/1/export'),
       ).thenAnswer(
         (_) async => Response(
-          data: {'csv': 'name,total\nAlice,100'},
+          data: <String, dynamic>{
+            'data': {'csv': 'name,total\nAlice,100'},
+          },
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),

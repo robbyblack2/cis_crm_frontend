@@ -24,8 +24,11 @@ class AutomationRemoteDataSourceImpl implements AutomationRemoteDataSource {
   @override
   Future<List<AutomationRuleModel>> getRules() async {
     try {
-      final response = await _dio.get<List<dynamic>>('$_basePath/rules');
-      return response.data!
+      final response =
+          await _dio.get<Map<String, dynamic>>('$_basePath/rules');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list
           .cast<Map<String, dynamic>>()
           .map(AutomationRuleModel.fromJson)
           .toList();
@@ -42,7 +45,9 @@ class AutomationRemoteDataSourceImpl implements AutomationRemoteDataSource {
     try {
       final response =
           await _dio.get<Map<String, dynamic>>('$_basePath/rules/$id');
-      return AutomationRuleModel.fromJson(response.data!);
+      return AutomationRuleModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to fetch rule',
@@ -56,7 +61,9 @@ class AutomationRemoteDataSourceImpl implements AutomationRemoteDataSource {
     try {
       final response =
           await _dio.post<Map<String, dynamic>>('$_basePath/rules', data: data);
-      return AutomationRuleModel.fromJson(response.data!);
+      return AutomationRuleModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to create rule',
@@ -73,7 +80,9 @@ class AutomationRemoteDataSourceImpl implements AutomationRemoteDataSource {
     try {
       final response = await _dio
           .put<Map<String, dynamic>>('$_basePath/rules/$id', data: data);
-      return AutomationRuleModel.fromJson(response.data!);
+      return AutomationRuleModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to update rule',
@@ -99,7 +108,9 @@ class AutomationRemoteDataSourceImpl implements AutomationRemoteDataSource {
     try {
       final response =
           await _dio.post<Map<String, dynamic>>('$_basePath/rules/$id/toggle');
-      return AutomationRuleModel.fromJson(response.data!);
+      return AutomationRuleModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to toggle rule',
@@ -113,7 +124,9 @@ class AutomationRemoteDataSourceImpl implements AutomationRemoteDataSource {
     try {
       final response =
           await _dio.post<Map<String, dynamic>>('$_basePath/rules/$id/dry-run');
-      return ExecutionLogModel.fromJson(response.data!);
+      return ExecutionLogModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to dry-run rule',
@@ -126,8 +139,10 @@ class AutomationRemoteDataSourceImpl implements AutomationRemoteDataSource {
   Future<List<ExecutionLogModel>> getExecutionLogs() async {
     try {
       final response =
-          await _dio.get<List<dynamic>>('$_basePath/execution-log');
-      return response.data!
+          await _dio.get<Map<String, dynamic>>('$_basePath/execution-log');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list
           .cast<Map<String, dynamic>>()
           .map(ExecutionLogModel.fromJson)
           .toList();

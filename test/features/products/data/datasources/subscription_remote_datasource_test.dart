@@ -29,9 +29,9 @@ void main() {
 
   group('getSubscriptions', () {
     test('returns list of SubscriptionModel on success', () async {
-      when(() => mockDio.get<List<dynamic>>(any())).thenAnswer(
+      when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
         (_) async => Response(
-          data: <dynamic>[tJson],
+          data: <String, dynamic>{'data': <dynamic>[tJson]},
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),
@@ -44,7 +44,7 @@ void main() {
     });
 
     test('throws ServerException on DioException', () async {
-      when(() => mockDio.get<List<dynamic>>(any())).thenThrow(
+      when(() => mockDio.get<Map<String, dynamic>>(any())).thenThrow(
         DioException(
           requestOptions: RequestOptions(),
           message: 'fail',
@@ -62,7 +62,7 @@ void main() {
     test('returns SubscriptionModel on success', () async {
       when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
         (_) async => Response(
-          data: tJson,
+          data: <String, dynamic>{'data': tJson},
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),
@@ -77,22 +77,24 @@ void main() {
 
   group('getLineItems', () {
     test('returns list of LineItemModel on success', () async {
-      when(() => mockDio.get<List<dynamic>>(any())).thenAnswer(
+      when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
         (_) async => Response(
-          data: <dynamic>[
-            <String, dynamic>{
-              'id': 'li1',
-              'product_id': 'p1',
-              'parent_type': 'subscription',
-              'parent_id': 's1',
-              'quantity': 2,
-              'unit_price': 50.0,
-              'serial_number': null,
-              'start_date': null,
-              'end_date': null,
-              'created_at': '2024-01-01T00:00:00.000',
-            },
-          ],
+          data: <String, dynamic>{
+            'data': <dynamic>[
+              <String, dynamic>{
+                'id': 'li1',
+                'product_id': 'p1',
+                'parent_type': 'subscription',
+                'parent_id': 's1',
+                'quantity': 2,
+                'unit_price': 50.0,
+                'serial_number': null,
+                'start_date': null,
+                'end_date': null,
+                'created_at': '2024-01-01T00:00:00.000',
+              },
+            ],
+          },
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),

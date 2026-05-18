@@ -18,21 +18,23 @@ void main() {
 
   group('getProducts', () {
     test('returns list of ProductModel when response is 200', () async {
-      when(() => mockDio.get<List<dynamic>>(any())).thenAnswer(
+      when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
         (_) async => Response(
-          data: <dynamic>[
-            <String, dynamic>{
-              'id': '1',
-              'name': 'Widget',
-              'type': 'hardware',
-              'default_price': 10.0,
-              'currency': 'USD',
-              'is_active': true,
-              'tags': <String>[],
-              'created_at': '2024-01-01T00:00:00.000',
-              'updated_at': '2024-01-01T00:00:00.000',
-            },
-          ],
+          data: <String, dynamic>{
+            'data': <dynamic>[
+              <String, dynamic>{
+                'id': '1',
+                'name': 'Widget',
+                'type': 'hardware',
+                'default_price': 10.0,
+                'currency': 'USD',
+                'is_active': true,
+                'tags': <String>[],
+                'created_at': '2024-01-01T00:00:00.000',
+                'updated_at': '2024-01-01T00:00:00.000',
+              },
+            ],
+          },
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),
@@ -46,7 +48,7 @@ void main() {
     });
 
     test('throws ServerException when DioException occurs', () async {
-      when(() => mockDio.get<List<dynamic>>(any())).thenThrow(
+      when(() => mockDio.get<Map<String, dynamic>>(any())).thenThrow(
         DioException(
           requestOptions: RequestOptions(),
           response: Response(
@@ -74,15 +76,17 @@ void main() {
       ).thenAnswer(
         (_) async => Response(
           data: <String, dynamic>{
-            'id': '2',
-            'name': 'New',
-            'type': 'service',
-            'default_price': null,
-            'currency': 'USD',
-            'is_active': true,
-            'tags': <String>[],
-            'created_at': '2024-01-01T00:00:00.000',
-            'updated_at': '2024-01-01T00:00:00.000',
+            'data': <String, dynamic>{
+              'id': '2',
+              'name': 'New',
+              'type': 'service',
+              'default_price': null,
+              'currency': 'USD',
+              'is_active': true,
+              'tags': <String>[],
+              'created_at': '2024-01-01T00:00:00.000',
+              'updated_at': '2024-01-01T00:00:00.000',
+            },
           },
           statusCode: 201,
           requestOptions: RequestOptions(),

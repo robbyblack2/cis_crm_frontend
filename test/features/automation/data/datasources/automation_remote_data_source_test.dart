@@ -42,9 +42,9 @@ void main() {
 
   group('getRules', () {
     test('returns list of AutomationRuleModel on success', () async {
-      when(() => dio.get<List<dynamic>>(any())).thenAnswer(
+      when(() => dio.get<Map<String, dynamic>>(any())).thenAnswer(
         (_) async => Response(
-          data: [ruleJson],
+          data: <String, dynamic>{'data': [ruleJson]},
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),
@@ -58,7 +58,7 @@ void main() {
     });
 
     test('throws ServerException on DioException', () async {
-      when(() => dio.get<List<dynamic>>(any())).thenThrow(
+      when(() => dio.get<Map<String, dynamic>>(any())).thenThrow(
         DioException(
           requestOptions: RequestOptions(),
           response: Response(
@@ -80,7 +80,7 @@ void main() {
     test('returns AutomationRuleModel on success', () async {
       when(() => dio.get<Map<String, dynamic>>(any())).thenAnswer(
         (_) async => Response(
-          data: ruleJson,
+          data: <String, dynamic>{'data': ruleJson},
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),
@@ -99,7 +99,7 @@ void main() {
         () => dio.post<Map<String, dynamic>>(any(), data: any(named: 'data')),
       ).thenAnswer(
         (_) async => Response(
-          data: ruleJson,
+          data: <String, dynamic>{'data': ruleJson},
           statusCode: 201,
           requestOptions: RequestOptions(),
         ),
@@ -128,7 +128,9 @@ void main() {
     test('returns toggled AutomationRuleModel on success', () async {
       when(() => dio.post<Map<String, dynamic>>(any())).thenAnswer(
         (_) async => Response(
-          data: {...ruleJson, 'is_active': false},
+          data: <String, dynamic>{
+            'data': {...ruleJson, 'is_active': false},
+          },
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),
@@ -144,7 +146,7 @@ void main() {
     test('returns ExecutionLogModel on success', () async {
       when(() => dio.post<Map<String, dynamic>>(any())).thenAnswer(
         (_) async => Response(
-          data: logJson,
+          data: <String, dynamic>{'data': logJson},
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),
@@ -159,9 +161,9 @@ void main() {
 
   group('getExecutionLogs', () {
     test('returns list of ExecutionLogModel on success', () async {
-      when(() => dio.get<List<dynamic>>(any())).thenAnswer(
+      when(() => dio.get<Map<String, dynamic>>(any())).thenAnswer(
         (_) async => Response(
-          data: [logJson],
+          data: <String, dynamic>{'data': [logJson]},
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),

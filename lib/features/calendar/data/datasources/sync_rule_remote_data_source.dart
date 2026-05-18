@@ -19,12 +19,10 @@ final class SyncRuleRemoteDataSourceImpl implements SyncRuleRemoteDataSource {
   @override
   Future<List<SyncRuleModel>> getSyncRules() async {
     try {
-      final response = await _dio.get<List<dynamic>>(_basePath);
-      final data = response.data;
-      if (data == null) {
-        throw const ServerException('Empty response body');
-      }
-      return data
+      final response = await _dio.get<Map<String, dynamic>>(_basePath);
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list
           .cast<Map<String, dynamic>>()
           .map(SyncRuleModel.fromJson)
           .toList();
@@ -43,7 +41,7 @@ final class SyncRuleRemoteDataSourceImpl implements SyncRuleRemoteDataSource {
         _basePath,
         data: rule.toJson(),
       );
-      final data = response.data;
+      final data = response.data?['data'] as Map<String, dynamic>?;
       if (data == null) {
         throw const ServerException('Empty response body');
       }
@@ -63,7 +61,7 @@ final class SyncRuleRemoteDataSourceImpl implements SyncRuleRemoteDataSource {
         '$_basePath/${rule.id}',
         data: rule.toJson(),
       );
-      final data = response.data;
+      final data = response.data?['data'] as Map<String, dynamic>?;
       if (data == null) {
         throw const ServerException('Empty response body');
       }

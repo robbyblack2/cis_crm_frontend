@@ -21,8 +21,10 @@ class ReportRemoteDataSourceImpl implements ReportRemoteDataSource {
 
   @override
   Future<List<ReportModel>> getReports() async {
-    final response = await _dio.get<List<dynamic>>('/api/reports');
-    return response.data!
+    final response = await _dio.get<Map<String, dynamic>>('/api/reports');
+    final list = response.data?['data'] as List<dynamic>?;
+    if (list == null) return [];
+    return list
         .cast<Map<String, dynamic>>()
         .map(ReportModel.fromJson)
         .toList();
@@ -31,7 +33,9 @@ class ReportRemoteDataSourceImpl implements ReportRemoteDataSource {
   @override
   Future<ReportResultModel> runReport(String id) async {
     final response = await _dio.get<Map<String, dynamic>>('/api/reports/$id');
-    return ReportResultModel.fromJson(response.data!);
+    return ReportResultModel.fromJson(
+      response.data!['data'] as Map<String, dynamic>,
+    );
   }
 
   @override
@@ -43,14 +47,17 @@ class ReportRemoteDataSourceImpl implements ReportRemoteDataSource {
       '/api/reports',
       data: {'name': name, 'description': description},
     );
-    return ReportModel.fromJson(response.data!);
+    return ReportModel.fromJson(
+      response.data!['data'] as Map<String, dynamic>,
+    );
   }
 
   @override
   Future<String> exportReport(String id) async {
     final response =
         await _dio.get<Map<String, dynamic>>('/api/reports/$id/export');
-    return response.data!['csv'] as String;
+    final data = response.data!['data'] as Map<String, dynamic>;
+    return data['csv'] as String;
   }
 
   @override
@@ -58,6 +65,8 @@ class ReportRemoteDataSourceImpl implements ReportRemoteDataSource {
     final response = await _dio.get<Map<String, dynamic>>(
       '/api/reports/pipeline-summary/$pipelineId',
     );
-    return PipelineSummaryModel.fromJson(response.data!);
+    return PipelineSummaryModel.fromJson(
+      response.data!['data'] as Map<String, dynamic>,
+    );
   }
 }

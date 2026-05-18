@@ -77,7 +77,9 @@ class RecordRemoteDataSourceImpl implements RecordRemoteDataSource {
   Future<RecordModel> getRecord(String id) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>('/api/records/$id');
-      return RecordModel.fromJson(response.data!);
+      return RecordModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to fetch record',
@@ -103,7 +105,9 @@ class RecordRemoteDataSourceImpl implements RecordRemoteDataSource {
           'source': source.name,
         },
       );
-      return RecordModel.fromJson(response.data!);
+      return RecordModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to create record',
@@ -126,7 +130,9 @@ class RecordRemoteDataSourceImpl implements RecordRemoteDataSource {
           if (tags != null) 'tags': tags,
         },
       );
-      return RecordModel.fromJson(response.data!);
+      return RecordModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to update record',
@@ -157,7 +163,9 @@ class RecordRemoteDataSourceImpl implements RecordRemoteDataSource {
         '/api/records/$id/move',
         data: {'to_stage_id': toStageId},
       );
-      return RecordModel.fromJson(response.data!);
+      return RecordModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to move record',
@@ -169,9 +177,11 @@ class RecordRemoteDataSourceImpl implements RecordRemoteDataSource {
   @override
   Future<List<StageTransitionModel>> getStageHistory(String recordId) async {
     try {
-      final response =
-          await _dio.get<List<dynamic>>('/api/records/$recordId/stage-history');
-      return response.data!
+      final response = await _dio
+          .get<Map<String, dynamic>>('/api/records/$recordId/stage-history');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list
           .cast<Map<String, dynamic>>()
           .map(StageTransitionModel.fromJson)
           .toList();

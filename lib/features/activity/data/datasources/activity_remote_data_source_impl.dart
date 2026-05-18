@@ -13,8 +13,10 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
   @override
   Future<List<CrmTaskModel>> getTasks() async {
     try {
-      final response = await _dio.get<List<dynamic>>('/api/tasks');
-      return response.data!
+      final response = await _dio.get<Map<String, dynamic>>('/api/tasks');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list
           .cast<Map<String, dynamic>>()
           .map(CrmTaskModel.fromJson)
           .toList();
@@ -30,7 +32,9 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
   Future<CrmTaskModel> getTask(String id) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>('/api/tasks/$id');
-      return CrmTaskModel.fromJson(response.data!);
+      return CrmTaskModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to fetch task',
@@ -46,7 +50,9 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
         '/api/tasks',
         data: task.toJson(),
       );
-      return CrmTaskModel.fromJson(response.data!);
+      return CrmTaskModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to create task',
@@ -62,7 +68,9 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
         '/api/tasks/${task.id}',
         data: task.toJson(),
       );
-      return CrmTaskModel.fromJson(response.data!);
+      return CrmTaskModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to update task',
@@ -86,8 +94,10 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
   @override
   Future<List<CallLogModel>> getCallLogs() async {
     try {
-      final response = await _dio.get<List<dynamic>>('/api/call-logs');
-      return response.data!
+      final response = await _dio.get<Map<String, dynamic>>('/api/call-logs');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list
           .cast<Map<String, dynamic>>()
           .map(CallLogModel.fromJson)
           .toList();
@@ -106,7 +116,9 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
         '/api/call-logs',
         data: callLog.toJson(),
       );
-      return CallLogModel.fromJson(response.data!);
+      return CallLogModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to log call',
@@ -121,9 +133,11 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
     required String entityId,
   }) async {
     try {
-      final response =
-          await _dio.get<List<dynamic>>('/api/timeline/$entityType/$entityId');
-      return response.data!
+      final response = await _dio
+          .get<Map<String, dynamic>>('/api/timeline/$entityType/$entityId');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list
           .cast<Map<String, dynamic>>()
           .map(TimelineEntryModel.fromJson)
           .toList();

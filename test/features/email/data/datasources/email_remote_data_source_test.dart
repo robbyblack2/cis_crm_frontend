@@ -38,7 +38,7 @@ void main() {
         ),
       ).thenAnswer(
         (_) async => Response(
-          data: tResponseData,
+          data: <String, dynamic>{'data': tResponseData},
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),
@@ -95,9 +95,9 @@ void main() {
         },
       ];
 
-      when(() => mockDio.get<List<dynamic>>(any())).thenAnswer(
+      when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
         (_) async => Response(
-          data: tDraftData,
+          data: <String, dynamic>{'data': tDraftData},
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),
@@ -123,9 +123,9 @@ void main() {
         },
       ];
 
-      when(() => mockDio.get<List<dynamic>>(any())).thenAnswer(
+      when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
         (_) async => Response(
-          data: tTemplateData,
+          data: <String, dynamic>{'data': tTemplateData},
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),

@@ -18,12 +18,10 @@ class CompanyRemoteDataSourceImpl implements CompanyRemoteDataSource {
   @override
   Future<List<CompanyModel>> getCompanies() async {
     try {
-      final response = await dio.get<List<dynamic>>('/api/companies');
-      final data = response.data;
-      if (data == null) {
-        throw const ServerException('Empty response body');
-      }
-      return data
+      final response = await dio.get<Map<String, dynamic>>('/api/companies');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list
           .cast<Map<String, dynamic>>()
           .map(CompanyModel.fromJson)
           .toList();
@@ -37,7 +35,7 @@ class CompanyRemoteDataSourceImpl implements CompanyRemoteDataSource {
     try {
       final response =
           await dio.get<Map<String, dynamic>>('/api/companies/$id');
-      final data = response.data;
+      final data = response.data?['data'] as Map<String, dynamic>?;
       if (data == null) {
         throw const ServerException('Empty response body');
       }
@@ -54,7 +52,7 @@ class CompanyRemoteDataSourceImpl implements CompanyRemoteDataSource {
         '/api/companies',
         data: company.toJson(),
       );
-      final data = response.data;
+      final data = response.data?['data'] as Map<String, dynamic>?;
       if (data == null) {
         throw const ServerException('Empty response body');
       }
@@ -71,7 +69,7 @@ class CompanyRemoteDataSourceImpl implements CompanyRemoteDataSource {
         '/api/companies/${company.id}',
         data: company.toJson(),
       );
-      final data = response.data;
+      final data = response.data?['data'] as Map<String, dynamic>?;
       if (data == null) {
         throw const ServerException('Empty response body');
       }

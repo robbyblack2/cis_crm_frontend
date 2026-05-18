@@ -17,8 +17,10 @@ final class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
   @override
   Future<List<ProductModel>> getProducts() async {
     try {
-      final response = await _dio.get<List<dynamic>>('/api/products');
-      return response.data!
+      final response = await _dio.get<Map<String, dynamic>>('/api/products');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list
           .cast<Map<String, dynamic>>()
           .map(ProductModel.fromJson)
           .toList();
@@ -35,7 +37,9 @@ final class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
     try {
       final response =
           await _dio.post<Map<String, dynamic>>('/api/products', data: body);
-      return ProductModel.fromJson(response.data!);
+      return ProductModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to create product',
@@ -54,7 +58,9 @@ final class ProductRemoteDatasourceImpl implements ProductRemoteDatasource {
         '/api/products/$id',
         data: body,
       );
-      return ProductModel.fromJson(response.data!);
+      return ProductModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to update product',

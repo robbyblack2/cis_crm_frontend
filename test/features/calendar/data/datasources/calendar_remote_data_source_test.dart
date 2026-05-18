@@ -30,9 +30,9 @@ void main() {
 
   group('getEvents', () {
     test('returns list of CalendarEventModel on success', () async {
-      when(() => mockDio.get<List<dynamic>>(any())).thenAnswer(
+      when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
         (_) async => Response(
-          data: [tEventJson],
+          data: <String, dynamic>{'data': [tEventJson]},
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),
@@ -46,21 +46,19 @@ void main() {
       expect(result.first.title, 'Test Event');
     });
 
-    test('throws ServerException on null response data', () async {
-      when(() => mockDio.get<List<dynamic>>(any())).thenAnswer(
-        (_) async => Response<List<dynamic>>(
+    test('returns empty list on null response data', () async {
+      when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
+        (_) async => Response<Map<String, dynamic>>(
           requestOptions: RequestOptions(),
         ),
       );
 
-      expect(
-        () => dataSource.getEvents(),
-        throwsA(isA<ServerException>()),
-      );
+      final result = await dataSource.getEvents();
+      expect(result, isEmpty);
     });
 
     test('throws ServerException on DioException', () async {
-      when(() => mockDio.get<List<dynamic>>(any())).thenThrow(
+      when(() => mockDio.get<Map<String, dynamic>>(any())).thenThrow(
         DioException(
           requestOptions: RequestOptions(),
           response: Response<dynamic>(
@@ -86,7 +84,7 @@ void main() {
         ),
       ).thenAnswer(
         (_) async => Response(
-          data: tEventJson,
+          data: <String, dynamic>{'data': tEventJson},
           statusCode: 201,
           requestOptions: RequestOptions(),
         ),

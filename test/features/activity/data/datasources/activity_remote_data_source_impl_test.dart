@@ -35,9 +35,9 @@ void main() {
         'created_at': '2024-01-01T00:00:00.000',
         'updated_at': '2024-01-01T00:00:00.000',
       };
-      when(() => mockDio.get<List<dynamic>>(any())).thenAnswer(
+      when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
         (_) async => Response(
-          data: [taskJson],
+          data: <String, dynamic>{'data': [taskJson]},
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),
@@ -50,7 +50,7 @@ void main() {
     });
 
     test('throws ServerException on DioException', () async {
-      when(() => mockDio.get<List<dynamic>>(any())).thenThrow(
+      when(() => mockDio.get<Map<String, dynamic>>(any())).thenThrow(
         DioException(
           requestOptions: RequestOptions(),
           message: 'Network error',

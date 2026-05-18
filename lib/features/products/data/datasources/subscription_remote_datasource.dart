@@ -28,8 +28,11 @@ final class SubscriptionRemoteDatasourceImpl
   @override
   Future<List<SubscriptionModel>> getSubscriptions() async {
     try {
-      final response = await _dio.get<List<dynamic>>('/api/subscriptions');
-      return response.data!
+      final response =
+          await _dio.get<Map<String, dynamic>>('/api/subscriptions');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list
           .cast<Map<String, dynamic>>()
           .map(SubscriptionModel.fromJson)
           .toList();
@@ -46,7 +49,9 @@ final class SubscriptionRemoteDatasourceImpl
     try {
       final response =
           await _dio.get<Map<String, dynamic>>('/api/subscriptions/$id');
-      return SubscriptionModel.fromJson(response.data!);
+      return SubscriptionModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to load subscription',
@@ -64,7 +69,9 @@ final class SubscriptionRemoteDatasourceImpl
         '/api/subscriptions',
         data: body,
       );
-      return SubscriptionModel.fromJson(response.data!);
+      return SubscriptionModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to create subscription',
@@ -83,7 +90,9 @@ final class SubscriptionRemoteDatasourceImpl
         '/api/subscriptions/$id',
         data: body,
       );
-      return SubscriptionModel.fromJson(response.data!);
+      return SubscriptionModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to update subscription',
@@ -107,9 +116,12 @@ final class SubscriptionRemoteDatasourceImpl
   @override
   Future<List<LineItemModel>> getLineItems(String subscriptionId) async {
     try {
-      final response = await _dio
-          .get<List<dynamic>>('/api/subscriptions/$subscriptionId/line-items');
-      return response.data!
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/api/subscriptions/$subscriptionId/line-items',
+      );
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list
           .cast<Map<String, dynamic>>()
           .map(LineItemModel.fromJson)
           .toList();
@@ -131,7 +143,9 @@ final class SubscriptionRemoteDatasourceImpl
         '/api/subscriptions/$subscriptionId/line-items',
         data: body,
       );
-      return LineItemModel.fromJson(response.data!);
+      return LineItemModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to add line item',

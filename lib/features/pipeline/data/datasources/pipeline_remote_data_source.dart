@@ -31,8 +31,10 @@ class PipelineRemoteDataSourceImpl implements PipelineRemoteDataSource {
   @override
   Future<List<PipelineModel>> getPipelines() async {
     try {
-      final response = await _dio.get<List<dynamic>>('/api/pipelines');
-      return response.data!
+      final response = await _dio.get<Map<String, dynamic>>('/api/pipelines');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list
           .cast<Map<String, dynamic>>()
           .map(PipelineModel.fromJson)
           .toList();
@@ -51,7 +53,8 @@ class PipelineRemoteDataSourceImpl implements PipelineRemoteDataSource {
     try {
       final response = await _dio
           .get<Map<String, dynamic>>('/api/pipelines/$pipelineId/kanban');
-      final data = response.data!;
+      final wrapped = response.data!;
+      final data = wrapped['data'] as Map<String, dynamic>? ?? wrapped;
       return (
         pipeline: PipelineModel.fromJson(
           data['pipeline'] as Map<String, dynamic>,
@@ -79,7 +82,9 @@ class PipelineRemoteDataSourceImpl implements PipelineRemoteDataSource {
         '/api/pipelines',
         data: {'name': name, 'pipeline_type': pipelineType.name},
       );
-      return PipelineModel.fromJson(response.data!);
+      return PipelineModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to create pipeline',
@@ -99,7 +104,9 @@ class PipelineRemoteDataSourceImpl implements PipelineRemoteDataSource {
         '/api/pipelines/$id',
         data: {'name': name, 'is_active': isActive},
       );
-      return PipelineModel.fromJson(response.data!);
+      return PipelineModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to update pipeline',

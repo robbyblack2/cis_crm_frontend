@@ -19,12 +19,10 @@ final class CalendarRemoteDataSourceImpl implements CalendarRemoteDataSource {
   @override
   Future<List<CalendarEventModel>> getEvents() async {
     try {
-      final response = await _dio.get<List<dynamic>>(_basePath);
-      final data = response.data;
-      if (data == null) {
-        throw const ServerException('Empty response body');
-      }
-      return data
+      final response = await _dio.get<Map<String, dynamic>>(_basePath);
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list
           .cast<Map<String, dynamic>>()
           .map(CalendarEventModel.fromJson)
           .toList();
@@ -43,7 +41,7 @@ final class CalendarRemoteDataSourceImpl implements CalendarRemoteDataSource {
         _basePath,
         data: event.toJson(),
       );
-      final data = response.data;
+      final data = response.data?['data'] as Map<String, dynamic>?;
       if (data == null) {
         throw const ServerException('Empty response body');
       }
@@ -63,7 +61,7 @@ final class CalendarRemoteDataSourceImpl implements CalendarRemoteDataSource {
         '$_basePath/${event.id}',
         data: event.toJson(),
       );
-      final data = response.data;
+      final data = response.data?['data'] as Map<String, dynamic>?;
       if (data == null) {
         throw const ServerException('Empty response body');
       }
