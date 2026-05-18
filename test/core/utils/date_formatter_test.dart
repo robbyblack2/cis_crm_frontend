@@ -3,36 +3,54 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
 
 void main() {
+  // Fixed clock so tests are deterministic regardless of wall time.
+  final now = DateTime(2026, 6, 15, 14, 30); // Jun 15 2026, 2:30 PM
+
   group('DateFormatter', () {
     group('relative', () {
       test('returns "Just now" for dates less than a minute ago', () {
-        final now = DateTime.now();
-        expect(DateFormatter.relative(now), 'Just now');
+        final date = now.subtract(const Duration(seconds: 30));
+        expect(DateFormatter.relative(date, now: now), 'Just now');
       });
 
       test('returns minutes ago for dates less than an hour ago', () {
-        final date = DateTime.now().subtract(const Duration(minutes: 5));
-        expect(DateFormatter.relative(date), '5m ago');
+        final date = now.subtract(const Duration(minutes: 5));
+        expect(DateFormatter.relative(date, now: now), '5m ago');
       });
 
-      test('returns hours ago for dates less than a day ago', () {
-        final date = DateTime.now().subtract(const Duration(hours: 2));
-        expect(DateFormatter.relative(date), '2h ago');
+      test('returns hours ago for dates less than a day ago (same day)', () {
+        final date = now.subtract(const Duration(hours: 2));
+        expect(DateFormatter.relative(date, now: now), '2h ago');
       });
 
-      test('returns "Yesterday" for yesterday', () {
-        final now = DateTime.now();
-        final yesterday = DateTime(now.year, now.month, now.day - 1, 12);
-        expect(DateFormatter.relative(yesterday), 'Yesterday');
+      test('returns "Yesterday" for yesterday even if < 24 h ago', () {
+        // Yesterday at noon — only 26.5 h before `now`, but calendar-yesterday.
+        final yesterday = DateTime(2026, 6, 14, 12);
+        expect(DateFormatter.relative(yesterday, now: now), 'Yesterday');
+      });
+
+      test('returns "Yesterday" for yesterday at midnight', () {
+        final yesterday = DateTime(2026, 6, 14);
+        expect(DateFormatter.relative(yesterday, now: now), 'Yesterday');
+      });
+
+      test('returns hours ago for earlier today even if > 12 h ago', () {
+        // 14.5 hours ago but still the same calendar day.
+        final earlyToday = DateTime(2026, 6, 15);
+        expect(DateFormatter.relative(earlyToday, now: now), '14h ago');
       });
 
       test('returns month and day for older same-year dates', () {
-        final now = DateTime.now();
-        // Use a date far enough in the past to not be yesterday.
-        final date = DateTime(now.year, 1, 5);
-        final result = DateFormatter.relative(date);
+        final date = DateTime(2026, 1, 5);
+        final result = DateFormatter.relative(date, now: now);
         expect(result, contains('Jan'));
         expect(result, contains('5'));
+      });
+
+      test('returns full date for previous-year dates', () {
+        final date = DateTime(2025, 3, 10);
+        final result = DateFormatter.relative(date, now: now);
+        expect(result, contains('2025'));
       });
     });
 
@@ -48,7 +66,6 @@ void main() {
         final date = DateTime(2026, 3, 12, 15, 45);
         final result = DateFormatter.dateTime(date);
         expect(result, contains('Mar 12, 2026'));
-        // Use intl to get the expected time format (may contain \u202F).
         final expectedTime = DateFormat.jm().format(date);
         expect(result, contains(expectedTime));
       });

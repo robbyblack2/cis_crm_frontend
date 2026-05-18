@@ -4,23 +4,24 @@ abstract final class DateFormatter {
   /// Returns a human-readable relative time string.
   ///
   /// "Just now", "5m ago", "2h ago", "Yesterday", "Mar 12"
-  static String relative(DateTime date) {
-    final now = DateTime.now();
-    final diff = now.difference(date);
+  static String relative(DateTime date, {DateTime? now}) {
+    final clock = now ?? DateTime.now();
+    final diff = clock.difference(date);
 
     if (diff.isNegative) return DateFormat.MMMd().format(date);
     if (diff.inMinutes < 1) return 'Just now';
     if (diff.inHours < 1) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
 
-    final yesterday = DateTime(now.year, now.month, now.day - 1);
+    final yesterday = DateTime(clock.year, clock.month, clock.day - 1);
     if (date.year == yesterday.year &&
         date.month == yesterday.month &&
         date.day == yesterday.day) {
       return 'Yesterday';
     }
 
-    if (date.year == now.year) return DateFormat.MMMd().format(date);
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+
+    if (date.year == clock.year) return DateFormat.MMMd().format(date);
     return DateFormat.yMMMd().format(date);
   }
 
