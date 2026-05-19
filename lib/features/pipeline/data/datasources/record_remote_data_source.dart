@@ -161,7 +161,7 @@ class RecordRemoteDataSourceImpl implements RecordRemoteDataSource {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         '/api/records/$id/move',
-        data: {'to_stage_id': toStageId},
+        data: {'stage_id': toStageId},
       );
       return RecordModel.fromJson(
         response.data!['data'] as Map<String, dynamic>,

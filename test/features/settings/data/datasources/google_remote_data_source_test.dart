@@ -22,7 +22,7 @@ void main() {
           .thenAnswer(
         (_) async => Response(
           data: <String, dynamic>{
-            'data': {'auth_url': 'https://accounts.google.com/o/oauth2/auth'},
+            'data': {'url': 'https://accounts.google.com/o/oauth2/auth'},
           },
           statusCode: 200,
           requestOptions: RequestOptions(),

@@ -20,7 +20,7 @@ class GoogleRemoteDataSourceImpl implements GoogleRemoteDataSource {
           await _dio.get<Map<String, dynamic>>('/api/google/auth-url');
       final data = response.data?['data'] as Map<String, dynamic>?;
       if (data == null) throw const ServerException('Empty response');
-      return data['auth_url'] as String;
+      return data['url'] as String;
     } on DioException {
       rethrow;
     }
