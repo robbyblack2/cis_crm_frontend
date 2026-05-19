@@ -40,6 +40,9 @@ class EmailBloc extends Bloc<EmailEvent, EmailState> {
       recipientEmails: event.recipientEmails,
       subject: event.subject,
       body: event.body,
+      contactId: event.contactId,
+      recordId: event.recordId,
+      cc: event.cc,
     );
     switch (result) {
       case Success(:final data):

@@ -9,7 +9,7 @@ import 'package:cis_crm/features/files/domain/repositories/file_repository.dart'
 import 'package:cis_crm/features/files/presentation/widgets/file_tile.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:cis_crm/features/email/presentation/pages/email_compose_page.dart';
 
 String _fullName(Contact c) => '${c.firstName} ${c.lastName}'.trim();
 
@@ -150,11 +150,14 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
                 icon: const Icon(Icons.email_outlined),
                 tooltip: 'Send email',
                 onPressed: () {
-                  final uri = Uri(
-                    scheme: 'mailto',
-                    path: _contact.email,
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => EmailComposePage(
+                        initialTo: _contact.email,
+                        contactId: _contact.id,
+                      ),
+                    ),
                   );
-                  launchUrl(uri);
                 },
               ),
             IconButton(

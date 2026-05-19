@@ -13,14 +13,21 @@ final class EmailSendRequested extends EmailEvent {
     required this.recipientEmails,
     required this.subject,
     required this.body,
+    this.contactId,
+    this.recordId,
+    this.cc,
   });
 
   final List<String> recipientEmails;
   final String subject;
   final String body;
+  final String? contactId;
+  final String? recordId;
+  final List<String>? cc;
 
   @override
-  List<Object?> get props => [recipientEmails, subject, body];
+  List<Object?> get props =>
+      [recipientEmails, subject, body, contactId, recordId, cc];
 }
 
 final class DraftSaveRequested extends EmailEvent {

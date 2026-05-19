@@ -11,6 +11,14 @@ abstract class CompanyRemoteDataSource {
   Future<List<Map<String, dynamic>>> getCompanyContacts(String id);
   Future<List<Map<String, dynamic>>> getCompanyRecords(String id);
   Future<List<Map<String, dynamic>>> getCompanySubscriptions(String id);
+  Future<List<Map<String, dynamic>>> getCompanyTimeline(String id);
+  Future<List<Map<String, dynamic>>> getCompanyNotes(String id);
+  Future<List<Map<String, dynamic>>> getCompanyFiles(String id);
+  Future<List<Map<String, dynamic>>> getCompanyProducts(String id);
+  Future<List<Map<String, dynamic>>> getCompanyLineItems(String id);
+  Future<void> bulkAssign(List<String> ids, String ownerId);
+  Future<void> bulkTag(List<String> ids, List<String> tags);
+  Future<void> bulkDelete(List<String> ids);
 }
 
 class CompanyRemoteDataSourceImpl implements CompanyRemoteDataSource {
@@ -127,6 +135,78 @@ class CompanyRemoteDataSourceImpl implements CompanyRemoteDataSource {
       final list = response.data?['data'] as List<dynamic>?;
       if (list == null) return [];
       return list.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _getSubResource(
+    String id,
+    String resource,
+  ) async {
+    try {
+      final response = await dio.get<Map<String, dynamic>>(
+        '/api/companies/$id/$resource',
+      );
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getCompanyTimeline(String id) =>
+      _getSubResource(id, 'timeline');
+
+  @override
+  Future<List<Map<String, dynamic>>> getCompanyNotes(String id) =>
+      _getSubResource(id, 'notes');
+
+  @override
+  Future<List<Map<String, dynamic>>> getCompanyFiles(String id) =>
+      _getSubResource(id, 'files');
+
+  @override
+  Future<List<Map<String, dynamic>>> getCompanyProducts(String id) =>
+      _getSubResource(id, 'products');
+
+  @override
+  Future<List<Map<String, dynamic>>> getCompanyLineItems(String id) =>
+      _getSubResource(id, 'line-items');
+
+  @override
+  Future<void> bulkAssign(List<String> ids, String ownerId) async {
+    try {
+      await dio.post<void>(
+        '/api/companies/bulk-assign',
+        data: {'company_ids': ids, 'owner_id': ownerId},
+      );
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
+
+  @override
+  Future<void> bulkTag(List<String> ids, List<String> tags) async {
+    try {
+      await dio.post<void>(
+        '/api/companies/bulk-tag',
+        data: {'company_ids': ids, 'tags': tags},
+      );
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
+
+  @override
+  Future<void> bulkDelete(List<String> ids) async {
+    try {
+      await dio.post<void>(
+        '/api/companies/bulk-delete',
+        data: {'company_ids': ids},
+      );
     } on DioException catch (e) {
       throw _handleDioException(e);
     }

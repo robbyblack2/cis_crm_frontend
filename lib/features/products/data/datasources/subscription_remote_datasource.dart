@@ -22,6 +22,10 @@ abstract interface class SubscriptionRemoteDatasource {
     Map<String, dynamic> body,
   );
   Future<void> deleteLineItem(String lineItemId);
+  Future<List<Map<String, dynamic>>> getTimeline(String subscriptionId);
+  Future<List<Map<String, dynamic>>> getNotes(String subscriptionId);
+  Future<Map<String, dynamic>> addNote(String subscriptionId, String body);
+  Future<List<Map<String, dynamic>>> getFiles(String subscriptionId);
 }
 
 final class SubscriptionRemoteDatasourceImpl
@@ -191,4 +195,51 @@ final class SubscriptionRemoteDatasourceImpl
       );
     }
   }
+
+  Future<List<Map<String, dynamic>>> _getSubResource(
+    String id,
+    String resource,
+  ) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/api/subscriptions/$id/$resource',
+      );
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to fetch $resource',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getTimeline(String id) =>
+      _getSubResource(id, 'timeline');
+
+  @override
+  Future<List<Map<String, dynamic>>> getNotes(String id) =>
+      _getSubResource(id, 'notes');
+
+  @override
+  Future<Map<String, dynamic>> addNote(String id, String body) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/subscriptions/$id/notes',
+        data: {'body': body},
+      );
+      return response.data?['data'] as Map<String, dynamic>? ?? {};
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to add note',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getFiles(String id) =>
+      _getSubResource(id, 'files');
 }

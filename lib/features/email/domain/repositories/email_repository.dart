@@ -9,12 +9,17 @@ abstract interface class EmailRepository {
     required List<String> recipientEmails,
     required String subject,
     required String body,
+    String? contactId,
+    String? recordId,
+    List<String>? cc,
   });
 
   Future<Result<EmailDraft, AppFailure>> saveDraft({
     required List<String> recipientEmails,
     required String subject,
     required String body,
+    String? contactId,
+    String? recordId,
   });
 
   Future<Result<List<EmailDraft>, AppFailure>> getDrafts();

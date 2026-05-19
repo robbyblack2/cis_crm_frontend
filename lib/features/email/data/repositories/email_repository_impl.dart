@@ -18,12 +18,18 @@ class EmailRepositoryImpl implements EmailRepository {
     required List<String> recipientEmails,
     required String subject,
     required String body,
+    String? contactId,
+    String? recordId,
+    List<String>? cc,
   }) =>
       _guard(
         () => _remoteDataSource.sendEmail(
           recipientEmails: recipientEmails,
           subject: subject,
           body: body,
+          contactId: contactId,
+          recordId: recordId,
+          cc: cc,
         ),
       );
 
@@ -32,12 +38,16 @@ class EmailRepositoryImpl implements EmailRepository {
     required List<String> recipientEmails,
     required String subject,
     required String body,
+    String? contactId,
+    String? recordId,
   }) =>
       _guard(
         () => _remoteDataSource.saveDraft(
           recipientEmails: recipientEmails,
           subject: subject,
           body: body,
+          contactId: contactId,
+          recordId: recordId,
         ),
       );
 

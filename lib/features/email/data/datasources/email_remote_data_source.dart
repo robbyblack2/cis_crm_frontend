@@ -9,12 +9,17 @@ abstract interface class EmailRemoteDataSource {
     required List<String> recipientEmails,
     required String subject,
     required String body,
+    String? contactId,
+    String? recordId,
+    List<String>? cc,
   });
 
   Future<EmailDraftModel> saveDraft({
     required List<String> recipientEmails,
     required String subject,
     required String body,
+    String? contactId,
+    String? recordId,
   });
 
   Future<List<EmailDraftModel>> getDrafts();
@@ -56,14 +61,20 @@ class EmailRemoteDataSourceImpl implements EmailRemoteDataSource {
     required List<String> recipientEmails,
     required String subject,
     required String body,
+    String? contactId,
+    String? recordId,
+    List<String>? cc,
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         '/api/email/send',
         data: {
-          'recipient_emails': recipientEmails,
+          'to': recipientEmails,
           'subject': subject,
-          'body': body,
+          'body_html': body,
+          if (contactId != null) 'contact_id': contactId,
+          if (recordId != null) 'record_id': recordId,
+          if (cc != null && cc.isNotEmpty) 'cc': cc,
         },
       );
       return EmailMessageModel.fromJson(
@@ -82,14 +93,18 @@ class EmailRemoteDataSourceImpl implements EmailRemoteDataSource {
     required List<String> recipientEmails,
     required String subject,
     required String body,
+    String? contactId,
+    String? recordId,
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         '/api/email/draft',
         data: {
-          'recipient_emails': recipientEmails,
+          'to': recipientEmails,
           'subject': subject,
-          'body': body,
+          'body_html': body,
+          if (contactId != null) 'contact_id': contactId,
+          if (recordId != null) 'record_id': recordId,
         },
       );
       return EmailDraftModel.fromJson(
@@ -133,9 +148,9 @@ class EmailRemoteDataSourceImpl implements EmailRemoteDataSource {
       final response = await _dio.put<Map<String, dynamic>>(
         '/api/email/drafts/$id',
         data: {
-          'recipient_emails': recipientEmails,
+          'to': recipientEmails,
           'subject': subject,
-          'body': body,
+          'body_html': body,
         },
       );
       return EmailDraftModel.fromJson(

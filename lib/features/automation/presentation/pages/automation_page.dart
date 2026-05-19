@@ -97,6 +97,8 @@ class _AutomationView extends StatelessWidget {
     // Action config fields
     final actionTitleController = TextEditingController();
     final actionValueController = TextEditingController();
+    final actionExtra1Controller = TextEditingController();
+    final actionExtra2Controller = TextEditingController();
 
     final triggerTypes = [
       'record.stage_changed',
@@ -106,9 +108,11 @@ class _AutomationView extends StatelessWidget {
       'contact.updated',
       'task.created',
       'task.completed',
+      'email.received',
     ];
     final actionTypes = [
       'create_task',
+      'create_record',
       'move_stage',
       'assign_owner',
       'add_tag',
@@ -260,29 +264,82 @@ class _AutomationView extends StatelessWidget {
                     decoration: InputDecoration(
                       labelText: switch (selectedActionType) {
                         'create_task' => 'Task title',
-                        'send_email' => 'Template ID',
+                        'create_record' => 'Record title',
                         'move_stage' => 'Stage ID',
-                        'assign_user' => 'User ID or "round_robin"',
+                        'assign_owner' => 'Owner ID',
                         'add_tag' => 'Tag name',
                         'update_field' => 'Field key',
-                        'send_webhook' => 'URL',
+                        'send_notification' => 'Message',
                         _ => 'Value',
                       },
                     ),
                   ),
-                  if (selectedActionType == 'create_task' ||
-                      selectedActionType == 'update_field' ||
-                      selectedActionType == 'send_webhook') ...[
+                  if (selectedActionType == 'create_task') ...[
                     const SizedBox(height: 8),
                     TextField(
                       controller: actionValueController,
-                      decoration: InputDecoration(
-                        labelText: switch (selectedActionType) {
-                          'create_task' => 'Priority (low/medium/high)',
-                          'update_field' => 'New value',
-                          'send_webhook' => 'Method (GET/POST)',
-                          _ => 'Extra',
-                        },
+                      decoration: const InputDecoration(
+                        labelText: 'Priority (low/medium/high)',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: actionExtra1Controller,
+                      decoration: const InputDecoration(
+                        labelText: 'Due date days (e.g. 3)',
+                        hintText: 'Creates task due in N days',
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: actionExtra2Controller,
+                      decoration: const InputDecoration(
+                        labelText: 'Description (optional)',
+                      ),
+                      maxLines: 2,
+                    ),
+                  ],
+                  if (selectedActionType == 'create_record') ...[
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: actionValueController,
+                      decoration: const InputDecoration(
+                        labelText: 'Pipeline ID',
+                        hintText: 'Target pipeline',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: actionExtra1Controller,
+                      decoration: const InputDecoration(
+                        labelText: 'Stage ID',
+                        hintText: 'Target stage',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: actionExtra2Controller,
+                      decoration: const InputDecoration(
+                        labelText: 'Source (email/manual/sync_rule)',
+                      ),
+                    ),
+                  ],
+                  if (selectedActionType == 'update_field') ...[
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: actionValueController,
+                      decoration: const InputDecoration(
+                        labelText: 'New value',
+                      ),
+                    ),
+                  ],
+                  if (selectedActionType == 'send_notification') ...[
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: actionValueController,
+                      decoration: const InputDecoration(
+                        labelText: 'Channel (optional)',
                       ),
                     ),
                   ],
@@ -321,27 +378,48 @@ class _AutomationView extends StatelessWidget {
                 final extraVal = actionValueController.text.trim();
                 final config = <String, dynamic>{};
 
+                final extra1 = actionExtra1Controller.text.trim();
+                final extra2 = actionExtra2Controller.text.trim();
+
                 switch (selectedActionType) {
                   case 'create_task':
                     config['title'] = mainVal;
                     if (extraVal.isNotEmpty) {
                       config['priority'] = extraVal;
                     }
+                    config['parent_type'] = 'record';
+                    if (extra1.isNotEmpty) {
+                      final days = int.tryParse(extra1);
+                      if (days != null) config['due_date_days'] = days;
+                    }
+                    if (extra2.isNotEmpty) {
+                      config['description'] = extra2;
+                    }
+                  case 'create_record':
+                    config['title'] = mainVal;
+                    if (extraVal.isNotEmpty) {
+                      config['pipeline_id'] = extraVal;
+                    }
+                    if (extra1.isNotEmpty) {
+                      config['stage_id'] = extra1;
+                    }
+                    if (extra2.isNotEmpty) {
+                      config['source'] = extra2;
+                    }
                   case 'send_notification':
-                    config['template_id'] = mainVal;
+                    config['message'] = mainVal;
+                    if (extraVal.isNotEmpty) {
+                      config['channel'] = extraVal;
+                    }
                   case 'move_stage':
                     config['stage_id'] = mainVal;
                   case 'assign_owner':
-                    config['user_id'] = mainVal;
+                    config['owner_id'] = mainVal;
                   case 'add_tag':
                     config['tag'] = mainVal;
                   case 'update_field':
-                    config['field_key'] = mainVal;
+                    config['field'] = mainVal;
                     config['value'] = extraVal;
-                  case 'send_webhook':
-                    config['url'] = mainVal;
-                    config['method'] =
-                        extraVal.isNotEmpty ? extraVal : 'POST';
                 }
                 final actionConfig = <String, dynamic>{
                   'type': selectedActionType,

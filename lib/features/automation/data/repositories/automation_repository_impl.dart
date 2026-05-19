@@ -64,7 +64,7 @@ class AutomationRepositoryImpl implements AutomationRepository {
     AutomationRule rule,
   ) async {
     try {
-      final model = rule as AutomationRuleModel;
+      final model = AutomationRuleModel.fromEntity(rule);
       final updated =
           await _remoteDataSource.updateRule(model.id, model.toJson());
       return Success(updated);

@@ -12,6 +12,9 @@ class SyncRule extends Equatable {
     required this.isActive,
     required this.createdBy,
     required this.createdAt,
+    this.matchCriteria,
+    this.fieldMappings,
+    this.updatedAt,
   });
 
   final String id;
@@ -22,6 +25,9 @@ class SyncRule extends Equatable {
   final bool isActive;
   final String createdBy;
   final DateTime createdAt;
+  final DateTime? updatedAt;
+  final Map<String, dynamic>? matchCriteria;
+  final Map<String, dynamic>? fieldMappings;
 
   @override
   List<Object?> get props => [
@@ -33,5 +39,8 @@ class SyncRule extends Equatable {
         isActive,
         createdBy,
         createdAt,
+        updatedAt,
+        matchCriteria,
+        fieldMappings,
       ];
 }

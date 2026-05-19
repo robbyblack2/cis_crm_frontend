@@ -5,26 +5,49 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class EmailComposePage extends StatelessWidget {
-  const EmailComposePage({super.key});
+  const EmailComposePage({
+    super.key,
+    this.initialTo,
+    this.contactId,
+    this.recordId,
+  });
+
+  final String? initialTo;
+  final String? contactId;
+  final String? recordId;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => getIt<EmailBloc>(),
-      child: const _EmailComposeView(),
+      child: _EmailComposeView(
+        initialTo: initialTo,
+        contactId: contactId,
+        recordId: recordId,
+      ),
     );
   }
 }
 
 class _EmailComposeView extends StatefulWidget {
-  const _EmailComposeView();
+  const _EmailComposeView({
+    this.initialTo,
+    this.contactId,
+    this.recordId,
+  });
+
+  final String? initialTo;
+  final String? contactId;
+  final String? recordId;
 
   @override
   State<_EmailComposeView> createState() => _EmailComposeViewState();
 }
 
 class _EmailComposeViewState extends State<_EmailComposeView> {
-  final _toController = TextEditingController();
+  late final _toController = TextEditingController(
+    text: widget.initialTo ?? '',
+  );
   final _subjectController = TextEditingController();
   final _bodyController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -149,6 +172,8 @@ class _EmailComposeViewState extends State<_EmailComposeView> {
                 .toList(),
             subject: _subjectController.text,
             body: _bodyController.text,
+            contactId: widget.contactId,
+            recordId: widget.recordId,
           ),
         );
   }

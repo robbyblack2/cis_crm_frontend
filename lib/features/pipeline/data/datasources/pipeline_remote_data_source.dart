@@ -42,6 +42,15 @@ abstract class PipelineRemoteDataSource {
   Future<void> deleteStage(String id);
 
   Future<List<Map<String, dynamic>>> getStagePrompts(String stageId);
+  Future<Map<String, dynamic>> createStagePrompt(
+    String stageId,
+    Map<String, dynamic> data,
+  );
+  Future<Map<String, dynamic>> updateStagePrompt(
+    String promptId,
+    Map<String, dynamic> data,
+  );
+  Future<void> deleteStagePrompt(String promptId);
 }
 
 class PipelineRemoteDataSourceImpl implements PipelineRemoteDataSource {
@@ -243,6 +252,56 @@ class PipelineRemoteDataSourceImpl implements PipelineRemoteDataSource {
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to fetch stage prompts',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> createStagePrompt(
+    String stageId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/stages/$stageId/prompts',
+        data: data,
+      );
+      return response.data?['data'] as Map<String, dynamic>? ?? {};
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to create stage prompt',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateStagePrompt(
+    String promptId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final response = await _dio.put<Map<String, dynamic>>(
+        '/api/stage-prompts/$promptId',
+        data: data,
+      );
+      return response.data?['data'] as Map<String, dynamic>? ?? {};
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to update stage prompt',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<void> deleteStagePrompt(String promptId) async {
+    try {
+      await _dio.delete<void>('/api/stage-prompts/$promptId');
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to delete stage prompt',
         statusCode: e.response?.statusCode,
       );
     }

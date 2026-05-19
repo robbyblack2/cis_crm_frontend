@@ -61,5 +61,6 @@ class AutomationRuleModel extends AutomationRule {
         'trigger_conditions': triggerConditions ?? <String, dynamic>{},
         'actions': actions,
         'priority': priority,
+        if (createdBy.isNotEmpty) 'created_by': createdBy,
       };
 }

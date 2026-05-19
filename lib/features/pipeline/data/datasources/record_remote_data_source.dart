@@ -47,6 +47,19 @@ abstract class RecordRemoteDataSource {
   Future<RecordModel> claimRecord(String recordId);
   Future<List<Map<String, dynamic>>> getEmails(String recordId);
 
+  // Reply and conversation
+  Future<Map<String, dynamic>> replyToRecord(
+    String recordId,
+    String body,
+  );
+  Future<List<Map<String, dynamic>>> getConversation(String recordId);
+  Future<Map<String, dynamic>> createRecordFromRecord(
+    String recordId,
+    String pipelineId,
+    String stageId,
+    String title,
+  );
+
   // Bulk operations
   Future<void> bulkMove(List<String> recordIds, String stageId);
   Future<void> bulkAssign(List<String> recordIds, String userId);
@@ -337,6 +350,69 @@ class RecordRemoteDataSourceImpl implements RecordRemoteDataSource {
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to fetch emails',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> replyToRecord(
+    String recordId,
+    String body,
+  ) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/records/$recordId/reply',
+        data: {'body': body},
+      );
+      return response.data?['data'] as Map<String, dynamic>? ?? {};
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to send reply',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getConversation(
+    String recordId,
+  ) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/api/records/$recordId/conversation',
+      );
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to fetch conversation',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> createRecordFromRecord(
+    String recordId,
+    String pipelineId,
+    String stageId,
+    String title,
+  ) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/records/$recordId/create-record',
+        data: {
+          'pipeline_id': pipelineId,
+          'stage_id': stageId,
+          'data': {'title': title},
+        },
+      );
+      return response.data?['data'] as Map<String, dynamic>? ?? {};
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to create record',
         statusCode: e.response?.statusCode,
       );
     }

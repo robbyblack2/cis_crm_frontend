@@ -17,6 +17,12 @@ abstract class ContactRemoteDataSource {
   Future<List<Map<String, dynamic>>> getContactNotes(String id);
   Future<Map<String, dynamic>> addContactNote(String id, String body);
   Future<List<Map<String, dynamic>>> getContactFiles(String id);
+  Future<List<Map<String, dynamic>>> getContactEmails(String id);
+  Future<void> bulkAssign(List<String> ids, String ownerId);
+  Future<void> bulkTag(List<String> ids, List<String> tags);
+  Future<void> bulkDelete(List<String> ids);
+  Future<String> exportContacts();
+  Future<void> importContacts(String csvData);
 }
 
 class ContactRemoteDataSourceImpl implements ContactRemoteDataSource {
@@ -180,6 +186,80 @@ class ContactRemoteDataSourceImpl implements ContactRemoteDataSource {
       final list = response.data?['data'] as List<dynamic>?;
       if (list == null) return [];
       return list.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getContactEmails(String id) async {
+    try {
+      final response = await dio.get<Map<String, dynamic>>(
+        '/api/contacts/$id/emails',
+      );
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
+
+  @override
+  Future<void> bulkAssign(List<String> ids, String ownerId) async {
+    try {
+      await dio.post<void>(
+        '/api/contacts/bulk-assign',
+        data: {'contact_ids': ids, 'owner_id': ownerId},
+      );
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
+
+  @override
+  Future<void> bulkTag(List<String> ids, List<String> tags) async {
+    try {
+      await dio.post<void>(
+        '/api/contacts/bulk-tag',
+        data: {'contact_ids': ids, 'tags': tags},
+      );
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
+
+  @override
+  Future<void> bulkDelete(List<String> ids) async {
+    try {
+      await dio.post<void>(
+        '/api/contacts/bulk-delete',
+        data: {'contact_ids': ids},
+      );
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
+
+  @override
+  Future<String> exportContacts() async {
+    try {
+      final response = await dio.get<Map<String, dynamic>>(
+        '/api/export/contacts',
+      );
+      return response.data?['data'] as String? ?? '';
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
+
+  @override
+  Future<void> importContacts(String csvData) async {
+    try {
+      await dio.post<void>(
+        '/api/import/contacts',
+        data: {'csv': csvData},
+      );
     } on DioException catch (e) {
       throw _handleDioException(e);
     }

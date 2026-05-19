@@ -94,8 +94,22 @@ class _AutomationRuleDetailPageState extends State<AutomationRuleDetailPage> {
                       label: 'Status',
                       child: Switch(
                         value: rule.isActive,
-                        onChanged: (_) {
-                          // Toggle would require passing bloc
+                        onChanged: (_) async {
+                          final result = await getIt<AutomationRepository>()
+                              .toggleRule(rule.id);
+                          if (!context.mounted) return;
+                          switch (result) {
+                            case Success(:final data):
+                              setState(() => _rule = data);
+                            case Failure(:final error):
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Toggle failed: ${error.message}',
+                                  ),
+                                ),
+                              );
+                          }
                         },
                       ),
                     ),
@@ -228,16 +242,23 @@ class _AutomationRuleDetailPageState extends State<AutomationRuleDetailPage> {
     // Config may be nested or top-level
     final cfg = action['config'] as Map<String, dynamic>? ?? action;
     return switch (type) {
-      'create_task' =>
-        'Title: ${cfg['title'] ?? '—'}, Priority: ${cfg['priority'] ?? '—'}',
-      'send_notification' => 'Template: ${cfg['template_id'] ?? '—'}',
+      'create_task' => () {
+          final parts = <String>['Title: ${cfg['title'] ?? '—'}'];
+          if (cfg['priority'] != null) parts.add('Priority: ${cfg['priority']}');
+          if (cfg['due_date_days'] != null) {
+            parts.add('Due in ${cfg['due_date_days']}d');
+          }
+          return parts.join(', ');
+        }(),
+      'create_record' =>
+        'Title: ${cfg['title'] ?? '—'}, Pipeline: ${cfg['pipeline_id'] ?? '—'}, Source: ${cfg['source'] ?? '—'}',
+      'send_notification' =>
+        'Message: ${cfg['message'] ?? cfg['template_id'] ?? '—'}',
       'move_stage' => 'Stage: ${cfg['stage_id'] ?? '—'}',
-      'assign_owner' => 'User: ${cfg['user_id'] ?? 'round_robin'}',
+      'assign_owner' => 'Owner: ${cfg['owner_id'] ?? cfg['user_id'] ?? '—'}',
       'add_tag' => 'Tag: ${cfg['tag'] ?? '—'}',
       'update_field' =>
-        '${cfg['field_key'] ?? '—'} = ${cfg['value'] ?? '—'}',
-      'send_webhook' =>
-        '${cfg['method'] ?? 'POST'} ${cfg['url'] ?? '—'}',
+        '${cfg['field'] ?? cfg['field_key'] ?? '—'} = ${cfg['value'] ?? '—'}',
       _ => action.toString(),
     };
   }
@@ -245,12 +266,12 @@ class _AutomationRuleDetailPageState extends State<AutomationRuleDetailPage> {
   IconData _actionIcon(String type) {
     return switch (type) {
       'create_task' => Icons.task_alt,
+      'create_record' => Icons.add_box_outlined,
       'send_notification' => Icons.notifications_outlined,
       'move_stage' => Icons.swap_horiz,
       'assign_owner' => Icons.person_add_outlined,
       'add_tag' => Icons.label_outline,
       'update_field' => Icons.edit_outlined,
-      'send_webhook' => Icons.webhook,
       _ => Icons.bolt_outlined,
     };
   }
