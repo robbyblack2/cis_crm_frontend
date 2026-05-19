@@ -77,6 +77,38 @@ class SettingsPage extends StatelessWidget {
           ),
           const Divider(),
 
+          // ── Configuration ──
+          _SectionHeader(title: 'Configuration'),
+          ListTile(
+            leading: const Icon(Icons.text_fields),
+            title: const Text('Field Definitions'),
+            subtitle: const Text('Custom fields for entities'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.fieldDefinitions),
+          ),
+          ListTile(
+            leading: const Icon(Icons.label_outline),
+            title: const Text('Tags'),
+            subtitle: const Text('Manage tag taxonomy'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.tags),
+          ),
+          ListTile(
+            leading: const Icon(Icons.view_list_outlined),
+            title: const Text('Saved Views'),
+            subtitle: const Text('Custom list filters'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.savedViews),
+          ),
+          ListTile(
+            leading: const Icon(Icons.draw_outlined),
+            title: const Text('Email Signature'),
+            subtitle: const Text('Organization email signature'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.emailSignature),
+          ),
+          const Divider(),
+
           // ── Admin ──
           _SectionHeader(title: 'Admin'),
           ListTile(

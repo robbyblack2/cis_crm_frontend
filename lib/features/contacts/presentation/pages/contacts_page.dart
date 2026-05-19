@@ -8,6 +8,7 @@ import 'package:cis_crm/features/contacts/presentation/bloc/contacts_bloc.dart';
 import 'package:cis_crm/features/contacts/presentation/pages/contact_detail_page.dart';
 import 'package:cis_crm/features/contacts/presentation/widgets/contact_tile.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:formz/formz.dart';
@@ -34,6 +35,11 @@ class _ContactsView extends StatelessWidget {
       appBar: AppBar(
         title: Text(l10n.contactsTitle),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.merge_type),
+            tooltip: 'Merge contacts',
+            onPressed: () => _showMergeDialog(context),
+          ),
           IconButton(
             icon: const Icon(Icons.search),
             tooltip: l10n.contactSearch,
@@ -90,6 +96,83 @@ class _ContactsView extends StatelessWidget {
     showSearch(
       context: context,
       delegate: _ContactSearchDelegate(contacts: contacts),
+    );
+  }
+
+  void _showMergeDialog(BuildContext context) {
+    final sourceCtrl = TextEditingController();
+    final targetCtrl = TextEditingController();
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Merge Contacts'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Merge source into target. Source contact will be removed.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: sourceCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Source Contact ID (will be removed)',
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: targetCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Target Contact ID (will be kept)',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final source = sourceCtrl.text.trim();
+              final target = targetCtrl.text.trim();
+              if (source.isEmpty || target.isEmpty) return;
+              Navigator.pop(ctx);
+              try {
+                await getIt<Dio>().post<void>(
+                  '/api/contacts/merge',
+                  data: {
+                    'source_id': source,
+                    'target_id': target,
+                  },
+                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Contacts merged'),
+                    ),
+                  );
+                  context
+                      .read<ContactsBloc>()
+                      .add(const ContactsLoadRequested());
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Merge failed: $e')),
+                  );
+                }
+              }
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            child: const Text('Merge'),
+          ),
+        ],
+      ),
     );
   }
 

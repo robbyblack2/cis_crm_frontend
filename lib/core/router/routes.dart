@@ -22,6 +22,10 @@ abstract final class Routes {
   static const callLogs = '/call-logs';
   static const files = '/files';
   static const companies = '/companies';
+  static const fieldDefinitions = '/field-definitions';
+  static const tags = '/tags';
+  static const savedViews = '/saved-views';
+  static const emailSignature = '/email-signature';
   static const importExport = '/import-export';
 
   static const users = '/users';

@@ -90,7 +90,11 @@ import 'package:cis_crm/features/email/presentation/pages/email_templates_page.d
 import 'package:cis_crm/features/files/presentation/pages/files_page.dart';
 import 'package:cis_crm/features/search/presentation/pages/search_page.dart';
 import 'package:cis_crm/features/settings/data/datasources/google_remote_data_source.dart';
+import 'package:cis_crm/features/settings/presentation/pages/email_signature_page.dart';
+import 'package:cis_crm/features/settings/presentation/pages/field_definitions_page.dart';
 import 'package:cis_crm/features/settings/presentation/pages/import_export_page.dart';
+import 'package:cis_crm/features/settings/presentation/pages/saved_views_page.dart';
+import 'package:cis_crm/features/settings/presentation/pages/tags_page.dart';
 import 'package:cis_crm/features/settings/data/repositories/google_repository_impl.dart';
 import 'package:cis_crm/features/settings/domain/repositories/google_repository.dart';
 import 'package:cis_crm/features/settings/presentation/bloc/google_integration_cubit.dart';
@@ -552,6 +556,22 @@ Future<void> configureDependencies(FlavorConfig config) async {
         GoRoute(
           path: Routes.importExport,
           builder: (_, __) => const ImportExportPage(),
+        ),
+        GoRoute(
+          path: Routes.fieldDefinitions,
+          builder: (_, __) => const FieldDefinitionsPage(),
+        ),
+        GoRoute(
+          path: Routes.tags,
+          builder: (_, __) => const TagsPage(),
+        ),
+        GoRoute(
+          path: Routes.savedViews,
+          builder: (_, __) => const SavedViewsPage(),
+        ),
+        GoRoute(
+          path: Routes.emailSignature,
+          builder: (_, __) => const EmailSignaturePage(),
         ),
       ],
     ),
