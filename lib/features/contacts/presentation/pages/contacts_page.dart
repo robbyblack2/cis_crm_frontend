@@ -1,10 +1,14 @@
 import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/core/widgets/state/empty_state.dart';
 import 'package:cis_crm/core/widgets/state/page_error.dart';
+import 'package:cis_crm/features/contacts/data/datasources/company_remote_data_source.dart';
+import 'package:cis_crm/features/contacts/data/models/company_model.dart';
+import 'package:cis_crm/features/contacts/domain/entities/company.dart';
 import 'package:cis_crm/features/contacts/domain/entities/contact.dart';
 import 'package:cis_crm/features/contacts/domain/repositories/contact_repository.dart';
 import 'package:cis_crm/features/contacts/presentation/bloc/contact_form_cubit.dart';
 import 'package:cis_crm/features/contacts/presentation/bloc/contacts_bloc.dart';
+import 'package:cis_crm/features/contacts/presentation/pages/company_detail_page.dart';
 import 'package:cis_crm/features/contacts/presentation/pages/contact_detail_page.dart';
 import 'package:cis_crm/features/contacts/presentation/widgets/contact_tile.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
@@ -20,7 +24,40 @@ class ContactsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => getIt<ContactsBloc>()..add(const ContactsLoadRequested()),
-      child: const _ContactsView(),
+      child: const _ContactsTabView(),
+    );
+  }
+}
+
+class _ContactsTabView extends StatelessWidget {
+  const _ContactsTabView();
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          Material(
+            color: Theme.of(context).colorScheme.surface,
+            elevation: 1,
+            child: const TabBar(
+              tabs: [
+                Tab(icon: Icon(Icons.person), text: 'Contacts'),
+                Tab(icon: Icon(Icons.business), text: 'Companies'),
+              ],
+            ),
+          ),
+          const Expanded(
+            child: TabBarView(
+              children: [
+                _ContactsView(),
+                _CompaniesTab(),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -415,6 +452,173 @@ class _ContactSearchDelegate extends SearchDelegate<Contact?> {
           onTap: () => close(context, contact),
         );
       },
+    );
+  }
+}
+
+// ── Companies Tab ──────────────────────────────────────────────────────
+
+class _CompaniesTab extends StatefulWidget {
+  const _CompaniesTab();
+
+  @override
+  State<_CompaniesTab> createState() => _CompaniesTabState();
+}
+
+class _CompaniesTabState extends State<_CompaniesTab> {
+  List<Company>? _companies;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final companies =
+          await getIt<CompanyRemoteDataSource>().getCompanies();
+      if (mounted) {
+        setState(() { _companies = companies; _loading = false; });
+      }
+    } catch (_) {
+      if (mounted) setState(() { _companies = []; _loading = false; });
+    }
+  }
+
+  void _showCreateDialog() {
+    final nameCtrl = TextEditingController();
+    final websiteCtrl = TextEditingController();
+    final industryCtrl = TextEditingController();
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Create Company'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Name'),
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: websiteCtrl,
+                decoration: const InputDecoration(labelText: 'Website'),
+                keyboardType: TextInputType.url,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: industryCtrl,
+                decoration:
+                    const InputDecoration(labelText: 'Industry'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final name = nameCtrl.text.trim();
+              if (name.isEmpty) return;
+              Navigator.pop(ctx);
+              try {
+                final company = CompanyModel(
+                  id: '',
+                  name: name,
+                  domain: websiteCtrl.text.trim().isNotEmpty
+                      ? websiteCtrl.text.trim()
+                      : null,
+                  industry: industryCtrl.text.trim().isNotEmpty
+                      ? industryCtrl.text.trim()
+                      : null,
+                  tags: const [],
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                );
+                await getIt<CompanyRemoteDataSource>()
+                    .createCompany(company);
+                await _load();
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'companies_tab_fab',
+        onPressed: _showCreateDialog,
+        child: const Icon(Icons.add),
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _companies == null || _companies!.isEmpty
+              ? const EmptyState(
+                  icon: Icons.business_outlined,
+                  title: 'No companies',
+                  message: 'Tap + to create your first company.',
+                )
+              : ListView.separated(
+                  itemCount: _companies!.length,
+                  separatorBuilder: (_, __) =>
+                      const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final company = _companies![index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor:
+                            theme.colorScheme.primaryContainer,
+                        child: Text(
+                          company.name.isNotEmpty
+                              ? company.name[0].toUpperCase()
+                              : '?',
+                          style: TextStyle(
+                            color:
+                                theme.colorScheme.onPrimaryContainer,
+                          ),
+                        ),
+                      ),
+                      title: Text(company.name),
+                      subtitle: Text(
+                        [
+                          if (company.industry != null)
+                            company.industry!,
+                          if (company.domain != null) company.domain!,
+                        ].join(' · '),
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              CompanyDetailPage(company: company),
+                        ),
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }
