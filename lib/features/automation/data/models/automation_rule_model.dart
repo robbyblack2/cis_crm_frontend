@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:cis_crm/features/automation/domain/entities/automation_rule.dart';
 
 class AutomationRuleModel extends AutomationRule {
@@ -16,19 +18,50 @@ class AutomationRuleModel extends AutomationRule {
   });
 
   factory AutomationRuleModel.fromJson(Map<String, dynamic> json) {
-    final rawActions = json['actions'] as List<dynamic>?;
+    // Handle trigger_conditions as Map, String, or null
+    Map<String, dynamic>? conditions;
+    final rawCond = json['trigger_conditions'];
+    if (rawCond is Map) {
+      conditions = Map<String, dynamic>.from(rawCond);
+    } else if (rawCond is String && rawCond.isNotEmpty) {
+      try {
+        final parsed = jsonDecode(rawCond);
+        if (parsed is Map) conditions = Map<String, dynamic>.from(parsed);
+      } catch (_) {}
+    }
+
+    // Handle actions as List, String, or null
+    List<Map<String, dynamic>> actions;
+    final rawActions = json['actions'];
+    if (rawActions is List) {
+      actions = rawActions
+          .map((a) => a is Map ? Map<String, dynamic>.from(a) : <String, dynamic>{})
+          .toList();
+    } else if (rawActions is String && rawActions.isNotEmpty) {
+      try {
+        final parsed = jsonDecode(rawActions);
+        if (parsed is List) {
+          actions = parsed
+              .map((a) => a is Map ? Map<String, dynamic>.from(a) : <String, dynamic>{})
+              .toList();
+        } else {
+          actions = const [];
+        }
+      } catch (_) {
+        actions = const [];
+      }
+    } else {
+      actions = const [];
+    }
+
     return AutomationRuleModel(
       id: json['id'] as String,
       name: json['name'] as String,
       description: json['description'] as String?,
       isActive: json['is_active'] as bool? ?? true,
       triggerType: json['trigger_type'] as String,
-      triggerConditions:
-          json['trigger_conditions'] as Map<String, dynamic>?,
-      actions: rawActions
-              ?.map((a) => Map<String, dynamic>.from(a as Map))
-              .toList() ??
-          const [],
+      triggerConditions: conditions,
+      actions: actions,
       priority: json['priority'] as int? ?? 0,
       createdBy: json['created_by'] as String? ?? '',
       createdAt: DateTime.parse(json['created_at'] as String),

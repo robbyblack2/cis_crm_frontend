@@ -32,14 +32,20 @@ class _AutomationRuleDetailPageState extends State<AutomationRuleDetailPage> {
       _loading = true;
       _error = null;
     });
-    final result =
-        await getIt<AutomationRepository>().getRule(widget.ruleId);
+    // Backend doesn't support GET /api/automation/rules/:id (405)
+    // Fetch all rules and find by ID
+    final result = await getIt<AutomationRepository>().getRules();
     if (!mounted) return;
     setState(() {
       _loading = false;
       switch (result) {
         case Success(:final data):
-          _rule = data;
+          final match = data.where((r) => r.id == widget.ruleId);
+          if (match.isNotEmpty) {
+            _rule = match.first;
+          } else {
+            _error = 'Rule not found';
+          }
         case Failure(:final error):
           _error = error.message;
       }
