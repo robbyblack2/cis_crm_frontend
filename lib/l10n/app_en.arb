@@ -191,6 +191,31 @@
     "description": "Label for the move action button."
   },
 
+  "dropHere": "Drop here",
+  "@dropHere": {
+    "description": "Hint text when dragging a record over an empty stage column."
+  },
+
+  "account": "Account",
+  "@account": {
+    "description": "Section header for account settings."
+  },
+
+  "tools": "Tools",
+  "@tools": {
+    "description": "Section header for CRM tools in settings."
+  },
+
+  "automationSubtitle": "Rules and workflow automation",
+  "@automationSubtitle": {
+    "description": "Subtitle for automation in settings."
+  },
+
+  "emailTemplatesSubtitle": "Manage reusable email templates",
+  "@emailTemplatesSubtitle": {
+    "description": "Subtitle for email templates in settings."
+  },
+
 
   "loginTitle": "Sign in to CIS CRM",
   "@loginTitle": {

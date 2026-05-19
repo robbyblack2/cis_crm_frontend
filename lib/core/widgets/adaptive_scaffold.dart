@@ -1,4 +1,5 @@
 import 'package:cis_crm/core/responsive/breakpoints.dart';
+import 'package:cis_crm/core/router/routes.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -75,7 +76,18 @@ class _Bottom extends StatelessWidget {
       body: shell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: shell.currentIndex,
-        onDestinationSelected: onTap,
+        onDestinationSelected: (index) {
+          // Last two virtual destinations: Search and Settings
+          if (index == destinations.length) {
+            context.push(Routes.search);
+            return;
+          }
+          if (index == destinations.length + 1) {
+            context.push(Routes.settings);
+            return;
+          }
+          onTap(index);
+        },
         destinations: [
           for (final d in destinations)
             NavigationDestination(
@@ -83,6 +95,16 @@ class _Bottom extends StatelessWidget {
               selectedIcon: d.selectedIcon,
               label: d.label,
             ),
+          const NavigationDestination(
+            icon: Icon(Icons.search),
+            selectedIcon: Icon(Icons.search),
+            label: 'Search',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
         ],
       ),
     );
@@ -109,6 +131,30 @@ class _Rail extends StatelessWidget {
             selectedIndex: shell.currentIndex,
             onDestinationSelected: onTap,
             labelType: NavigationRailLabelType.all,
+            leading: Column(
+              children: [
+                const SizedBox(height: 8),
+                IconButton(
+                  icon: const Icon(Icons.search),
+                  tooltip: 'Search',
+                  onPressed: () => context.push(Routes.search),
+                ),
+                const SizedBox(height: 4),
+              ],
+            ),
+            trailing: Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.settings_outlined),
+                    tooltip: 'Settings',
+                    onPressed: () => context.push(Routes.settings),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
             destinations: [
               for (final d in destinations)
                 NavigationRailDestination(
@@ -144,11 +190,21 @@ class _Drawer extends StatelessWidget {
         children: [
           NavigationDrawer(
             selectedIndex: shell.currentIndex,
-            onDestinationSelected: onTap,
+            onDestinationSelected: (index) {
+              if (index == destinations.length) {
+                context.push(Routes.search);
+                return;
+              }
+              if (index == destinations.length + 1) {
+                context.push(Routes.settings);
+                return;
+              }
+              onTap(index);
+            },
             children: [
               const Padding(
                 padding: EdgeInsets.fromLTRB(28, 16, 16, 10),
-                child: Text(''),
+                child: Text('CIS CRM'),
               ),
               for (final d in destinations)
                 NavigationDrawerDestination(
@@ -156,6 +212,17 @@ class _Drawer extends StatelessWidget {
                   selectedIcon: d.selectedIcon,
                   label: Text(d.label),
                 ),
+              const Divider(indent: 28, endIndent: 28),
+              const NavigationDrawerDestination(
+                icon: Icon(Icons.search),
+                selectedIcon: Icon(Icons.search),
+                label: Text('Search'),
+              ),
+              const NavigationDrawerDestination(
+                icon: Icon(Icons.settings_outlined),
+                selectedIcon: Icon(Icons.settings),
+                label: Text('Settings'),
+              ),
             ],
           ),
           const VerticalDivider(width: 1),

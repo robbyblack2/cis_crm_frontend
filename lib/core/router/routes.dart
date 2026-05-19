@@ -16,6 +16,11 @@ abstract final class Routes {
   static const profile = '/profile';
   static const settings = '/settings';
   static const integrations = '/integrations';
+  static const automation = '/automation';
+  static const emailTemplates = '/email-templates';
+  static const emailCompose = '/email/compose';
+  static const callLogs = '/call-logs';
+  static const files = '/files';
 
   static const debugFlags = '/debug/flags';
 

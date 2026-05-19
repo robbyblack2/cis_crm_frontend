@@ -11,33 +11,97 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
         children: [
-          const SizedBox(height: 16),
+          // ── Account ──
+          _SectionHeader(title: l10n.account),
           ListTile(
             leading: const Icon(Icons.person_outline),
             title: Text(l10n.profileTitle),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(Routes.profile),
           ),
-          const Divider(),
           ListTile(
             leading: const Icon(Icons.extension_outlined),
             title: Text(l10n.integrationsTitle),
+            subtitle: const Text('Google Workspace'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(Routes.integrations),
           ),
           const Divider(),
+
+          // ── Tools ──
+          _SectionHeader(title: l10n.tools),
           ListTile(
-            leading: const Icon(Icons.logout),
-            title: Text(l10n.signOut),
+            leading: const Icon(Icons.bolt_outlined),
+            title: Text(l10n.automationTitle),
+            subtitle: Text(l10n.automationSubtitle),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.automation),
+          ),
+          ListTile(
+            leading: const Icon(Icons.email_outlined),
+            title: Text(l10n.emailCompose),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.emailCompose),
+          ),
+          ListTile(
+            leading: const Icon(Icons.description_outlined),
+            title: Text(l10n.emailTemplatesTitle),
+            subtitle: Text(l10n.emailTemplatesSubtitle),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.emailTemplates),
+          ),
+          ListTile(
+            leading: const Icon(Icons.phone_outlined),
+            title: Text(l10n.callLogTitle),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.callLogs),
+          ),
+          ListTile(
+            leading: const Icon(Icons.folder_outlined),
+            title: Text(l10n.filesTitle),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.files),
+          ),
+          const Divider(),
+
+          // ── Sign out ──
+          ListTile(
+            leading: Icon(Icons.logout, color: theme.colorScheme.error),
+            title: Text(
+              l10n.signOut,
+              style: TextStyle(color: theme.colorScheme.error),
+            ),
             onTap: () {
               context.read<AuthBloc>().add(const AuthSignOutRequested());
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      child: Text(
+        title,
+        style: Theme.of(context)
+            .textTheme
+            .titleSmall
+            ?.copyWith(fontWeight: FontWeight.bold),
       ),
     );
   }

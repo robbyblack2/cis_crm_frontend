@@ -136,6 +136,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get move => 'Move';
 
   @override
+  String get dropHere => 'Drop here';
+
+  @override
+  String get account => 'Account';
+
+  @override
+  String get tools => 'Tools';
+
+  @override
+  String get automationSubtitle => 'Rules and workflow automation';
+
+  @override
+  String get emailTemplatesSubtitle => 'Manage reusable email templates';
+
+  @override
   String get loginTitle => 'Sign in to CIS CRM';
 
   @override

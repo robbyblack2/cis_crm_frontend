@@ -334,6 +334,36 @@ abstract class AppLocalizations {
   /// **'Move'**
   String get move;
 
+  /// Hint text when dragging a record over an empty stage column.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop here'**
+  String get dropHere;
+
+  /// Section header for account settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get account;
+
+  /// Section header for CRM tools in settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Tools'**
+  String get tools;
+
+  /// Subtitle for automation in settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Rules and workflow automation'**
+  String get automationSubtitle;
+
+  /// Subtitle for email templates in settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage reusable email templates'**
+  String get emailTemplatesSubtitle;
+
   /// Title shown on the login page.
   ///
   /// In en, this message translates to:
