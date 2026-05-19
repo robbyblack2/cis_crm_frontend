@@ -1,7 +1,9 @@
+import 'package:cis_crm/core/router/routes.dart';
 import 'package:cis_crm/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -18,9 +20,14 @@ class SettingsPage extends StatelessWidget {
             leading: const Icon(Icons.person_outline),
             title: Text(l10n.profileTitle),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              // TODO(settings): Navigate to profile page.
-            },
+            onTap: () => context.push(Routes.profile),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.extension_outlined),
+            title: Text(l10n.integrationsTitle),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.integrations),
           ),
           const Divider(),
           ListTile(

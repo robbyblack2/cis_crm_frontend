@@ -15,6 +15,7 @@ abstract final class Routes {
   static const search = '/search';
   static const profile = '/profile';
   static const settings = '/settings';
+  static const integrations = '/integrations';
 
   static const debugFlags = '/debug/flags';
 

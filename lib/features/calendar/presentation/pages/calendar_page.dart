@@ -183,8 +183,36 @@ class _CalendarViewState extends State<_CalendarView> {
         '${dt.day.toString().padLeft(2, '0')} $h:$m';
   }
 
+  List<CalendarEvent> _filterByViewMode(List<CalendarEvent> events) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return switch (_viewMode) {
+      _CalendarViewMode.day => events
+          .where(
+            (e) =>
+                e.start.year == today.year &&
+                e.start.month == today.month &&
+                e.start.day == today.day,
+          )
+          .toList(),
+      _CalendarViewMode.week => events.where((e) {
+          final weekStart =
+              today.subtract(Duration(days: today.weekday - 1));
+          final weekEnd = weekStart.add(const Duration(days: 7));
+          return !e.start.isBefore(weekStart) && e.start.isBefore(weekEnd);
+        }).toList(),
+      _CalendarViewMode.month => events
+          .where(
+            (e) =>
+                e.start.year == today.year && e.start.month == today.month,
+          )
+          .toList(),
+    };
+  }
+
   Widget _buildLoaded(BuildContext context, List<CalendarEvent> events) {
-    final grouped = _groupByDate(events);
+    final filtered = _filterByViewMode(events);
+    final grouped = _groupByDate(filtered);
     final sortedDates = grouped.keys.toList()..sort();
 
     return Scaffold(
@@ -194,9 +222,7 @@ class _CalendarViewState extends State<_CalendarView> {
           IconButton(
             tooltip: AppLocalizations.of(context)!.goToToday,
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(AppLocalizations.of(context)!.comingSoon)),
-              );
+              setState(() => _viewMode = _CalendarViewMode.day);
             },
             icon: const Icon(Icons.today),
           ),
@@ -228,7 +254,7 @@ class _CalendarViewState extends State<_CalendarView> {
           ),
         ),
       ),
-      body: events.isEmpty
+      body: filtered.isEmpty
           ? EmptyState(
               icon: Icons.calendar_month,
               title: AppLocalizations.of(context)!.noEvents,

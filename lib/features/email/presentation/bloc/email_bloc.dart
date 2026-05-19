@@ -19,6 +19,10 @@ class EmailBloc extends Bloc<EmailEvent, EmailState> {
     on<EmailSendRequested>(_onSendRequested, transformer: droppable());
     on<DraftSaveRequested>(_onDraftSaveRequested, transformer: droppable());
     on<DraftSendRequested>(_onDraftSendRequested, transformer: droppable());
+    on<TemplateCreateRequested>(
+      _onTemplateCreateRequested,
+      transformer: droppable(),
+    );
     on<TemplatesLoadRequested>(
       _onTemplatesLoadRequested,
       transformer: droppable(),
@@ -72,6 +76,30 @@ class EmailBloc extends Bloc<EmailEvent, EmailState> {
     switch (result) {
       case Success(:final data):
         emit(EmailLoaded(sentMessage: data));
+      case Failure(:final error):
+        emit(EmailError(failure: error));
+    }
+  }
+
+  Future<void> _onTemplateCreateRequested(
+    TemplateCreateRequested event,
+    Emitter<EmailState> emit,
+  ) async {
+    emit(const EmailLoading());
+    final result = await _repository.createTemplate(
+      name: event.name,
+      subject: event.subject,
+      body: event.body,
+    );
+    switch (result) {
+      case Success():
+        final listResult = await _repository.getTemplates();
+        switch (listResult) {
+          case Success(:final data):
+            emit(EmailLoaded(templates: data));
+          case Failure(:final error):
+            emit(EmailError(failure: error));
+        }
       case Failure(:final error):
         emit(EmailError(failure: error));
     }

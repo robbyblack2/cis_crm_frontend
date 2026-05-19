@@ -34,11 +34,25 @@ class _ReportDetailView extends StatelessWidget {
         title: Text(report.name),
         actions: [
           IconButton(
-            onPressed: () {
-              // TODO(export): Implement report export.
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(AppLocalizations.of(context)!.exportNotImplemented)),
-              );
+            onPressed: () async {
+              final url = await context
+                  .read<ReportsCubit>()
+                  .exportReport(report.id);
+              if (!context.mounted) return;
+              if (url != null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Export ready: $url')),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      AppLocalizations.of(context)!
+                          .exportNotImplemented,
+                    ),
+                  ),
+                );
+              }
             },
             tooltip: AppLocalizations.of(context)!.exportReport,
             icon: const Icon(Icons.file_download_outlined),

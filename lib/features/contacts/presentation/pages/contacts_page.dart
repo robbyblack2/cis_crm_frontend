@@ -2,12 +2,15 @@ import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/core/widgets/state/empty_state.dart';
 import 'package:cis_crm/core/widgets/state/page_error.dart';
 import 'package:cis_crm/features/contacts/domain/entities/contact.dart';
+import 'package:cis_crm/features/contacts/domain/repositories/contact_repository.dart';
+import 'package:cis_crm/features/contacts/presentation/bloc/contact_form_cubit.dart';
 import 'package:cis_crm/features/contacts/presentation/bloc/contacts_bloc.dart';
 import 'package:cis_crm/features/contacts/presentation/pages/contact_detail_page.dart';
 import 'package:cis_crm/features/contacts/presentation/widgets/contact_tile.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:formz/formz.dart';
 
 class ContactsPage extends StatelessWidget {
   const ContactsPage({super.key});
@@ -90,7 +93,105 @@ class _ContactsView extends StatelessWidget {
   }
 
   void _addContact(BuildContext context) {
-    // TODO(contacts): navigate to add contact form
+    final l10n = AppLocalizations.of(context)!;
+    showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => BlocProvider(
+        create: (_) => ContactFormCubit(
+          contactRepository: getIt<ContactRepository>(),
+        ),
+        child: BlocConsumer<ContactFormCubit, ContactFormState>(
+          listener: (ctx, state) {
+            if (state.submissionStatus == FormzSubmissionStatus.success) {
+              Navigator.of(ctx).pop(true);
+            }
+          },
+          builder: (ctx, state) {
+            final cubit = ctx.read<ContactFormCubit>();
+            return AlertDialog(
+              title: Text(l10n.addContact),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: l10n.contactFirstName,
+                        errorText: state.firstName.displayError,
+                      ),
+                      onChanged: cubit.firstNameChanged,
+                      textCapitalization: TextCapitalization.words,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: l10n.contactLastName,
+                        errorText: state.lastName.displayError,
+                      ),
+                      onChanged: cubit.lastNameChanged,
+                      textCapitalization: TextCapitalization.words,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      decoration: InputDecoration(labelText: l10n.contactEmail),
+                      onChanged: cubit.emailChanged,
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      decoration: InputDecoration(labelText: l10n.contactPhone),
+                      onChanged: cubit.phoneChanged,
+                      keyboardType: TextInputType.phone,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: l10n.contactJobTitle,
+                      ),
+                      onChanged: cubit.jobTitleChanged,
+                      textCapitalization: TextCapitalization.words,
+                    ),
+                    if (state.errorMessage != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        state.errorMessage!,
+                        style: TextStyle(
+                          color: Theme.of(ctx).colorScheme.error,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text(l10n.cancel),
+                ),
+                FilledButton(
+                  onPressed: state.submissionStatus ==
+                          FormzSubmissionStatus.inProgress
+                      ? null
+                      : cubit.submitted,
+                  child: state.submissionStatus ==
+                          FormzSubmissionStatus.inProgress
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(l10n.create),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    ).then((created) {
+      if ((created ?? false) && context.mounted) {
+        context.read<ContactsBloc>().add(const ContactsLoadRequested());
+      }
+    });
   }
 }
 
@@ -137,7 +238,6 @@ class _ContactsListState extends State<_ContactsList> {
   Widget build(BuildContext context) {
     final contacts = widget.state.contacts;
     final hasMore = widget.state.hasMore;
-    final isLoadingMore = widget.state.isLoadingMore;
 
     return ListView.separated(
       controller: _scrollController,

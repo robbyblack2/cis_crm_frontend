@@ -1,6 +1,10 @@
+import 'package:cis_crm/app/injection.dart';
+import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/features/files/domain/entities/file_attachment.dart';
+import 'package:cis_crm/features/files/domain/repositories/file_repository.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class FilePreviewWidget extends StatelessWidget {
   const FilePreviewWidget({required this.file, super.key});
@@ -46,9 +50,7 @@ class FilePreviewWidget extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             FilledButton.tonalIcon(
-              onPressed: () {
-                // TODO(files): Implement file download/preview.
-              },
+              onPressed: () => _openPreview(context),
               icon: const Icon(Icons.open_in_new),
               label: Text(AppLocalizations.of(context)!.openPreview),
             ),
@@ -56,5 +58,25 @@ class FilePreviewWidget extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _openPreview(BuildContext context) async {
+    final result = await getIt<FileRepository>().getPreviewUrl(file.id);
+    if (!context.mounted) return;
+    switch (result) {
+      case Success(:final data):
+        final uri = Uri.tryParse(data);
+        if (uri != null) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      case Failure():
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.failedToLoadFiles,
+            ),
+          ),
+        );
+    }
   }
 }

@@ -18,8 +18,10 @@ import 'package:cis_crm/features/activity/data/datasources/activity_remote_data_
 import 'package:cis_crm/features/activity/data/datasources/activity_remote_data_source_impl.dart';
 import 'package:cis_crm/features/activity/data/repositories/call_log_repository_impl.dart';
 import 'package:cis_crm/features/activity/data/repositories/task_repository_impl.dart';
+import 'package:cis_crm/features/activity/data/repositories/timeline_repository_impl.dart';
 import 'package:cis_crm/features/activity/domain/repositories/call_log_repository.dart';
 import 'package:cis_crm/features/activity/domain/repositories/task_repository.dart';
+import 'package:cis_crm/features/activity/domain/repositories/timeline_repository.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/call_log_cubit.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/tasks_bloc.dart';
 import 'package:cis_crm/features/activity/presentation/pages/tasks_page.dart';
@@ -81,6 +83,11 @@ import 'package:cis_crm/features/search/data/repositories/search_repository_impl
 import 'package:cis_crm/features/search/domain/repositories/search_repository.dart';
 import 'package:cis_crm/features/search/presentation/bloc/search_bloc.dart';
 import 'package:cis_crm/features/search/presentation/pages/search_page.dart';
+import 'package:cis_crm/features/settings/data/datasources/google_remote_data_source.dart';
+import 'package:cis_crm/features/settings/data/repositories/google_repository_impl.dart';
+import 'package:cis_crm/features/settings/domain/repositories/google_repository.dart';
+import 'package:cis_crm/features/settings/presentation/bloc/google_integration_cubit.dart';
+import 'package:cis_crm/features/settings/presentation/pages/integrations_page.dart';
 import 'package:cis_crm/features/settings/presentation/pages/profile_page.dart';
 import 'package:cis_crm/features/settings/presentation/pages/settings_page.dart';
 import 'package:dio/dio.dart';
@@ -201,6 +208,9 @@ Future<void> configureDependencies(FlavorConfig config) async {
     )
     ..registerLazySingleton<ReportRemoteDataSource>(
       () => ReportRemoteDataSourceImpl(dio: dio),
+    )
+    ..registerLazySingleton<GoogleRemoteDataSource>(
+      () => GoogleRemoteDataSourceImpl(dio: dio),
     );
 
   // ── 6. Repositories ─────────────────────────────────────────────
@@ -281,6 +291,16 @@ Future<void> configureDependencies(FlavorConfig config) async {
       () => ReportRepositoryImpl(
         dataSource: getIt<ReportRemoteDataSource>(),
       ),
+    )
+    ..registerLazySingleton<TimelineRepository>(
+      () => TimelineRepositoryImpl(
+        remoteDataSource: getIt<ActivityRemoteDataSource>(),
+      ),
+    )
+    ..registerLazySingleton<GoogleRepository>(
+      () => GoogleRepositoryImpl(
+        remoteDataSource: getIt<GoogleRemoteDataSource>(),
+      ),
     );
 
   // ── 7. App-wide blocs (singletons) ─────────────────────────────
@@ -357,6 +377,11 @@ Future<void> configureDependencies(FlavorConfig config) async {
     ..registerFactory<ReportsCubit>(
       () => ReportsCubit(
         repository: getIt<ReportRepository>(),
+      ),
+    )
+    ..registerFactory<GoogleIntegrationCubit>(
+      () => GoogleIntegrationCubit(
+        repository: getIt<GoogleRepository>(),
       ),
     );
 
@@ -478,6 +503,10 @@ Future<void> configureDependencies(FlavorConfig config) async {
         GoRoute(
           path: Routes.search,
           builder: (_, __) => const SearchPage(),
+        ),
+        GoRoute(
+          path: Routes.integrations,
+          builder: (_, __) => const IntegrationsPage(),
         ),
       ],
     ),

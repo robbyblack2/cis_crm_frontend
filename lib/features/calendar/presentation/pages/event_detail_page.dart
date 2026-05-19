@@ -1,6 +1,7 @@
 import 'package:cis_crm/features/calendar/domain/entities/calendar_event.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class EventDetailPage extends StatelessWidget {
   const EventDetailPage({required this.event, super.key});
@@ -127,9 +128,7 @@ class _MeetingLinkRow extends StatelessWidget {
                 ),
               ),
               InkWell(
-                onTap: () {
-                  // TODO(feature): Launch URL with url_launcher.
-                },
+                onTap: () => _launchUrl(link),
                 child: Text(
                   link,
                   style: theme.textTheme.bodyMedium?.copyWith(
@@ -143,5 +142,12 @@ class _MeetingLinkRow extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 }

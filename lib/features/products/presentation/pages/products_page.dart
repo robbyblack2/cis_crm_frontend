@@ -2,6 +2,7 @@ import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/core/widgets/state/empty_state.dart';
 import 'package:cis_crm/core/widgets/state/page_error.dart';
 import 'package:cis_crm/core/widgets/state/page_loading.dart';
+import 'package:cis_crm/features/products/domain/entities/product_type.dart';
 import 'package:cis_crm/features/products/presentation/bloc/products_bloc.dart';
 import 'package:cis_crm/features/products/presentation/bloc/subscriptions_bloc.dart';
 import 'package:cis_crm/features/products/presentation/pages/product_detail_page.dart';
@@ -57,11 +58,104 @@ class _ProductsView extends StatelessWidget {
           ],
         ),
         floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            // TODO(nav): Navigate to add product form.
-          },
+          onPressed: () => _showCreateProductDialog(context),
           tooltip: AppLocalizations.of(context)!.addProduct,
           child: const Icon(Icons.add),
+        ),
+      ),
+    );
+  }
+
+  void _showCreateProductDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final nameController = TextEditingController();
+    final currencyController = TextEditingController(text: 'USD');
+    final priceController = TextEditingController();
+    final tagsController = TextEditingController();
+    var selectedType = ProductType.service;
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(l10n.addProduct),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(labelText: l10n.productName),
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<ProductType>(
+                  value: selectedType,
+                  decoration: InputDecoration(labelText: l10n.productType),
+                  items: ProductType.values
+                      .map(
+                        (t) => DropdownMenuItem(
+                          value: t,
+                          child: Text(t.name),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) {
+                      setDialogState(() => selectedType = v);
+                    }
+                  },
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: currencyController,
+                  decoration: InputDecoration(labelText: l10n.productCurrency),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: priceController,
+                  decoration: InputDecoration(labelText: l10n.productPrice),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: tagsController,
+                  decoration: InputDecoration(labelText: l10n.productTags),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                final name = nameController.text.trim();
+                if (name.isEmpty) return;
+                final price = double.tryParse(priceController.text.trim());
+                final tags = tagsController.text
+                    .split(',')
+                    .map((t) => t.trim())
+                    .where((t) => t.isNotEmpty)
+                    .toList();
+                context.read<ProductsBloc>().add(
+                      ProductCreateRequested(
+                        name: name,
+                        type: selectedType.name,
+                        currency: currencyController.text.trim(),
+                        defaultPrice: price,
+                        tags: tags,
+                      ),
+                    );
+                Navigator.of(dialogContext).pop();
+              },
+              child: Text(l10n.create),
+            ),
+          ],
         ),
       ),
     );

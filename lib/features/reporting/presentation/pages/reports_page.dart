@@ -1,7 +1,11 @@
 import 'package:cis_crm/app/injection.dart';
+import 'package:cis_crm/core/error/failures.dart';
+import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/core/widgets/state/empty_state.dart';
 import 'package:cis_crm/core/widgets/state/page_error.dart';
 import 'package:cis_crm/core/widgets/state/page_loading.dart';
+import 'package:cis_crm/features/pipeline/domain/entities/pipeline.dart';
+import 'package:cis_crm/features/pipeline/domain/repositories/pipeline_repository.dart';
 import 'package:cis_crm/features/reporting/domain/entities/pipeline_summary.dart';
 import 'package:cis_crm/features/reporting/presentation/bloc/reports_cubit.dart';
 import 'package:cis_crm/features/reporting/presentation/bloc/reports_state.dart';
@@ -97,7 +101,7 @@ class _PipelineSummaryCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () {
-            _showPipelineIdDialog(context);
+            _showPipelinePickerDialog(context);
           },
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -139,34 +143,57 @@ class _PipelineSummaryCard extends StatelessWidget {
     );
   }
 
-  void _showPipelineIdDialog(BuildContext context) {
-    final controller = TextEditingController();
+  void _showPipelinePickerDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Enter Pipeline ID'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'Pipeline ID',
-            border: OutlineInputBorder(),
+        title: Text(l10n.selectPipeline),
+        content: SizedBox(
+          width: 300,
+          child: FutureBuilder(
+            future: getIt<PipelineRepository>().getPipelines(),
+            builder: (ctx, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              final result = snapshot.data;
+              if (result == null) {
+                return Text(l10n.failedToLoadPipelines);
+              }
+              return switch (result) {
+                Failure() => Text(l10n.failedToLoadPipelines),
+                Success<List<Pipeline>, AppFailure>(:final data)
+                    when data.isEmpty =>
+                  Text(l10n.noPipelinesAvailable),
+                Success<List<Pipeline>, AppFailure>(:final data) =>
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: data
+                        .map(
+                          (p) => ListTile(
+                            title: Text(p.name),
+                            onTap: () {
+                              Navigator.of(dialogContext).pop();
+                              context
+                                  .read<ReportsCubit>()
+                                  .loadPipelineSummary(p.id);
+                            },
+                          ),
+                        )
+                        .toList(),
+                  ),
+              };
+            },
           ),
-          autofocus: true,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final id = controller.text.trim();
-              if (id.isNotEmpty) {
-                Navigator.of(dialogContext).pop();
-                context.read<ReportsCubit>().loadPipelineSummary(id);
-              }
-            },
-            child: const Text('Load'),
+            child: Text(l10n.cancel),
           ),
         ],
       ),

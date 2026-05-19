@@ -1,4 +1,7 @@
+import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/core/forms/inputs/required_text_input.dart';
+import 'package:cis_crm/features/pipeline/domain/entities/record.dart';
+import 'package:cis_crm/features/pipeline/domain/repositories/record_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:formz/formz.dart';
@@ -6,7 +9,11 @@ import 'package:formz/formz.dart';
 part 'record_form_state.dart';
 
 class RecordFormCubit extends Cubit<RecordFormState> {
-  RecordFormCubit() : super(const RecordFormState());
+  RecordFormCubit({required RecordRepository recordRepository})
+      : _repository = recordRepository,
+        super(const RecordFormState());
+
+  final RecordRepository _repository;
 
   void titleChanged(String value) {
     emit(
@@ -41,16 +48,22 @@ class RecordFormCubit extends Cubit<RecordFormState> {
 
     emit(state.copyWith(submissionStatus: FormzSubmissionStatus.inProgress));
 
-    try {
-      // TODO(pipeline): call repository to create/update record
-      emit(state.copyWith(submissionStatus: FormzSubmissionStatus.success));
-    } catch (e) {
-      emit(
-        state.copyWith(
-          submissionStatus: FormzSubmissionStatus.failure,
-          errorMessage: e.toString,
-        ),
-      );
+    final result = await _repository.createRecord(
+      pipelineId: state.pipelineId,
+      stageId: state.stageId,
+      title: state.title.value,
+      source: RecordSource.manual,
+    );
+    switch (result) {
+      case Success():
+        emit(state.copyWith(submissionStatus: FormzSubmissionStatus.success));
+      case Failure(:final error):
+        emit(
+          state.copyWith(
+            submissionStatus: FormzSubmissionStatus.failure,
+            errorMessage: () => error.message,
+          ),
+        );
     }
   }
 }

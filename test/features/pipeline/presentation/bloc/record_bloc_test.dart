@@ -276,6 +276,50 @@ void main() {
       );
     });
 
+    group('RecordDeleteRequested', () {
+      blocTest<RecordBloc, RecordState>(
+        'emits [RecordLoading, RecordLoaded] when delete + reload succeeds',
+        setUp: () {
+          when(() => mockRepository.deleteRecord('r1'))
+              .thenAnswer((_) async => const Success(null));
+          when(() => mockRepository.getRecords())
+              .thenAnswer((_) async => Success(tPaginatedResponse));
+        },
+        build: () => RecordBloc(recordRepository: mockRepository),
+        act: (bloc) => bloc.add(
+          const RecordDeleteRequested(recordId: 'r1'),
+        ),
+        expect: () => [
+          const RecordLoading(),
+          RecordLoaded(
+            records: [tRecord],
+            currentPage: 1,
+            total: 1,
+          ),
+        ],
+        verify: (_) {
+          verify(() => mockRepository.deleteRecord('r1')).called(1);
+        },
+      );
+
+      blocTest<RecordBloc, RecordState>(
+        'emits [RecordLoading, RecordError] when delete fails',
+        setUp: () {
+          when(() => mockRepository.deleteRecord('r1')).thenAnswer(
+            (_) async => const Failure(ServerFailure('Delete failed')),
+          );
+        },
+        build: () => RecordBloc(recordRepository: mockRepository),
+        act: (bloc) => bloc.add(
+          const RecordDeleteRequested(recordId: 'r1'),
+        ),
+        expect: () => const [
+          RecordLoading(),
+          RecordError(message: 'Delete failed'),
+        ],
+      );
+    });
+
     group('RecordMoveRequested', () {
       blocTest<RecordBloc, RecordState>(
         'emits [RecordLoading, RecordLoaded] when move + reload succeeds',

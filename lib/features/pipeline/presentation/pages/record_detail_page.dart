@@ -1,3 +1,5 @@
+import 'package:cis_crm/core/error/result.dart';
+import 'package:cis_crm/features/activity/domain/repositories/timeline_repository.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/pipeline.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/record.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/stage.dart';
@@ -6,6 +8,7 @@ import 'package:cis_crm/features/pipeline/presentation/bloc/record_bloc.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 
 Color _parseColor(String colorStr) {
   if (colorStr.startsWith('#')) {
@@ -226,7 +229,7 @@ class _RecordDetailScaffold extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // ── Timeline placeholder ──
+            // ── Timeline ──
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -240,27 +243,7 @@ class _RecordDetailScaffold extends StatelessWidget {
                       ),
                     ),
                     const Divider(height: 24),
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 32),
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.timeline_outlined,
-                              size: 48,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              AppLocalizations.of(context)!.activityTimelineComingSoon,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    _TimelineSection(recordId: record.id),
                   ],
                 ),
               ),
@@ -302,16 +285,102 @@ class _RecordDetailScaffold extends StatelessWidget {
       case 'edit':
         _showEditDialog(context);
       case 'move':
+        _showMoveDialog(context);
       case 'delete':
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${action[0].toUpperCase()}${action.substring(1)} '
-              'action not yet implemented',
+        _confirmDelete(context);
+    }
+  }
+
+  void _confirmDelete(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.deleteRecord),
+        content: Text(l10n.deleteRecordConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(true);
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    ).then((confirmed) {
+      if ((confirmed ?? false) && context.mounted) {
+        context.read<RecordBloc>().add(
+              RecordDeleteRequested(recordId: record.id),
+            );
+        Navigator.of(context).pop();
+      }
+    });
+  }
+
+  void _showMoveDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final pipelineState = context.read<PipelineBloc>().state;
+    final stages = pipelineState is PipelineLoaded
+        ? pipelineState.kanbanStages ?? <Stage>[]
+        : <Stage>[];
+
+    if (stages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.noStagesAvailable)),
+      );
+      return;
+    }
+
+    showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        String? selectedStageId;
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) => AlertDialog(
+            title: Text(l10n.moveToStage),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: stages
+                  .map(
+                    (stage) => RadioListTile<String>(
+                      title: Text(stage.name),
+                      value: stage.id,
+                      groupValue: selectedStageId,
+                      onChanged: (v) =>
+                          setDialogState(() => selectedStageId = v),
+                    ),
+                  )
+                  .toList(),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton(
+                onPressed: selectedStageId != null
+                    ? () => Navigator.of(dialogContext).pop(selectedStageId)
+                    : null,
+                child: Text(l10n.move),
+              ),
+            ],
           ),
         );
-    }
+      },
+    ).then((stageId) {
+      if (stageId != null && context.mounted) {
+        context.read<RecordBloc>().add(
+              RecordMoveRequested(recordId: record.id, toStageId: stageId),
+            );
+      }
+    });
   }
 
   void _showEditDialog(BuildContext context) {
@@ -352,6 +421,119 @@ class _RecordDetailScaffold extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _TimelineSection extends StatelessWidget {
+  const _TimelineSection({required this.recordId});
+
+  final String recordId;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    return FutureBuilder(
+      future: GetIt.instance<TimelineRepository>().getTimeline(
+        entityType: 'record',
+        entityId: recordId,
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasError || !snapshot.hasData) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Text(
+                l10n.timelineLoadFailed,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ),
+          );
+        }
+
+        final result = snapshot.data!;
+        return switch (result) {
+          Success(:final data) when data.isEmpty => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.timeline_outlined,
+                      size: 48,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.noTimelineEntries,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          Success(:final data) => Column(
+              children: data
+                  .map(
+                    (entry) => ListTile(
+                      leading: Icon(
+                        _timelineIcon(entry.eventType),
+                        color: theme.colorScheme.primary,
+                      ),
+                      title: Text(entry.summary),
+                      subtitle: Text(_formatDateTime(entry.createdAt)),
+                      contentPadding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  )
+                  .toList(),
+            ),
+          Failure() => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text(
+                  l10n.timelineLoadFailed,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+              ),
+            ),
+        };
+      },
+    );
+  }
+
+  IconData _timelineIcon(String eventType) {
+    return switch (eventType) {
+      'stage_change' => Icons.swap_horiz,
+      'note_added' => Icons.note_add_outlined,
+      'email_sent' => Icons.email_outlined,
+      'call_logged' => Icons.phone_outlined,
+      'file_uploaded' => Icons.attach_file,
+      'task_completed' => Icons.task_alt,
+      _ => Icons.circle_outlined,
+    };
+  }
+
+  String _formatDateTime(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final hour = date.hour.toString().padLeft(2, '0');
+    final minute = date.minute.toString().padLeft(2, '0');
+    return '$day/$month/${date.year} $hour:$minute';
   }
 }
 

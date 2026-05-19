@@ -29,9 +29,7 @@ class _EmailTemplatesView extends StatelessWidget {
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.emailTemplatesTitle)),
       floatingActionButton: FloatingActionButton(
         tooltip: AppLocalizations.of(context)!.createTemplate,
-        onPressed: () {
-          // TODO(email): Navigate to create template page.
-        },
+        onPressed: () => _showCreateTemplateDialog(context),
         child: const Icon(Icons.add),
       ),
       body: BlocBuilder<EmailBloc, EmailState>(
@@ -60,6 +58,67 @@ class _EmailTemplatesView extends StatelessWidget {
             _ => const SizedBox.shrink(),
           };
         },
+      ),
+    );
+  }
+
+  void _showCreateTemplateDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final nameController = TextEditingController();
+    final subjectController = TextEditingController();
+    final bodyController = TextEditingController();
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.createTemplate),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(labelText: l10n.templateName),
+                autofocus: true,
+                textCapitalization: TextCapitalization.sentences,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: subjectController,
+                decoration: InputDecoration(labelText: l10n.templateSubject),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: bodyController,
+                decoration: InputDecoration(labelText: l10n.templateBody),
+                maxLines: 4,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              final subject = subjectController.text.trim();
+              final body = bodyController.text.trim();
+              if (name.isEmpty || subject.isEmpty) return;
+              context.read<EmailBloc>().add(
+                    TemplateCreateRequested(
+                      name: name,
+                      subject: subject,
+                      body: body,
+                    ),
+                  );
+              Navigator.of(dialogContext).pop();
+            },
+            child: Text(l10n.create),
+          ),
+        ],
       ),
     );
   }

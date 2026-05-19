@@ -304,6 +304,36 @@ abstract class AppLocalizations {
   /// **'Activity timeline coming soon'**
   String get activityTimelineComingSoon;
 
+  /// Error text when timeline fails to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load timeline'**
+  String get timelineLoadFailed;
+
+  /// Title for the delete record confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Record'**
+  String get deleteRecord;
+
+  /// Confirmation text for deleting a record.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this record? This action cannot be undone.'**
+  String get deleteRecordConfirm;
+
+  /// Message when no pipeline stages are loaded.
+  ///
+  /// In en, this message translates to:
+  /// **'No stages available'**
+  String get noStagesAvailable;
+
+  /// Label for the move action button.
+  ///
+  /// In en, this message translates to:
+  /// **'Move'**
+  String get move;
+
   /// Title shown on the login page.
   ///
   /// In en, this message translates to:
@@ -1737,6 +1767,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Busy'**
   String get callOutcomeBusy;
+
+  /// Label for the product currency field.
+  ///
+  /// In en, this message translates to:
+  /// **'Currency'**
+  String get productCurrency;
+
+  /// Label for the product tags field.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags (comma-separated)'**
+  String get productTags;
+
+  /// Label for the email template name field.
+  ///
+  /// In en, this message translates to:
+  /// **'Template name'**
+  String get templateName;
+
+  /// Label for the email template subject field.
+  ///
+  /// In en, this message translates to:
+  /// **'Subject'**
+  String get templateSubject;
+
+  /// Label for the email template body field.
+  ///
+  /// In en, this message translates to:
+  /// **'Body'**
+  String get templateBody;
+
+  /// Label for the automation rule name field.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule name'**
+  String get ruleName;
+
+  /// Label for the automation rule description field.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get ruleDescription;
+
+  /// Label for the automation rule trigger type field.
+  ///
+  /// In en, this message translates to:
+  /// **'Trigger type'**
+  String get ruleTriggerType;
+
+  /// Label for the automation rule priority field.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority'**
+  String get rulePriority;
+
+  /// Label for the contact ID field in call log form.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact ID'**
+  String get callContactId;
+
+  /// Label for the call direction field.
+  ///
+  /// In en, this message translates to:
+  /// **'Direction'**
+  String get callDirection;
+
+  /// Label for the call outcome field.
+  ///
+  /// In en, this message translates to:
+  /// **'Outcome'**
+  String get callOutcome;
+
+  /// Label for the call duration field.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration (seconds)'**
+  String get callDuration;
+
+  /// Label for the call notes field.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get callNotes;
+
+  /// Title for the pipeline selection dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Pipeline'**
+  String get selectPipeline;
+
+  /// Message when no pipelines exist.
+  ///
+  /// In en, this message translates to:
+  /// **'No pipelines available'**
+  String get noPipelinesAvailable;
 
   /// Title for the initial search state.
   ///

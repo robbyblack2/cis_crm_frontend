@@ -1,4 +1,6 @@
-@Tags(['integration'])
+@Tags(<String>['integration'])
+library;
+
 import 'package:cis_crm/features/activity/data/datasources/activity_remote_data_source_impl.dart';
 import 'package:cis_crm/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:cis_crm/features/automation/data/datasources/automation_remote_data_source.dart';
@@ -24,12 +26,14 @@ void main() {
 
   setUpAll(() async {
     // Plain Dio — no interceptors, no FlutterSecureStorage.
-    dio = Dio(BaseOptions(
-      baseUrl: 'http://localhost:8087',
-      connectTimeout: const Duration(seconds: 5),
-      receiveTimeout: const Duration(seconds: 10),
-      contentType: 'application/json',
-    ));
+    dio = Dio(
+      BaseOptions(
+        baseUrl: 'http://localhost:8087',
+        connectTimeout: const Duration(seconds: 5),
+        receiveTimeout: const Duration(seconds: 10),
+        contentType: 'application/json',
+      ),
+    );
 
     // Login and set token directly on Dio.
     final loginResp = await dio.post<Map<String, dynamic>>(
@@ -90,7 +94,7 @@ void main() {
     test('getCompanies parses list', () async {
       final ds = CompanyRemoteDataSourceImpl(dio: dio);
       final result = await ds.getCompanies();
-      expect(result, isA<List>());
+      expect(result, isA<List<dynamic>>());
     });
   });
 
@@ -98,7 +102,7 @@ void main() {
     test('getTasks handles null data', () async {
       final ds = ActivityRemoteDataSourceImpl(dio: dio);
       final result = await ds.getTasks();
-      expect(result, isA<List>());
+      expect(result, isA<List<dynamic>>());
     });
   });
 
@@ -106,7 +110,7 @@ void main() {
     test('getEvents handles null data', () async {
       final ds = CalendarRemoteDataSourceImpl(dio: dio);
       final result = await ds.getEvents();
-      expect(result, isA<List>());
+      expect(result, isA<List<dynamic>>());
     });
   });
 
@@ -123,7 +127,7 @@ void main() {
     test('getSubscriptions does not crash', () async {
       final ds = SubscriptionRemoteDatasourceImpl(dio: dio);
       final result = await ds.getSubscriptions();
-      expect(result, isA<List>());
+      expect(result, isA<List<dynamic>>());
     });
   });
 
@@ -131,7 +135,7 @@ void main() {
     test('getRules handles null data', () async {
       final ds = AutomationRemoteDataSourceImpl(dio: dio);
       final result = await ds.getRules();
-      expect(result, isA<List>());
+      expect(result, isA<List<dynamic>>());
     });
   });
 
@@ -139,13 +143,13 @@ void main() {
     test('getDrafts parses list', () async {
       final ds = EmailRemoteDataSourceImpl(dio: dio);
       final result = await ds.getDrafts();
-      expect(result, isA<List>());
+      expect(result, isA<List<dynamic>>());
     });
 
     test('getTemplates handles null data', () async {
       final ds = EmailRemoteDataSourceImpl(dio: dio);
       final result = await ds.getTemplates();
-      expect(result, isA<List>());
+      expect(result, isA<List<dynamic>>());
     });
   });
 
@@ -153,7 +157,7 @@ void main() {
     test('getReports handles null data', () async {
       final ds = ReportRemoteDataSourceImpl(dio: dio);
       final result = await ds.getReports();
-      expect(result, isA<List>());
+      expect(result, isA<List<dynamic>>());
     });
   });
 
@@ -161,7 +165,7 @@ void main() {
     test('search parses grouped response', () async {
       final ds = SearchRemoteDatasourceImpl(dio: dio);
       final result = await ds.search(query: 'test');
-      expect(result, isA<List>());
+      expect(result, isA<List<dynamic>>());
     });
   });
 }

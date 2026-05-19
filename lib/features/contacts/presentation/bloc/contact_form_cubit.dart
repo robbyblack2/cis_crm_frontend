@@ -111,7 +111,7 @@ class ContactFormCubit extends Cubit<ContactFormState> {
           emit(
             state.copyWith(
               submissionStatus: FormzSubmissionStatus.failure,
-              errorMessage: error.toString,
+              errorMessage: () => error.toString(),
             ),
           );
       }
@@ -119,7 +119,7 @@ class ContactFormCubit extends Cubit<ContactFormState> {
       emit(
         state.copyWith(
           submissionStatus: FormzSubmissionStatus.failure,
-          errorMessage: e.toString,
+          errorMessage: () => e.toString(),
         ),
       );
     }

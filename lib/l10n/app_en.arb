@@ -166,6 +166,31 @@
     "description": "Placeholder text for the record detail timeline section."
   },
 
+  "timelineLoadFailed": "Failed to load timeline",
+  "@timelineLoadFailed": {
+    "description": "Error text when timeline fails to load."
+  },
+
+  "deleteRecord": "Delete Record",
+  "@deleteRecord": {
+    "description": "Title for the delete record confirmation dialog."
+  },
+
+  "deleteRecordConfirm": "Are you sure you want to delete this record? This action cannot be undone.",
+  "@deleteRecordConfirm": {
+    "description": "Confirmation text for deleting a record."
+  },
+
+  "noStagesAvailable": "No stages available",
+  "@noStagesAvailable": {
+    "description": "Message when no pipeline stages are loaded."
+  },
+
+  "move": "Move",
+  "@move": {
+    "description": "Label for the move action button."
+  },
+
 
   "loginTitle": "Sign in to CIS CRM",
   "@loginTitle": {
@@ -1409,6 +1434,86 @@
     "description": "Call outcome label for a busy call."
   },
 
+
+  "productCurrency": "Currency",
+  "@productCurrency": {
+    "description": "Label for the product currency field."
+  },
+
+  "productTags": "Tags (comma-separated)",
+  "@productTags": {
+    "description": "Label for the product tags field."
+  },
+
+  "templateName": "Template name",
+  "@templateName": {
+    "description": "Label for the email template name field."
+  },
+
+  "templateSubject": "Subject",
+  "@templateSubject": {
+    "description": "Label for the email template subject field."
+  },
+
+  "templateBody": "Body",
+  "@templateBody": {
+    "description": "Label for the email template body field."
+  },
+
+  "ruleName": "Rule name",
+  "@ruleName": {
+    "description": "Label for the automation rule name field."
+  },
+
+  "ruleDescription": "Description",
+  "@ruleDescription": {
+    "description": "Label for the automation rule description field."
+  },
+
+  "ruleTriggerType": "Trigger type",
+  "@ruleTriggerType": {
+    "description": "Label for the automation rule trigger type field."
+  },
+
+  "rulePriority": "Priority",
+  "@rulePriority": {
+    "description": "Label for the automation rule priority field."
+  },
+
+  "callContactId": "Contact ID",
+  "@callContactId": {
+    "description": "Label for the contact ID field in call log form."
+  },
+
+  "callDirection": "Direction",
+  "@callDirection": {
+    "description": "Label for the call direction field."
+  },
+
+  "callOutcome": "Outcome",
+  "@callOutcome": {
+    "description": "Label for the call outcome field."
+  },
+
+  "callDuration": "Duration (seconds)",
+  "@callDuration": {
+    "description": "Label for the call duration field."
+  },
+
+  "callNotes": "Notes",
+  "@callNotes": {
+    "description": "Label for the call notes field."
+  },
+
+  "selectPipeline": "Select Pipeline",
+  "@selectPipeline": {
+    "description": "Title for the pipeline selection dialog."
+  },
+
+  "noPipelinesAvailable": "No pipelines available",
+  "@noPipelinesAvailable": {
+    "description": "Message when no pipelines exist."
+  },
 
   "searchCrmTitle": "Search your CRM",
   "@searchCrmTitle": {

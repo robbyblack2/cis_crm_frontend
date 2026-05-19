@@ -181,7 +181,7 @@ void main() {
     test('returns ContactModel when response is 200', () async {
       when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
         (_) async => Response(
-          data: tContactJson,
+          data: {'data': tContactJson},
           statusCode: 200,
           requestOptions: RequestOptions(),
         ),

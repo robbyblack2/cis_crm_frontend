@@ -52,10 +52,11 @@ class ContactRemoteDataSourceImpl implements ContactRemoteDataSource {
   Future<ContactModel> getContact(String id) async {
     try {
       final response = await dio.get<Map<String, dynamic>>('/api/contacts/$id');
-      final data = response.data;
-      if (data == null) {
+      final body = response.data;
+      if (body == null) {
         throw const ServerException('Empty response body');
       }
+      final data = body['data'] as Map<String, dynamic>? ?? body;
       return ContactModel.fromJson(data);
     } on DioException catch (e) {
       throw _handleDioException(e);
@@ -69,10 +70,11 @@ class ContactRemoteDataSourceImpl implements ContactRemoteDataSource {
         '/api/contacts',
         data: contact.toJson(),
       );
-      final data = response.data;
-      if (data == null) {
+      final body = response.data;
+      if (body == null) {
         throw const ServerException('Empty response body');
       }
+      final data = body['data'] as Map<String, dynamic>? ?? body;
       return ContactModel.fromJson(data);
     } on DioException catch (e) {
       throw _handleDioException(e);
@@ -86,10 +88,11 @@ class ContactRemoteDataSourceImpl implements ContactRemoteDataSource {
         '/api/contacts/${contact.id}',
         data: contact.toJson(),
       );
-      final data = response.data;
-      if (data == null) {
+      final body = response.data;
+      if (body == null) {
         throw const ServerException('Empty response body');
       }
+      final data = body['data'] as Map<String, dynamic>? ?? body;
       return ContactModel.fromJson(data);
     } on DioException catch (e) {
       throw _handleDioException(e);

@@ -1,3 +1,5 @@
+import 'package:cis_crm/app/injection.dart';
+import 'package:cis_crm/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
@@ -8,11 +10,13 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // TODO(auth): replace placeholders with AuthBloc state once available.
-    const displayName = 'CRM User';
-    const email = 'user@example.com';
-    const role = 'Admin';
-    const initials = 'CU';
+    final authState = getIt<AuthBloc>().state;
+    final user = authState is AuthAuthenticated ? authState.user : null;
+    final displayName =
+        user != null && user.displayName.isNotEmpty ? user.displayName : '—';
+    final email = user?.email ?? '—';
+    final role = user?.status.name ?? '—';
+    final initials = _computeInitials(displayName);
 
     return Scaffold(
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.profileTitle)),
@@ -45,7 +49,7 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          const Center(
+          Center(
             child: Chip(label: Text(role)),
           ),
           const SizedBox(height: 32),
@@ -73,6 +77,13 @@ class ProfilePage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  static String _computeInitials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts.first.isEmpty) return '?';
+    if (parts.length == 1) return parts.first[0].toUpperCase();
+    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
   }
 }
 

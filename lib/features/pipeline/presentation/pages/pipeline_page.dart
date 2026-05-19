@@ -358,9 +358,17 @@ class _KanbanBoard extends StatelessWidget {
   }
 
   void _navigateToDetail(BuildContext context, PipelineRecord record) {
+    final pipelineBloc = context.read<PipelineBloc>();
+    final recordBloc = context.read<RecordBloc>();
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => RecordDetailPage(recordId: record.id),
+        builder: (_) => MultiBlocProvider(
+          providers: [
+            BlocProvider<PipelineBloc>.value(value: pipelineBloc),
+            BlocProvider<RecordBloc>.value(value: recordBloc),
+          ],
+          child: RecordDetailPage(recordId: record.id),
+        ),
       ),
     );
   }

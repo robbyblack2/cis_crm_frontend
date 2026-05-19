@@ -188,6 +188,62 @@ void main() {
       );
     });
 
+    group('TemplateCreateRequested', () {
+      blocTest<EmailBloc, EmailState>(
+        'emits [loading, loaded] when template create + reload succeeds',
+        build: () {
+          when(
+            () => mockRepository.createTemplate(
+              name: any(named: 'name'),
+              subject: any(named: 'subject'),
+              body: any(named: 'body'),
+            ),
+          ).thenAnswer((_) async => Success(tTemplate));
+          when(() => mockRepository.getTemplates())
+              .thenAnswer((_) async => Success([tTemplate]));
+          return EmailBloc(emailRepository: mockRepository);
+        },
+        act: (bloc) => bloc.add(
+          const TemplateCreateRequested(
+            name: 'Welcome',
+            subject: 'Welcome!',
+            body: 'Hello',
+          ),
+        ),
+        expect: () => [
+          const EmailLoading(),
+          EmailLoaded(templates: [tTemplate]),
+        ],
+      );
+
+      blocTest<EmailBloc, EmailState>(
+        'emits [loading, error] when template create fails',
+        build: () {
+          when(
+            () => mockRepository.createTemplate(
+              name: any(named: 'name'),
+              subject: any(named: 'subject'),
+              body: any(named: 'body'),
+            ),
+          ).thenAnswer(
+            (_) async => const Failure(ServerFailure('Create failed')),
+          );
+          return EmailBloc(emailRepository: mockRepository);
+        },
+        act: (bloc) => bloc.add(
+          const TemplateCreateRequested(
+            name: 'Welcome',
+            subject: 'Welcome!',
+            body: 'Hello',
+          ),
+        ),
+        expect: () => const [
+          EmailLoading(),
+          EmailError(failure: ServerFailure('Create failed')),
+        ],
+      );
+    });
+
     group('TemplatesLoadRequested', () {
       blocTest<EmailBloc, EmailState>(
         'emits [loading, loaded] when templates load succeeds',

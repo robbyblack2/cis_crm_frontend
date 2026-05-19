@@ -120,6 +120,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activityTimelineComingSoon => 'Activity timeline coming soon';
 
   @override
+  String get timelineLoadFailed => 'Failed to load timeline';
+
+  @override
+  String get deleteRecord => 'Delete Record';
+
+  @override
+  String get deleteRecordConfirm =>
+      'Are you sure you want to delete this record? This action cannot be undone.';
+
+  @override
+  String get noStagesAvailable => 'No stages available';
+
+  @override
+  String get move => 'Move';
+
+  @override
   String get loginTitle => 'Sign in to CIS CRM';
 
   @override
@@ -853,6 +869,54 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get callOutcomeBusy => 'Busy';
+
+  @override
+  String get productCurrency => 'Currency';
+
+  @override
+  String get productTags => 'Tags (comma-separated)';
+
+  @override
+  String get templateName => 'Template name';
+
+  @override
+  String get templateSubject => 'Subject';
+
+  @override
+  String get templateBody => 'Body';
+
+  @override
+  String get ruleName => 'Rule name';
+
+  @override
+  String get ruleDescription => 'Description';
+
+  @override
+  String get ruleTriggerType => 'Trigger type';
+
+  @override
+  String get rulePriority => 'Priority';
+
+  @override
+  String get callContactId => 'Contact ID';
+
+  @override
+  String get callDirection => 'Direction';
+
+  @override
+  String get callOutcome => 'Outcome';
+
+  @override
+  String get callDuration => 'Duration (seconds)';
+
+  @override
+  String get callNotes => 'Notes';
+
+  @override
+  String get selectPipeline => 'Select Pipeline';
+
+  @override
+  String get noPipelinesAvailable => 'No pipelines available';
 
   @override
   String get searchCrmTitle => 'Search your CRM';

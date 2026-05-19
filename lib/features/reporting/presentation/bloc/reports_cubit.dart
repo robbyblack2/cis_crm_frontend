@@ -42,4 +42,12 @@ class ReportsCubit extends Cubit<ReportsState> {
         emit(ReportsError(error.message));
     }
   }
+
+  Future<String?> exportReport(String id) async {
+    final result = await _repository.exportReport(id);
+    return switch (result) {
+      Success(:final data) => data,
+      Failure() => null,
+    };
+  }
 }

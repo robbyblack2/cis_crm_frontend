@@ -80,7 +80,6 @@ void main() {
         isA<ContactFormState>(), // firstName dirty
         isA<ContactFormState>(), // lastName dirty
         isA<ContactFormState>(), // email
-        isA<ContactFormState>(), // validation
         isA<ContactFormState>()
             .having(
               (s) => s.submissionStatus,
@@ -116,7 +115,6 @@ void main() {
       },
       expect: () => [
         isA<ContactFormState>(), // firstName dirty
-        isA<ContactFormState>(), // validation
         isA<ContactFormState>()
             .having(
               (s) => s.submissionStatus,

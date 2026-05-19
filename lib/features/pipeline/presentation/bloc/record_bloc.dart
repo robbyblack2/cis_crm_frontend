@@ -54,6 +54,15 @@ final class RecordMoveRequested extends RecordEvent {
   List<Object?> get props => [recordId, toStageId];
 }
 
+final class RecordDeleteRequested extends RecordEvent {
+  const RecordDeleteRequested({required this.recordId});
+
+  final String recordId;
+
+  @override
+  List<Object?> get props => [recordId];
+}
+
 final class RecordUpdateRequested extends RecordEvent {
   const RecordUpdateRequested({
     required this.id,
@@ -144,6 +153,7 @@ class RecordBloc extends Bloc<RecordEvent, RecordState> {
     on<RecordLoadMoreRequested>(_onLoadMore, transformer: droppable());
     on<RecordCreateRequested>(_onCreate, transformer: droppable());
     on<RecordMoveRequested>(_onMove, transformer: droppable());
+    on<RecordDeleteRequested>(_onDelete, transformer: droppable());
     on<RecordUpdateRequested>(_onUpdate, transformer: droppable());
   }
 
@@ -207,6 +217,33 @@ class RecordBloc extends Bloc<RecordEvent, RecordState> {
       title: event.title,
       source: event.source,
     );
+    switch (result) {
+      case Success():
+        final listResult = await _repository.getRecords();
+        switch (listResult) {
+          case Success(:final data):
+            emit(
+              RecordLoaded(
+                records: data.items,
+                currentPage: data.page,
+                total: data.total,
+                perPage: data.perPage,
+              ),
+            );
+          case Failure(:final error):
+            emit(RecordError(message: error.message));
+        }
+      case Failure(:final error):
+        emit(RecordError(message: error.message));
+    }
+  }
+
+  Future<void> _onDelete(
+    RecordDeleteRequested event,
+    Emitter<RecordState> emit,
+  ) async {
+    emit(const RecordLoading());
+    final result = await _repository.deleteRecord(event.recordId);
     switch (result) {
       case Success():
         final listResult = await _repository.getRecords();
