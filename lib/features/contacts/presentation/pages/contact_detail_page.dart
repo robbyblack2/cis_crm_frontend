@@ -9,6 +9,7 @@ import 'package:cis_crm/features/files/domain/repositories/file_repository.dart'
 import 'package:cis_crm/features/files/presentation/widgets/file_tile.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 String _fullName(Contact c) => '${c.firstName} ${c.lastName}'.trim();
 
@@ -132,6 +133,18 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
             ),
             const SizedBox(width: 8),
           ] else ...[
+            if (_contact.email.isNotEmpty)
+              IconButton(
+                icon: const Icon(Icons.email_outlined),
+                tooltip: 'Send email',
+                onPressed: () {
+                  final uri = Uri(
+                    scheme: 'mailto',
+                    path: _contact.email,
+                  );
+                  launchUrl(uri);
+                },
+              ),
             IconButton(
               icon: const Icon(Icons.edit_outlined),
               tooltip: 'Edit',

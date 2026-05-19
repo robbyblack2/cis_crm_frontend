@@ -28,3 +28,12 @@ final class SubscriptionCreateRequested extends SubscriptionsEvent {
   @override
   List<Object?> get props => [companyId, systemId, productType, tags];
 }
+
+final class SubscriptionDeleteRequested extends SubscriptionsEvent {
+  const SubscriptionDeleteRequested({required this.id});
+
+  final String id;
+
+  @override
+  List<Object?> get props => [id];
+}

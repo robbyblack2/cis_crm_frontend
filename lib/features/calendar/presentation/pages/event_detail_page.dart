@@ -1,5 +1,7 @@
+import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/features/calendar/domain/entities/calendar_event.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -21,7 +23,51 @@ class EventDetailPage extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context)!.eventDetails)),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context)!.eventDetails),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outlined),
+            tooltip: 'Delete event',
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Delete Event?'),
+                  content: const Text('This will remove the event.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Cancel'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: FilledButton.styleFrom(
+                        backgroundColor:
+                            Theme.of(context).colorScheme.error,
+                      ),
+                      child: const Text('Delete'),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed != true || !context.mounted) return;
+              try {
+                await getIt<Dio>().delete<void>(
+                  '/api/calendar/events/${event.id}',
+                );
+                if (context.mounted) Navigator.pop(context);
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed: $e')),
+                  );
+                }
+              }
+            },
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

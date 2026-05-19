@@ -21,6 +21,10 @@ class SubscriptionsBloc extends Bloc<SubscriptionsEvent, SubscriptionsState> {
       _onCreateRequested,
       transformer: droppable(),
     );
+    on<SubscriptionDeleteRequested>(
+      _onDeleteRequested,
+      transformer: droppable(),
+    );
   }
 
   final SubscriptionRepository _repository;
@@ -50,6 +54,20 @@ class SubscriptionsBloc extends Bloc<SubscriptionsEvent, SubscriptionsState> {
       productType: event.productType,
       tags: event.tags,
     );
+    switch (result) {
+      case Success():
+        add(const SubscriptionsLoadRequested());
+      case Failure(error: final failure):
+        emit(SubscriptionsError(message: failure.message));
+    }
+  }
+
+  Future<void> _onDeleteRequested(
+    SubscriptionDeleteRequested event,
+    Emitter<SubscriptionsState> emit,
+  ) async {
+    emit(const SubscriptionsLoading());
+    final result = await _repository.deleteSubscription(id: event.id);
     switch (result) {
       case Success():
         add(const SubscriptionsLoadRequested());
