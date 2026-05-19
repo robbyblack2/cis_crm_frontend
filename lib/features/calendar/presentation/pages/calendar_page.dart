@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:cis_crm/app/injection.dart';
+import 'package:cis_crm/core/network/web_socket_cubit.dart';
+import 'package:cis_crm/core/network/web_socket_event.dart';
 import 'package:cis_crm/core/widgets/state/empty_state.dart';
 import 'package:cis_crm/core/widgets/state/page_error.dart';
 import 'package:cis_crm/core/widgets/state/page_loading.dart';
@@ -31,8 +35,66 @@ class _CalendarView extends StatefulWidget {
   State<_CalendarView> createState() => _CalendarViewState();
 }
 
+/// Calendar event types that trigger a reload.
+const _calendarEventTypes = {
+  'calendar.event_created',
+  'calendar.event_updated',
+  'calendar.event_deleted',
+  'calendar.synced',
+};
+
 class _CalendarViewState extends State<_CalendarView> {
   _CalendarViewMode _viewMode = _CalendarViewMode.week;
+  StreamSubscription<WebSocketEvent>? _wsSub;
+  Timer? _pollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _subscribeToWebSocket();
+    // Periodic refresh every 30s to pick up Google Calendar syncs
+    _pollTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) {
+        if (mounted) {
+          context
+              .read<CalendarBloc>()
+              .add(const CalendarLoadRequested());
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _wsSub?.cancel();
+    _pollTimer?.cancel();
+    _unsubscribeChannel();
+    super.dispose();
+  }
+
+  void _subscribeToWebSocket() {
+    try {
+      final wsCubit = context.read<WebSocketCubit>()
+        ..subscribe('calendar');
+
+      _wsSub = wsCubit.events.listen((event) {
+        if (_calendarEventTypes.contains(event.type) && mounted) {
+          context
+              .read<CalendarBloc>()
+              .add(const CalendarLoadRequested());
+        }
+      });
+    } catch (_) {
+      // WebSocket may not be connected — polling handles it
+    }
+  }
+
+  void _unsubscribeChannel() {
+    try {
+      context.read<WebSocketCubit>().unsubscribe('calendar');
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {

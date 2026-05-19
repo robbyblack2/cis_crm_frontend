@@ -82,12 +82,17 @@ class CalendarBloc extends Bloc<CalendarBlocEvent, CalendarState> {
     CalendarLoadRequested event,
     Emitter<CalendarState> emit,
   ) async {
-    emit(const CalendarLoading());
+    // Only show loading spinner on first load, not background refreshes
+    if (state is CalendarInitial) {
+      emit(const CalendarLoading());
+    }
     final result = await _repository.getEvents();
     switch (result) {
       case Success(:final data):
         emit(CalendarLoaded(events: data));
       case Failure(:final error):
+        // Don't override existing data with error on background refresh
+        if (state is CalendarLoaded) return;
         emit(CalendarError(failure: error));
     }
   }
