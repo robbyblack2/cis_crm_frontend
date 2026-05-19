@@ -1,18 +1,14 @@
 import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/core/error/failures.dart';
 import 'package:cis_crm/core/error/result.dart';
-import 'package:cis_crm/core/responsive/breakpoints.dart';
 import 'package:cis_crm/features/contacts/data/datasources/contact_remote_data_source.dart';
 import 'package:cis_crm/features/contacts/domain/entities/contact.dart';
 import 'package:cis_crm/features/contacts/domain/repositories/contact_repository.dart';
-import 'package:cis_crm/features/contacts/presentation/bloc/contact_form_cubit.dart';
 import 'package:cis_crm/features/files/domain/entities/file_attachment.dart';
 import 'package:cis_crm/features/files/domain/repositories/file_repository.dart';
 import 'package:cis_crm/features/files/presentation/widgets/file_tile.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:formz/formz.dart';
 
 String _fullName(Contact c) => '${c.firstName} ${c.lastName}'.trim();
 
@@ -22,7 +18,7 @@ String _initials(Contact c) {
   return '$first$last'.toUpperCase();
 }
 
-class ContactDetailPage extends StatelessWidget {
+class ContactDetailPage extends StatefulWidget {
   const ContactDetailPage({
     required this.contact,
     super.key,
@@ -31,175 +27,220 @@ class ContactDetailPage extends StatelessWidget {
   final Contact contact;
 
   @override
+  State<ContactDetailPage> createState() => _ContactDetailPageState();
+}
+
+class _ContactDetailPageState extends State<ContactDetailPage> {
+  late Contact _contact;
+  bool _editing = false;
+  bool _saving = false;
+
+  late final TextEditingController _firstNameCtrl;
+  late final TextEditingController _lastNameCtrl;
+  late final TextEditingController _emailCtrl;
+  late final TextEditingController _phoneCtrl;
+  late final TextEditingController _jobTitleCtrl;
+  late final TextEditingController _sourceCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _contact = widget.contact;
+    _firstNameCtrl = TextEditingController(text: _contact.firstName);
+    _lastNameCtrl = TextEditingController(text: _contact.lastName);
+    _emailCtrl = TextEditingController(text: _contact.email);
+    _phoneCtrl = TextEditingController(text: _contact.phone ?? '');
+    _jobTitleCtrl = TextEditingController(text: _contact.jobTitle ?? '');
+    _sourceCtrl = TextEditingController(text: _contact.source ?? '');
+  }
+
+  @override
+  void dispose() {
+    _firstNameCtrl.dispose();
+    _lastNameCtrl.dispose();
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
+    _jobTitleCtrl.dispose();
+    _sourceCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    final updated = Contact(
+      id: _contact.id,
+      firstName: _firstNameCtrl.text.trim(),
+      lastName: _lastNameCtrl.text.trim(),
+      email: _emailCtrl.text.trim(),
+      phone: _phoneCtrl.text.trim().isNotEmpty
+          ? _phoneCtrl.text.trim()
+          : null,
+      jobTitle: _jobTitleCtrl.text.trim().isNotEmpty
+          ? _jobTitleCtrl.text.trim()
+          : null,
+      source: _sourceCtrl.text.trim().isNotEmpty
+          ? _sourceCtrl.text.trim()
+          : null,
+      status: _contact.status,
+      tags: _contact.tags,
+      ownerId: _contact.ownerId,
+      companyId: _contact.companyId,
+      version: _contact.version,
+      createdAt: _contact.createdAt,
+      updatedAt: DateTime.now(),
+    );
+    final result =
+        await getIt<ContactRepository>().updateContact(updated);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    switch (result) {
+      case Success(:final data):
+        setState(() {
+          _contact = data;
+          _editing = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Contact saved')),
+        );
+      case Failure(:final error):
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Save failed: ${error.message}')),
+        );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_fullName(contact)),
+        title: Text(_fullName(_contact)),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_outlined),
-            tooltip: AppLocalizations.of(context)!.editContact,
-            onPressed: () => _showEditDialog(context),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outlined),
-            tooltip: AppLocalizations.of(context)!.deleteContact,
-            onPressed: () => _confirmDelete(context),
-          ),
+          if (_editing) ...[
+            TextButton(
+              onPressed: () => setState(() => _editing = false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: _saving ? null : _save,
+              child: _saving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Save'),
+            ),
+            const SizedBox(width: 8),
+          ] else ...[
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: 'Edit',
+              onPressed: () => setState(() => _editing = true),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outlined),
+              tooltip: 'Delete',
+              onPressed: () => _confirmDelete(context),
+            ),
+          ],
         ],
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final windowSize = windowSizeFor(constraints.maxWidth);
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: switch (windowSize) {
-              WindowSize.compact => _CompactLayout(contact: contact),
-              WindowSize.medium ||
-              WindowSize.expanded =>
-                _WideLayout(contact: contact),
-            },
-          );
-        },
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _ContactHeader(contact: _contact),
+            const SizedBox(height: 16),
+            _editing
+                ? _buildEditForm(context)
+                : _ContactInfoCard(contact: _contact),
+            if (_contact.tags.isNotEmpty && !_editing) ...[
+              const SizedBox(height: 16),
+              _TagsCard(tags: _contact.tags),
+            ],
+            const SizedBox(height: 16),
+            _FilesSection(contactId: _contact.id),
+            const SizedBox(height: 16),
+            _ContactNotesSection(contactId: _contact.id),
+            const SizedBox(height: 16),
+            _ContactRecordsSection(contactId: _contact.id),
+          ],
+        ),
       ),
     );
   }
 
-  void _showEditDialog(BuildContext context) {
-    showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => BlocProvider(
-        create: (_) => ContactFormCubit(
-          contactRepository: getIt<ContactRepository>(),
-          existingContact: contact,
-        ),
-        child: BlocConsumer<ContactFormCubit, ContactFormState>(
-          listener: (ctx, state) {
-            if (state.submissionStatus == FormzSubmissionStatus.success) {
-              Navigator.of(ctx).pop(true);
-            }
-          },
-          builder: (ctx, state) {
-            final cubit = ctx.read<ContactFormCubit>();
-            final isSubmitting =
-                state.submissionStatus == FormzSubmissionStatus.inProgress;
-
-            return AlertDialog(
-              title: Text(AppLocalizations.of(ctx)!.editContact),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: TextEditingController.fromValue(
-                        TextEditingValue(
-                          text: state.firstName.value,
-                          selection: TextSelection.collapsed(
-                            offset: state.firstName.value.length,
-                          ),
-                        ),
-                      ),
-                      decoration: InputDecoration(
-                        labelText: AppLocalizations.of(ctx)!.contactFirstName,
-                        errorText: state.firstName.displayError,
-                      ),
-                      onChanged: cubit.firstNameChanged,
-                      textCapitalization: TextCapitalization.words,
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: TextEditingController.fromValue(
-                        TextEditingValue(
-                          text: state.lastName.value,
-                          selection: TextSelection.collapsed(
-                            offset: state.lastName.value.length,
-                          ),
-                        ),
-                      ),
-                      decoration: InputDecoration(
-                        labelText: AppLocalizations.of(ctx)!.contactLastName,
-                        errorText: state.lastName.displayError,
-                      ),
-                      onChanged: cubit.lastNameChanged,
-                      textCapitalization: TextCapitalization.words,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      initialValue: state.email,
-                      decoration: InputDecoration(
-                        labelText:
-                            AppLocalizations.of(ctx)!.contactEmail,
-                      ),
-                      onChanged: cubit.emailChanged,
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      initialValue: state.phone,
-                      decoration: InputDecoration(
-                        labelText:
-                            AppLocalizations.of(ctx)!.contactPhone,
-                      ),
-                      onChanged: cubit.phoneChanged,
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      initialValue: state.jobTitle,
-                      decoration: InputDecoration(
-                        labelText:
-                            AppLocalizations.of(ctx)!.contactJobTitle,
-                      ),
-                      onChanged: cubit.jobTitleChanged,
-                      textCapitalization: TextCapitalization.words,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      initialValue: state.source,
-                      decoration: InputDecoration(
-                        labelText:
-                            AppLocalizations.of(ctx)!.contactSource,
-                      ),
-                      onChanged: cubit.sourceChanged,
-                    ),
-                    if (state.errorMessage != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        state.errorMessage!,
-                        style: TextStyle(
-                          color: Theme.of(ctx).colorScheme.error,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+  Widget _buildEditForm(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Edit Contact',
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const Divider(height: 24),
+            TextField(
+              controller: _firstNameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'First Name',
+                border: OutlineInputBorder(),
               ),
-              actions: [
-                TextButton(
-                  onPressed:
-                      isSubmitting ? null : () => Navigator.of(ctx).pop(),
-                  child: Text(AppLocalizations.of(ctx)!.cancel),
-                ),
-                FilledButton(
-                  onPressed: isSubmitting ? null : cubit.submitted,
-                  child: isSubmitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(AppLocalizations.of(ctx)!.save),
-                ),
-              ],
-            );
-          },
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _lastNameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Last Name',
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _emailCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _phoneCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Phone',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.phone,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _jobTitleCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Job Title',
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _sourceCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Source',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
         ),
       ),
-    ).then((saved) {
-      if ((saved ?? false) && context.mounted) {
-        Navigator.of(context).pop();
-      }
-    });
+    );
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
@@ -209,7 +250,7 @@ class ContactDetailPage extends StatelessWidget {
         title: const Text('Delete Contact?'),
         content: Text(
           'Are you sure you want to delete '
-          '${_fullName(contact)}? This cannot be undone.',
+          '${_fullName(_contact)}? This cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -231,7 +272,7 @@ class ContactDetailPage extends StatelessWidget {
     if (!context.mounted) return;
 
     final result =
-        await getIt<ContactRepository>().deleteContact(contact.id);
+        await getIt<ContactRepository>().deleteContact(_contact.id);
 
     if (!context.mounted) return;
 
