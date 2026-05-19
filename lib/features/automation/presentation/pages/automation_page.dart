@@ -117,14 +117,24 @@ class _AutomationView extends StatelessWidget {
     ];
     final condOps = ['eq', 'neq', 'gt', 'lt', 'contains', 'in'];
 
-    showDialog<void>(
+    showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(l10n.createRule),
-          content: SizedBox(
-            width: 400,
-            child: SingleChildScrollView(
+        builder: (dialogContext, setDialogState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(dialogContext).viewInsets.bottom,
+          ),
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.85,
+            maxChildSize: 0.95,
+            minChildSize: 0.5,
+            expand: false,
+            builder: (context, scrollController) =>
+                SingleChildScrollView(
+              controller: scrollController,
+              padding: const EdgeInsets.all(24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,16 +286,18 @@ class _AutomationView extends StatelessWidget {
                       ),
                     ),
                   ],
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(l10n.cancel),
-            ),
-            FilledButton(
+                  // ── Buttons ──
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.of(dialogContext).pop(),
+                        child: Text(l10n.cancel),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton(
               onPressed: () {
                 final name = nameController.text.trim();
                 if (name.isEmpty) return;
@@ -357,13 +369,18 @@ class _AutomationView extends StatelessWidget {
                 context.read<AutomationBloc>().add(
                       AutomationRuleCreateRequested(rule: rule),
                     );
-                Navigator.of(dialogContext).pop();
-              },
-              child: Text(l10n.create),
+                        Navigator.of(dialogContext).pop();
+                      },
+                      child: Text(l10n.create),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
+    ),
     );
   }
 }

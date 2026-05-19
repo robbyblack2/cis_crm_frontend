@@ -84,16 +84,28 @@ class _FilesView extends StatelessWidget {
   }
 
   Future<void> _pickAndUploadFile(BuildContext context) async {
-    final result = await FilePicker.platform.pickFiles();
+    final result = await FilePicker.platform.pickFiles(
+      withData: true, // Required for web — loads bytes into memory
+    );
     if (result == null || result.files.isEmpty) return;
     final file = result.files.first;
-    if (file.path == null) return;
     if (!context.mounted) return;
-    await context.read<FilesCubit>().uploadFile(
-          parentType: 'general',
-          parentId: 'default',
-          filePath: file.path!,
-          filename: file.name,
-        );
+
+    // On web, path is null — use bytes. On native, use path.
+    if (file.path != null) {
+      await context.read<FilesCubit>().uploadFile(
+            parentType: 'general',
+            parentId: 'default',
+            filePath: file.path!,
+            filename: file.name,
+          );
+    } else if (file.bytes != null) {
+      // Web fallback — show message since upload needs server-side handling
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('File upload on web requires native platform'),
+        ),
+      );
+    }
   }
 }
