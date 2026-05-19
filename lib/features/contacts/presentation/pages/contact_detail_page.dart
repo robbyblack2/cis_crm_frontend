@@ -676,28 +676,6 @@ class _ContactNotesSectionState extends State<_ContactNotesSection> {
                   ?.copyWith(fontWeight: FontWeight.w600),
             ),
             const Divider(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _ctrl,
-                    decoration: const InputDecoration(
-                      hintText: 'Add a note...',
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 2,
-                    minLines: 1,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton.filled(
-                  onPressed: _add,
-                  icon: const Icon(Icons.send),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
             if (_loading)
               const Center(child: CircularProgressIndicator())
             else if (_notes == null || _notes!.isEmpty)

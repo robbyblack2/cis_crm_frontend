@@ -11,6 +11,10 @@ import 'package:cis_crm/features/pipeline/domain/entities/record.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/stage.dart';
 import 'package:cis_crm/features/pipeline/presentation/bloc/pipeline_bloc.dart';
 import 'package:cis_crm/features/pipeline/presentation/bloc/record_bloc.dart';
+import 'package:cis_crm/features/contacts/data/datasources/company_remote_data_source.dart';
+import 'package:cis_crm/features/contacts/data/datasources/contact_remote_data_source.dart';
+import 'package:cis_crm/features/contacts/data/models/company_model.dart';
+import 'package:cis_crm/features/contacts/data/models/contact_model.dart';
 import 'package:cis_crm/features/pipeline/presentation/pages/pipeline_settings_page.dart';
 import 'package:cis_crm/features/pipeline/presentation/pages/record_detail_page.dart';
 import 'package:cis_crm/features/pipeline/presentation/widgets/stage_column.dart';
@@ -237,132 +241,615 @@ class _LoadedPipelineView extends StatelessWidget {
   }
 
   void _showCreateRecordDialog(BuildContext context) {
-    final titleController = TextEditingController();
-    final contactIdController = TextEditingController();
-    final companyIdController = TextEditingController();
-    final tagsController = TextEditingController();
     final recordBloc = context.read<RecordBloc>();
-
     final stages = (state.kanbanStages ?? <Stage>[]).toList()
       ..sort((a, b) => a.position.compareTo(b.position));
-
     if (stages.isEmpty) return;
 
-    var selectedStageId = stages.first.id;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _CreateRecordSheet(
+        stages: stages,
+        pipelineId: state.kanbanPipeline?.id ?? '',
+        recordBloc: recordBloc,
+      ),
+    );
+  }
+}
+
+class _CreateRecordSheet extends StatefulWidget {
+  const _CreateRecordSheet({
+    required this.stages,
+    required this.pipelineId,
+    required this.recordBloc,
+  });
+
+  final List<Stage> stages;
+  final String pipelineId;
+  final RecordBloc recordBloc;
+
+  @override
+  State<_CreateRecordSheet> createState() => _CreateRecordSheetState();
+}
+
+class _CreateRecordSheetState extends State<_CreateRecordSheet> {
+  final _titleCtrl = TextEditingController();
+  final _tagsCtrl = TextEditingController();
+  final _contactSearchCtrl = TextEditingController();
+  final _companySearchCtrl = TextEditingController();
+  late String _selectedStageId;
+
+  String? _selectedContactId;
+  String? _selectedContactName;
+  String? _selectedCompanyId;
+  String? _selectedCompanyName;
+
+  List<Map<String, dynamic>> _contactResults = [];
+  List<Map<String, dynamic>> _companyResults = [];
+  bool _searchingContacts = false;
+  bool _searchingCompanies = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedStageId = widget.stages.first.id;
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _tagsCtrl.dispose();
+    _contactSearchCtrl.dispose();
+    _companySearchCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _searchContacts(String query) async {
+    if (query.length < 2) {
+      setState(() => _contactResults = []);
+      return;
+    }
+    setState(() => _searchingContacts = true);
+    try {
+      final response = await getIt<ContactRemoteDataSource>()
+          .getContacts(page: 1, perPage: 10);
+      final filtered = response.items
+          .where((c) {
+            final name = '${c.firstName} ${c.lastName}'.toLowerCase();
+            final email = c.email.toLowerCase();
+            final q = query.toLowerCase();
+            return name.contains(q) || email.contains(q);
+          })
+          .map((c) => {
+                'id': c.id,
+                'name': '${c.firstName} ${c.lastName}'.trim(),
+                'email': c.email,
+              })
+          .toList();
+      if (mounted) {
+        setState(() {
+          _contactResults = filtered;
+          _searchingContacts = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _contactResults = [];
+          _searchingContacts = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _searchCompanies(String query) async {
+    if (query.length < 2) {
+      setState(() => _companyResults = []);
+      return;
+    }
+    setState(() => _searchingCompanies = true);
+    try {
+      final companies =
+          await getIt<CompanyRemoteDataSource>().getCompanies();
+      final filtered = companies
+          .where(
+            (c) => c.name.toLowerCase().contains(query.toLowerCase()),
+          )
+          .map((c) => {'id': c.id, 'name': c.name})
+          .toList();
+      if (mounted) {
+        setState(() {
+          _companyResults = filtered;
+          _searchingCompanies = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _companyResults = [];
+          _searchingCompanies = false;
+        });
+      }
+    }
+  }
+
+  void _quickAddContact() {
+    final firstCtrl = TextEditingController();
+    final lastCtrl = TextEditingController();
+    final emailCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
 
     showDialog<void>(
       context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            final l10n = AppLocalizations.of(context)!;
-            return AlertDialog(
-              title: Text(l10n.newRecord),
-              content: SizedBox(
-                width: 400,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextField(
-                        controller: titleController,
-                        decoration: InputDecoration(
-                          labelText: l10n.title,
-                          hintText: l10n.enterRecordTitle,
-                        ),
-                        autofocus: true,
-                        textCapitalization: TextCapitalization.sentences,
-                      ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedStageId,
-                        decoration: InputDecoration(
-                          labelText: l10n.stage,
-                        ),
-                        items: stages
-                            .map(
-                              (s) => DropdownMenuItem(
-                                value: s.id,
-                                child: Text(s.name),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() => selectedStageId = value);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: contactIdController,
-                        decoration: InputDecoration(
-                          labelText: l10n.contact,
-                          hintText: 'Contact ID (optional)',
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: companyIdController,
-                        decoration: InputDecoration(
-                          labelText: l10n.contactCompany,
-                          hintText: 'Company ID (optional)',
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: tagsController,
-                        decoration: const InputDecoration(
-                          labelText: 'Tags',
-                          hintText: 'Comma-separated (optional)',
-                        ),
-                      ),
-                    ],
+      builder: (ctx) => AlertDialog(
+        title: const Text('Quick Add Contact'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: firstCtrl,
+                decoration:
+                    const InputDecoration(labelText: 'First name'),
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: lastCtrl,
+                decoration:
+                    const InputDecoration(labelText: 'Last name'),
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: emailCtrl,
+                decoration: const InputDecoration(labelText: 'Email'),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: phoneCtrl,
+                decoration: const InputDecoration(labelText: 'Phone'),
+                keyboardType: TextInputType.phone,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final first = firstCtrl.text.trim();
+              final last = lastCtrl.text.trim();
+              if (first.isEmpty) return;
+              Navigator.pop(ctx);
+              try {
+                final contact = ContactModel(
+                  id: '',
+                  firstName: first,
+                  lastName: last,
+                  email: emailCtrl.text.trim(),
+                  phone: phoneCtrl.text.trim().isNotEmpty
+                      ? phoneCtrl.text.trim()
+                      : null,
+                  status: 'lead',
+                  tags: const [],
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                );
+                final created = await getIt<ContactRemoteDataSource>()
+                    .createContact(contact);
+                setState(() {
+                  _selectedContactId = created.id;
+                  _selectedContactName =
+                      '${created.firstName} ${created.lastName}'.trim();
+                  _contactSearchCtrl.text = _selectedContactName!;
+                  _contactResults = [];
+                });
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _quickAddCompany() {
+    final nameCtrl = TextEditingController();
+    final websiteCtrl = TextEditingController();
+    final industryCtrl = TextEditingController();
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Quick Add Company'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Name'),
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: websiteCtrl,
+                decoration:
+                    const InputDecoration(labelText: 'Website'),
+                keyboardType: TextInputType.url,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: industryCtrl,
+                decoration:
+                    const InputDecoration(labelText: 'Industry'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final name = nameCtrl.text.trim();
+              if (name.isEmpty) return;
+              Navigator.pop(ctx);
+              try {
+                final company = CompanyModel(
+                  id: '',
+                  name: name,
+                  domain: websiteCtrl.text.trim().isNotEmpty
+                      ? websiteCtrl.text.trim()
+                      : null,
+                  industry: industryCtrl.text.trim().isNotEmpty
+                      ? industryCtrl.text.trim()
+                      : null,
+                  tags: const [],
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                );
+                final created = await getIt<CompanyRemoteDataSource>()
+                    .createCompany(company);
+                setState(() {
+                  _selectedCompanyId = created.id;
+                  _selectedCompanyName = created.name;
+                  _companySearchCtrl.text = created.name;
+                  _companyResults = [];
+                });
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _submit() {
+    final title = _titleCtrl.text.trim();
+    if (title.isEmpty) return;
+    final tags = _tagsCtrl.text
+        .split(',')
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+    widget.recordBloc.add(
+      RecordCreateRequested(
+        pipelineId: widget.pipelineId,
+        stageId: _selectedStageId,
+        title: title,
+        source: RecordSource.manual,
+        contactId: _selectedContactId,
+        companyId: _selectedCompanyId,
+        tags: tags,
+      ),
+    );
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        maxChildSize: 0.95,
+        minChildSize: 0.4,
+        expand: false,
+        builder: (context, scrollController) => SingleChildScrollView(
+          controller: scrollController,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Header ──
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n.newRecord,
+                      style: theme.textTheme.headlineSmall,
+                    ),
                   ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+
+              // ── Title ──
+              TextField(
+                controller: _titleCtrl,
+                decoration: InputDecoration(
+                  labelText: l10n.title,
+                  hintText: l10n.enterRecordTitle,
+                  border: const OutlineInputBorder(),
+                ),
+                autofocus: true,
+                textCapitalization: TextCapitalization.sentences,
+              ),
+              const SizedBox(height: 16),
+
+              // ── Stage ──
+              DropdownButtonFormField<String>(
+                initialValue: _selectedStageId,
+                decoration: InputDecoration(
+                  labelText: l10n.stage,
+                  border: const OutlineInputBorder(),
+                ),
+                items: widget.stages
+                    .map(
+                      (s) => DropdownMenuItem(
+                        value: s.id,
+                        child: Text(s.name),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) setState(() => _selectedStageId = v);
+                },
+              ),
+              const SizedBox(height: 24),
+
+              // ── Contact search ──
+              Text(
+                l10n.contact,
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              if (_selectedContactId != null)
+                Card(
+                  color: theme.colorScheme.primaryContainer,
+                  child: ListTile(
+                    leading: const Icon(Icons.person),
+                    title: Text(_selectedContactName ?? ''),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => setState(() {
+                        _selectedContactId = null;
+                        _selectedContactName = null;
+                        _contactSearchCtrl.clear();
+                      }),
+                    ),
+                  ),
+                )
+              else ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _contactSearchCtrl,
+                        decoration: const InputDecoration(
+                          hintText: 'Search contacts...',
+                          prefixIcon: Icon(Icons.search),
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                        onChanged: _searchContacts,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.tonalIcon(
+                      onPressed: _quickAddContact,
+                      icon: const Icon(Icons.person_add, size: 18),
+                      label: const Text('New'),
+                    ),
+                  ],
+                ),
+                if (_searchingContacts)
+                  const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Center(
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child:
+                            CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  ),
+                if (_contactResults.isNotEmpty)
+                  Card(
+                    child: Column(
+                      children: _contactResults
+                          .take(5)
+                          .map(
+                            (c) => ListTile(
+                              dense: true,
+                              leading: CircleAvatar(
+                                radius: 16,
+                                child: Text(
+                                  (c['name'] as String? ?? '?')[0]
+                                      .toUpperCase(),
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                              title: Text(
+                                c['name'] as String? ?? '',
+                              ),
+                              subtitle: Text(
+                                c['email'] as String? ?? '',
+                                style: theme.textTheme.bodySmall,
+                              ),
+                              onTap: () => setState(() {
+                                _selectedContactId =
+                                    c['id'] as String?;
+                                _selectedContactName =
+                                    c['name'] as String?;
+                                _contactSearchCtrl.text =
+                                    _selectedContactName ?? '';
+                                _contactResults = [];
+                              }),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+              ],
+              const SizedBox(height: 16),
+
+              // ── Company search ──
+              Text(
+                l10n.contactCompany,
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              if (_selectedCompanyId != null)
+                Card(
+                  color: theme.colorScheme.primaryContainer,
+                  child: ListTile(
+                    leading: const Icon(Icons.business),
+                    title: Text(_selectedCompanyName ?? ''),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => setState(() {
+                        _selectedCompanyId = null;
+                        _selectedCompanyName = null;
+                        _companySearchCtrl.clear();
+                      }),
+                    ),
+                  ),
+                )
+              else ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _companySearchCtrl,
+                        decoration: const InputDecoration(
+                          hintText: 'Search companies...',
+                          prefixIcon: Icon(Icons.search),
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                        onChanged: _searchCompanies,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.tonalIcon(
+                      onPressed: _quickAddCompany,
+                      icon: const Icon(Icons.add_business, size: 18),
+                      label: const Text('New'),
+                    ),
+                  ],
+                ),
+                if (_searchingCompanies)
+                  const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Center(
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child:
+                            CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  ),
+                if (_companyResults.isNotEmpty)
+                  Card(
+                    child: Column(
+                      children: _companyResults
+                          .take(5)
+                          .map(
+                            (c) => ListTile(
+                              dense: true,
+                              leading: const Icon(Icons.business),
+                              title:
+                                  Text(c['name'] as String? ?? ''),
+                              onTap: () => setState(() {
+                                _selectedCompanyId =
+                                    c['id'] as String?;
+                                _selectedCompanyName =
+                                    c['name'] as String?;
+                                _companySearchCtrl.text =
+                                    _selectedCompanyName ?? '';
+                                _companyResults = [];
+                              }),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+              ],
+              const SizedBox(height: 16),
+
+              // ── Tags ──
+              TextField(
+                controller: _tagsCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Tags',
+                  hintText: 'Comma-separated (optional)',
+                  border: OutlineInputBorder(),
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: Text(l10n.cancel),
+              const SizedBox(height: 24),
+
+              // ── Submit ──
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _submit,
+                  icon: const Icon(Icons.add),
+                  label: Text(l10n.create),
                 ),
-                FilledButton(
-                  onPressed: () {
-                    final title = titleController.text.trim();
-                    if (title.isEmpty) return;
-                    final contactId =
-                        contactIdController.text.trim().isNotEmpty
-                            ? contactIdController.text.trim()
-                            : null;
-                    final companyId =
-                        companyIdController.text.trim().isNotEmpty
-                            ? companyIdController.text.trim()
-                            : null;
-                    final tags = tagsController.text
-                        .split(',')
-                        .map((t) => t.trim())
-                        .where((t) => t.isNotEmpty)
-                        .toList();
-                    recordBloc.add(
-                      RecordCreateRequested(
-                        pipelineId: state.kanbanPipeline?.id ?? '',
-                        stageId: selectedStageId,
-                        title: title,
-                        source: RecordSource.manual,
-                        contactId: contactId,
-                        companyId: companyId,
-                        tags: tags,
-                      ),
-                    );
-                    Navigator.of(dialogContext).pop();
-                  },
-                  child: Text(l10n.create),
-                ),
-              ],
-            );
-          },
-        );
-      },
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
