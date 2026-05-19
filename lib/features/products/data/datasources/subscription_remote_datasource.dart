@@ -17,6 +17,11 @@ abstract interface class SubscriptionRemoteDatasource {
     String subscriptionId,
     Map<String, dynamic> body,
   );
+  Future<LineItemModel> updateLineItem(
+    String lineItemId,
+    Map<String, dynamic> body,
+  );
+  Future<void> deleteLineItem(String lineItemId);
 }
 
 final class SubscriptionRemoteDatasourceImpl
@@ -149,6 +154,39 @@ final class SubscriptionRemoteDatasourceImpl
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to add line item',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<LineItemModel> updateLineItem(
+    String lineItemId,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final response = await _dio.put<Map<String, dynamic>>(
+        '/api/line-items/$lineItemId',
+        data: body,
+      );
+      return LineItemModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to update line item',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<void> deleteLineItem(String lineItemId) async {
+    try {
+      await _dio.delete<void>('/api/line-items/$lineItemId');
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to delete line item',
         statusCode: e.response?.statusCode,
       );
     }

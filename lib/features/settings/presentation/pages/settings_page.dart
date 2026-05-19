@@ -37,6 +37,13 @@ class SettingsPage extends StatelessWidget {
           // ── Tools ──
           _SectionHeader(title: l10n.tools),
           ListTile(
+            leading: const Icon(Icons.business_outlined),
+            title: const Text('Companies'),
+            subtitle: const Text('Manage organizations'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.companies),
+          ),
+          ListTile(
             leading: const Icon(Icons.bolt_outlined),
             title: Text(l10n.automationTitle),
             subtitle: Text(l10n.automationSubtitle),
@@ -85,6 +92,13 @@ class SettingsPage extends StatelessWidget {
             subtitle: const Text('Track changes'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(Routes.auditLog),
+          ),
+          ListTile(
+            leading: const Icon(Icons.import_export),
+            title: const Text('Import / Export'),
+            subtitle: const Text('CSV data import and export'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.importExport),
           ),
           const Divider(),
 

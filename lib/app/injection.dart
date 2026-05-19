@@ -84,11 +84,13 @@ import 'package:cis_crm/features/search/domain/repositories/search_repository.da
 import 'package:cis_crm/features/search/presentation/bloc/search_bloc.dart';
 import 'package:cis_crm/features/activity/presentation/pages/call_log_page.dart';
 import 'package:cis_crm/features/automation/presentation/pages/automation_page.dart';
+import 'package:cis_crm/features/contacts/presentation/pages/companies_page.dart';
 import 'package:cis_crm/features/email/presentation/pages/email_compose_page.dart';
 import 'package:cis_crm/features/email/presentation/pages/email_templates_page.dart';
 import 'package:cis_crm/features/files/presentation/pages/files_page.dart';
 import 'package:cis_crm/features/search/presentation/pages/search_page.dart';
 import 'package:cis_crm/features/settings/data/datasources/google_remote_data_source.dart';
+import 'package:cis_crm/features/settings/presentation/pages/import_export_page.dart';
 import 'package:cis_crm/features/settings/data/repositories/google_repository_impl.dart';
 import 'package:cis_crm/features/settings/domain/repositories/google_repository.dart';
 import 'package:cis_crm/features/settings/presentation/bloc/google_integration_cubit.dart';
@@ -520,6 +522,10 @@ Future<void> configureDependencies(FlavorConfig config) async {
           builder: (_, __) => const AutomationPage(),
         ),
         GoRoute(
+          path: Routes.companies,
+          builder: (_, __) => const CompaniesPage(),
+        ),
+        GoRoute(
           path: Routes.emailTemplates,
           builder: (_, __) => const EmailTemplatesPage(),
         ),
@@ -542,6 +548,10 @@ Future<void> configureDependencies(FlavorConfig config) async {
         GoRoute(
           path: Routes.auditLog,
           builder: (_, __) => const AuditLogPage(),
+        ),
+        GoRoute(
+          path: Routes.importExport,
+          builder: (_, __) => const ImportExportPage(),
         ),
       ],
     ),

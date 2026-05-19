@@ -7,6 +7,7 @@ import 'package:cis_crm/features/pipeline/domain/entities/stage.dart';
 import 'package:cis_crm/features/pipeline/presentation/bloc/pipeline_bloc.dart';
 import 'package:cis_crm/features/pipeline/presentation/bloc/record_bloc.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
@@ -260,6 +261,14 @@ class _RecordDetailScaffold extends StatelessWidget {
 
             // ── Linked Contacts ──
             _LinkedContactsSection(recordId: record.id),
+            const SizedBox(height: 16),
+
+            // ── Emails ──
+            _EmailsSection(recordId: record.id),
+            const SizedBox(height: 16),
+
+            // ── Files ──
+            _RecordFilesSection(recordId: record.id),
             const SizedBox(height: 16),
 
             // ── Timeline ──
@@ -776,6 +785,173 @@ class _LinkedContactsSectionState extends State<_LinkedContactsSection> {
                     ),
                   );
                 },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmailsSection extends StatefulWidget {
+  const _EmailsSection({required this.recordId});
+  final String recordId;
+
+  @override
+  State<_EmailsSection> createState() => _EmailsSectionState();
+}
+
+class _EmailsSectionState extends State<_EmailsSection> {
+  List<Map<String, dynamic>>? _emails;
+  bool _loading = true;
+  final _replyCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _replyCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final emails = await GetIt.instance<RecordRemoteDataSource>()
+          .getEmails(widget.recordId);
+      if (mounted) setState(() { _emails = emails; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() { _emails = []; _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Emails',
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const Divider(height: 24),
+            if (_loading)
+              const Center(child: CircularProgressIndicator())
+            else if (_emails == null || _emails!.isEmpty)
+              Text(
+                'No emails linked to this record',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              ...(_emails!).map(
+                (e) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    Icons.email_outlined,
+                    color: theme.colorScheme.primary,
+                  ),
+                  title: Text(
+                    e['subject'] as String? ?? 'No subject',
+                  ),
+                  subtitle: Text(
+                    e['from_address'] as String? ??
+                        e['sender_email'] as String? ??
+                        '',
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecordFilesSection extends StatefulWidget {
+  const _RecordFilesSection({required this.recordId});
+  final String recordId;
+
+  @override
+  State<_RecordFilesSection> createState() => _RecordFilesSectionState();
+}
+
+class _RecordFilesSectionState extends State<_RecordFilesSection> {
+  List<Map<String, dynamic>>? _files;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final response = await GetIt.instance<Dio>().get<Map<String, dynamic>>(
+        '/api/files',
+        queryParameters: {
+          'parent_type': 'record',
+          'parent_id': widget.recordId,
+        },
+      );
+      final list = response.data?['data'] as List<dynamic>?;
+      if (mounted) {
+        setState(() {
+          _files = list?.cast<Map<String, dynamic>>() ?? [];
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() { _files = []; _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Files',
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const Divider(height: 24),
+            if (_loading)
+              const Center(child: CircularProgressIndicator())
+            else if (_files == null || _files!.isEmpty)
+              Text(
+                'No files attached',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              ...(_files!).map(
+                (f) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.attach_file),
+                  title: Text(
+                    f['filename'] as String? ?? 'File',
+                  ),
+                  subtitle: Text(
+                    f['content_type'] as String? ?? '',
+                  ),
+                ),
               ),
           ],
         ),

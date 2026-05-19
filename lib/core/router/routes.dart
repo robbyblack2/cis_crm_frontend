@@ -21,6 +21,8 @@ abstract final class Routes {
   static const emailCompose = '/email/compose';
   static const callLogs = '/call-logs';
   static const files = '/files';
+  static const companies = '/companies';
+  static const importExport = '/import-export';
 
   static const users = '/users';
   static const auditLog = '/audit-log';

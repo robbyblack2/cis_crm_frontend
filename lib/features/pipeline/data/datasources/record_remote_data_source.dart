@@ -45,6 +45,12 @@ abstract class RecordRemoteDataSource {
   Future<void> unlinkContact(String recordId, String contactId);
   Future<RecordModel> claimRecord(String recordId);
   Future<List<Map<String, dynamic>>> getEmails(String recordId);
+
+  // Bulk operations
+  Future<void> bulkMove(List<String> recordIds, String stageId);
+  Future<void> bulkAssign(List<String> recordIds, String userId);
+  Future<void> bulkTag(List<String> recordIds, List<String> tags);
+  Future<void> bulkDelete(List<String> recordIds);
 }
 
 class RecordRemoteDataSourceImpl implements RecordRemoteDataSource {
@@ -325,6 +331,72 @@ class RecordRemoteDataSourceImpl implements RecordRemoteDataSource {
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to fetch emails',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<void> bulkMove(List<String> recordIds, String stageId) async {
+    try {
+      await _dio.post<void>(
+        '/api/records/bulk-move',
+        data: {'record_ids': recordIds, 'stage_id': stageId},
+      );
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Bulk move failed',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<void> bulkAssign(
+    List<String> recordIds,
+    String userId,
+  ) async {
+    try {
+      await _dio.post<void>(
+        '/api/records/bulk-assign',
+        data: {'record_ids': recordIds, 'owner_id': userId},
+      );
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Bulk assign failed',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<void> bulkTag(
+    List<String> recordIds,
+    List<String> tags,
+  ) async {
+    try {
+      await _dio.post<void>(
+        '/api/records/bulk-tag',
+        data: {'record_ids': recordIds, 'tags': tags},
+      );
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Bulk tag failed',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<void> bulkDelete(List<String> recordIds) async {
+    try {
+      await _dio.post<void>(
+        '/api/records/bulk-delete',
+        data: {'record_ids': recordIds},
+      );
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Bulk delete failed',
         statusCode: e.response?.statusCode,
       );
     }
