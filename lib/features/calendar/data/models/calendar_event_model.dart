@@ -51,14 +51,13 @@ class CalendarEventModel extends CalendarEvent {
       );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
         'title': title,
         'start_time': start.toIso8601String(),
         'end_time': end.toIso8601String(),
-        'created_at': createdAt.toIso8601String(),
-        if (googleEventId != null) 'google_event_id': googleEventId,
-        if (location != null) 'location': location,
-        if (meetingLink != null) 'meeting_link': meetingLink,
+        'attendees': <Map<String, dynamic>>[],
+        if (location != null && location!.isNotEmpty) 'location': location,
+        if (meetingLink != null && meetingLink!.isNotEmpty)
+          'meeting_link': meetingLink,
         if (linkedRecordId != null) 'linked_record_id': linkedRecordId,
       };
 }
