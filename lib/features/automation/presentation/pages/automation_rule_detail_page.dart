@@ -3,6 +3,7 @@ import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/features/automation/domain/entities/automation_rule.dart';
 import 'package:cis_crm/features/automation/domain/repositories/automation_repository.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 class AutomationRuleDetailPage extends StatefulWidget {
@@ -168,6 +169,24 @@ class _AutomationRuleDetailPageState extends State<AutomationRuleDetailPage> {
                   ),
                 ),
               ),
+            const SizedBox(height: 16),
+
+            // ── Dry Run ──
+            FilledButton.tonalIcon(
+              onPressed: () => _dryRun(context, rule.id),
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('Dry Run'),
+            ),
+            const SizedBox(height: 16),
+
+            // ── Execution Log ──
+            Text(
+              'Execution Log',
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            _ExecutionLogSection(ruleId: rule.id),
           ],
         ),
       ),
@@ -175,21 +194,28 @@ class _AutomationRuleDetailPageState extends State<AutomationRuleDetailPage> {
   }
 
   Widget _buildConditions(Map<String, dynamic> conditions) {
-    final operator = conditions['operator'] as String? ?? 'AND';
-    final condList =
-        conditions['conditions'] as List<dynamic>? ?? [];
+    // Support both All/Any and AND/OR formats
+    final allConds = conditions['All'] as List<dynamic>?;
+    final anyConds = conditions['Any'] as List<dynamic>?;
+    final legacyConds = conditions['conditions'] as List<dynamic>?;
+    final operator = allConds != null
+        ? 'All'
+        : anyConds != null
+            ? 'Any'
+            : conditions['operator'] as String? ?? 'All';
+    final condList = allConds ?? anyConds ?? legacyConds ?? [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Operator: $operator'),
+        Text('Match: $operator'),
         const SizedBox(height: 8),
         for (final cond in condList)
           if (cond is Map<String, dynamic>)
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(
-                '${cond['field']} ${cond['op']} ${cond['value']}',
+                '${cond['field']} ${cond['operator'] ?? cond['op']} ${cond['value']}',
                 style: const TextStyle(fontFamily: 'monospace'),
               ),
             ),
@@ -199,15 +225,19 @@ class _AutomationRuleDetailPageState extends State<AutomationRuleDetailPage> {
 
   String _actionSummary(Map<String, dynamic> action) {
     final type = action['type'] as String?;
+    // Config may be nested or top-level
+    final cfg = action['config'] as Map<String, dynamic>? ?? action;
     return switch (type) {
       'create_task' =>
-        'Title: ${action['title'] ?? '—'}, Priority: ${action['priority'] ?? '—'}',
-      'send_email' => 'Template: ${action['template_id'] ?? '—'}',
-      'move_stage' => 'Stage: ${action['stage_id'] ?? '—'}',
-      'assign_user' => 'User: ${action['user_id'] ?? 'round_robin'}',
-      'add_tag' => 'Tag: ${action['tag'] ?? '—'}',
+        'Title: ${cfg['title'] ?? '—'}, Priority: ${cfg['priority'] ?? '—'}',
+      'send_notification' => 'Template: ${cfg['template_id'] ?? '—'}',
+      'move_stage' => 'Stage: ${cfg['stage_id'] ?? '—'}',
+      'assign_owner' => 'User: ${cfg['user_id'] ?? 'round_robin'}',
+      'add_tag' => 'Tag: ${cfg['tag'] ?? '—'}',
+      'update_field' =>
+        '${cfg['field_key'] ?? '—'} = ${cfg['value'] ?? '—'}',
       'send_webhook' =>
-        '${action['method'] ?? 'POST'} ${action['url'] ?? '—'}',
+        '${cfg['method'] ?? 'POST'} ${cfg['url'] ?? '—'}',
       _ => action.toString(),
     };
   }
@@ -215,9 +245,9 @@ class _AutomationRuleDetailPageState extends State<AutomationRuleDetailPage> {
   IconData _actionIcon(String type) {
     return switch (type) {
       'create_task' => Icons.task_alt,
-      'send_email' => Icons.email_outlined,
+      'send_notification' => Icons.notifications_outlined,
       'move_stage' => Icons.swap_horiz,
-      'assign_user' => Icons.person_add_outlined,
+      'assign_owner' => Icons.person_add_outlined,
       'add_tag' => Icons.label_outline,
       'update_field' => Icons.edit_outlined,
       'send_webhook' => Icons.webhook,
@@ -260,6 +290,110 @@ class _AutomationRuleDetailPageState extends State<AutomationRuleDetailPage> {
           );
       }
     });
+  }
+
+  Future<void> _dryRun(BuildContext context, String ruleId) async {
+    try {
+      final result = await getIt<AutomationRepository>().dryRunRule(ruleId);
+      if (!context.mounted) return;
+      switch (result) {
+        case Success(:final data):
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Dry run: ${data.status.name}'),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        case Failure(:final error):
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Dry run failed: ${error.message}')),
+          );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Dry run error: $e')),
+        );
+      }
+    }
+  }
+}
+
+class _ExecutionLogSection extends StatefulWidget {
+  const _ExecutionLogSection({required this.ruleId});
+  final String ruleId;
+
+  @override
+  State<_ExecutionLogSection> createState() => _ExecutionLogSectionState();
+}
+
+class _ExecutionLogSectionState extends State<_ExecutionLogSection> {
+  List<Map<String, dynamic>>? _logs;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final response = await getIt<Dio>().get<Map<String, dynamic>>(
+        '/api/automation/execution-log',
+      );
+      final list = response.data?['data'] as List<dynamic>?;
+      if (mounted) {
+        // Filter logs for this rule
+        final all = list?.cast<Map<String, dynamic>>() ?? [];
+        final filtered = all
+            .where((l) => l['rule_id'] == widget.ruleId)
+            .toList();
+        setState(() { _logs = filtered; _loading = false; });
+      }
+    } catch (_) {
+      if (mounted) setState(() { _logs = []; _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_logs == null || _logs!.isEmpty) {
+      return Text(
+        'No executions yet',
+        style: theme.textTheme.bodySmall
+            ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+      );
+    }
+    return Column(
+      children: _logs!.take(10).map((log) {
+        final status = log['status'] as String? ?? '';
+        final ts = log['created_at'] as String? ?? '';
+        final icon = switch (status) {
+          'success' => Icons.check_circle,
+          'dry_run' => Icons.science_outlined,
+          'partial_failure' => Icons.warning_amber,
+          'failed' => Icons.error_outline,
+          _ => Icons.circle_outlined,
+        };
+        final color = switch (status) {
+          'success' => Colors.green,
+          'dry_run' => Colors.blue,
+          'partial_failure' => Colors.orange,
+          'failed' => Colors.red,
+          _ => Colors.grey,
+        };
+        return ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(icon, color: color),
+          title: Text(status),
+          subtitle: Text(ts),
+          dense: true,
+        );
+      }).toList(),
+    );
   }
 }
 

@@ -34,6 +34,7 @@ abstract class RecordRemoteDataSource {
   Future<RecordModel> moveRecord({
     required String id,
     required String toStageId,
+    Map<String, dynamic>? promptData,
   });
 
   Future<List<StageTransitionModel>> getStageHistory(String recordId);
@@ -180,11 +181,16 @@ class RecordRemoteDataSourceImpl implements RecordRemoteDataSource {
   Future<RecordModel> moveRecord({
     required String id,
     required String toStageId,
+    Map<String, dynamic>? promptData,
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         '/api/records/$id/move',
-        data: {'stage_id': toStageId},
+        data: {
+          'stage_id': toStageId,
+          if (promptData != null && promptData.isNotEmpty)
+            'prompt_data': promptData,
+        },
       );
       return RecordModel.fromJson(
         response.data!['data'] as Map<String, dynamic>,

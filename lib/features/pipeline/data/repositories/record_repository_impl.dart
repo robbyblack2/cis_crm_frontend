@@ -128,11 +128,13 @@ class RecordRepositoryImpl implements RecordRepository {
   Future<Result<PipelineRecord, AppFailure>> moveRecord({
     required String id,
     required String toStageId,
+    Map<String, dynamic>? promptData,
   }) async {
     try {
       final record = await _remoteDataSource.moveRecord(
         id: id,
         toStageId: toStageId,
+        promptData: promptData,
       );
       return Success(record);
     } on NetworkException {

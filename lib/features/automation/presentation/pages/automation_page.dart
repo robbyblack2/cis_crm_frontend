@@ -101,16 +101,19 @@ class _AutomationView extends StatelessWidget {
     final triggerTypes = [
       'record.stage_changed',
       'record.created',
+      'record.updated',
+      'contact.created',
+      'contact.updated',
+      'task.created',
       'task.completed',
     ];
     final actionTypes = [
       'create_task',
-      'send_email',
       'move_stage',
-      'assign_user',
+      'assign_owner',
       'add_tag',
       'update_field',
-      'send_webhook',
+      'send_notification',
     ];
     final condOps = ['eq', 'neq', 'gt', 'lt', 'contains', 'in'];
 
@@ -291,46 +294,47 @@ class _AutomationView extends StatelessWidget {
                 Map<String, dynamic>? triggerConditions;
                 if (condFieldController.text.trim().isNotEmpty) {
                   triggerConditions = {
-                    'operator': 'AND',
-                    'conditions': [
+                    'All': [
                       {
                         'field': condFieldController.text.trim(),
-                        'op': condOperator,
+                        'operator': condOperator,
                         'value': condValueController.text.trim(),
                       },
                     ],
                   };
                 }
 
-                // Build action
-                final actionConfig = <String, dynamic>{
-                  'type': selectedActionType,
-                };
+                // Build action with config nested
                 final mainVal = actionTitleController.text.trim();
                 final extraVal = actionValueController.text.trim();
+                final config = <String, dynamic>{};
 
                 switch (selectedActionType) {
                   case 'create_task':
-                    actionConfig['title'] = mainVal;
+                    config['title'] = mainVal;
                     if (extraVal.isNotEmpty) {
-                      actionConfig['priority'] = extraVal;
+                      config['priority'] = extraVal;
                     }
-                  case 'send_email':
-                    actionConfig['template_id'] = mainVal;
+                  case 'send_notification':
+                    config['template_id'] = mainVal;
                   case 'move_stage':
-                    actionConfig['stage_id'] = mainVal;
-                  case 'assign_user':
-                    actionConfig['user_id'] = mainVal;
+                    config['stage_id'] = mainVal;
+                  case 'assign_owner':
+                    config['user_id'] = mainVal;
                   case 'add_tag':
-                    actionConfig['tag'] = mainVal;
+                    config['tag'] = mainVal;
                   case 'update_field':
-                    actionConfig['field_key'] = mainVal;
-                    actionConfig['value'] = extraVal;
+                    config['field_key'] = mainVal;
+                    config['value'] = extraVal;
                   case 'send_webhook':
-                    actionConfig['url'] = mainVal;
-                    actionConfig['method'] =
+                    config['url'] = mainVal;
+                    config['method'] =
                         extraVal.isNotEmpty ? extraVal : 'POST';
                 }
+                final actionConfig = <String, dynamic>{
+                  'type': selectedActionType,
+                  'config': config,
+                };
 
                 final now = DateTime.now();
                 final rule = AutomationRule(

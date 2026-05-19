@@ -33,6 +33,7 @@ abstract class RecordRepository {
   Future<Result<PipelineRecord, AppFailure>> moveRecord({
     required String id,
     required String toStageId,
+    Map<String, dynamic>? promptData,
   });
 
   Future<Result<List<StageTransition>, AppFailure>> getStageHistory(

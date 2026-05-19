@@ -52,13 +52,15 @@ final class RecordMoveRequested extends RecordEvent {
   const RecordMoveRequested({
     required this.recordId,
     required this.toStageId,
+    this.promptData,
   });
 
   final String recordId;
   final String toStageId;
+  final Map<String, dynamic>? promptData;
 
   @override
-  List<Object?> get props => [recordId, toStageId];
+  List<Object?> get props => [recordId, toStageId, promptData];
 }
 
 final class RecordDeleteRequested extends RecordEvent {
@@ -283,6 +285,7 @@ class RecordBloc extends Bloc<RecordEvent, RecordState> {
     final result = await _repository.moveRecord(
       id: event.recordId,
       toStageId: event.toStageId,
+      promptData: event.promptData,
     );
     switch (result) {
       case Success():
