@@ -101,18 +101,31 @@ class WebSocketService {
   Future<void> _openConnection(String token) async {
     await _closeConnection();
 
-    final uri = buildUri(token);
-    _channel = WebSocketChannel.connect(uri);
+    try {
+      final uri = buildUri(token);
+      _channel = WebSocketChannel.connect(uri);
 
-    _subscription = _channel!.stream.listen(
-      _onData,
-      onError: _onError,
-      onDone: _onDone,
-    );
+      // Wait for the connection to be ready (throws on failure).
+      await _channel!.ready;
 
-    // Re-subscribe to channels that were active before a reconnect.
-    for (final channel in _activeChannels) {
-      _send({'action': 'subscribe', 'channel': channel});
+      _subscription = _channel!.stream.listen(
+        _onData,
+        onError: _onError,
+        onDone: _onDone,
+      );
+
+      _reconnectAttempts = 0;
+
+      // Re-subscribe to channels that were active before a reconnect.
+      for (final channel in _activeChannels) {
+        _send({'action': 'subscribe', 'channel': channel});
+      }
+    } catch (_) {
+      // Connection failed — schedule a reconnect silently.
+      _channel = null;
+      if (!_intentionalDisconnect) {
+        _scheduleReconnect();
+      }
     }
   }
 

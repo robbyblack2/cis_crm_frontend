@@ -72,6 +72,7 @@ class _ContactsView extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'contacts_fab',
         tooltip: l10n.addContactTooltip,
         onPressed: () => _addContact(context),
         child: const Icon(Icons.add),

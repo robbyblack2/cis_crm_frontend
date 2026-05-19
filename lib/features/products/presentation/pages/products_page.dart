@@ -58,6 +58,7 @@ class _ProductsView extends StatelessWidget {
           ],
         ),
         floatingActionButton: FloatingActionButton(
+          heroTag: 'products_fab',
           onPressed: () => _showCreateProductDialog(context),
           tooltip: AppLocalizations.of(context)!.addProduct,
           child: const Icon(Icons.add),
@@ -201,6 +202,9 @@ class _CatalogTab extends StatelessWidget {
                           builder: (_) => ProductDetailPage(product: product),
                         ),
                       ),
+                      onDeleted: (id) => context
+                          .read<ProductsBloc>()
+                          .add(ProductDeleteRequested(id: id)),
                     );
                   },
                 ),

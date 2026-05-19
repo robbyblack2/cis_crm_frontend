@@ -28,6 +28,7 @@ class _EmailTemplatesView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.emailTemplatesTitle)),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'email_templates_fab',
         tooltip: AppLocalizations.of(context)!.createTemplate,
         onPressed: () => _showCreateTemplateDialog(context),
         child: const Icon(Icons.add),

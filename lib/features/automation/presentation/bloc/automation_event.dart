@@ -29,3 +29,12 @@ final class AutomationRuleToggleRequested extends AutomationEvent {
   @override
   List<Object?> get props => [ruleId];
 }
+
+final class AutomationRuleDeleteRequested extends AutomationEvent {
+  const AutomationRuleDeleteRequested({required this.ruleId});
+
+  final String ruleId;
+
+  @override
+  List<Object?> get props => [ruleId];
+}

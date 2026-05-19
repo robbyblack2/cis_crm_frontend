@@ -7,16 +7,18 @@ class ProductTile extends StatelessWidget {
   const ProductTile({
     required this.product,
     this.onTap,
+    this.onDeleted,
     super.key,
   });
 
   final Product product;
   final VoidCallback? onTap;
+  final ValueChanged<String>? onDeleted;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return ListTile(
+    final tile = ListTile(
       leading: CircleAvatar(
         backgroundColor: theme.colorScheme.primaryContainer,
         child: Icon(
@@ -31,6 +33,21 @@ class ProductTile extends StatelessWidget {
       ),
       trailing: _ActiveBadge(isActive: product.isActive),
       onTap: onTap,
+    );
+
+    if (onDeleted == null) return tile;
+
+    return Dismissible(
+      key: ValueKey(product.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        color: theme.colorScheme.error,
+        child: Icon(Icons.delete, color: theme.colorScheme.onError),
+      ),
+      onDismissed: (_) => onDeleted!(product.id),
+      child: tile,
     );
   }
 
@@ -60,7 +77,9 @@ class _ActiveBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        isActive ? AppLocalizations.of(context)!.productActive : AppLocalizations.of(context)!.productInactive,
+        isActive
+            ? AppLocalizations.of(context)!.productActive
+            : AppLocalizations.of(context)!.productInactive,
         style: theme.textTheme.labelSmall?.copyWith(
           color: isActive
               ? theme.colorScheme.onPrimaryContainer

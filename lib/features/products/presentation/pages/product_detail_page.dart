@@ -1,5 +1,8 @@
+import 'package:cis_crm/app/injection.dart';
+import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/features/products/domain/entities/product.dart';
 import 'package:cis_crm/features/products/domain/entities/product_type.dart';
+import 'package:cis_crm/features/products/domain/repositories/product_repository.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 
@@ -12,7 +15,16 @@ class ProductDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(product.name)),
+      appBar: AppBar(
+        title: Text(product.name),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outlined),
+            tooltip: AppLocalizations.of(context)!.delete,
+            onPressed: () => _confirmDelete(context),
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Card(
@@ -83,6 +95,43 @@ class ProductDetailPage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _confirmDelete(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.deleteRecord),
+        content: Text(l10n.deleteRecordConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    ).then((confirmed) async {
+      if (confirmed != true || !context.mounted) return;
+      final result =
+          await getIt<ProductRepository>().deleteProduct(id: product.id);
+      if (!context.mounted) return;
+      switch (result) {
+        case Success():
+          Navigator.of(context).pop();
+        case Failure():
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.comingSoon)),
+          );
+      }
+    });
   }
 
   static IconData _iconForType(ProductType type) {

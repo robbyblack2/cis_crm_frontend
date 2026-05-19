@@ -31,6 +31,7 @@ class _AutomationView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.automationTitle)),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'automation_fab',
         tooltip: AppLocalizations.of(context)!.createRule,
         onPressed: () => _showCreateRuleDialog(context),
         child: const Icon(Icons.add),
@@ -85,53 +86,195 @@ class _AutomationView extends StatelessWidget {
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
     final priorityController = TextEditingController(text: '0');
-    var selectedTrigger = 'stage_change';
+    var selectedTrigger = 'record.stage_changed';
+    var selectedActionType = 'create_task';
 
-    final triggerTypes = ['stage_change', 'new_record', 'field_update'];
+    // Condition fields
+    final condFieldController = TextEditingController();
+    final condValueController = TextEditingController();
+    var condOperator = 'eq';
+
+    // Action config fields
+    final actionTitleController = TextEditingController();
+    final actionValueController = TextEditingController();
+
+    final triggerTypes = [
+      'record.stage_changed',
+      'record.created',
+      'task.completed',
+    ];
+    final actionTypes = [
+      'create_task',
+      'send_email',
+      'move_stage',
+      'assign_user',
+      'add_tag',
+      'update_field',
+      'send_webhook',
+    ];
+    final condOps = ['eq', 'neq', 'gt', 'lt', 'contains', 'in'];
 
     showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => AlertDialog(
           title: Text(l10n.createRule),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(labelText: l10n.ruleName),
-                  autofocus: true,
-                  textCapitalization: TextCapitalization.sentences,
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: descriptionController,
-                  decoration: InputDecoration(labelText: l10n.ruleDescription),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: selectedTrigger,
-                  decoration: InputDecoration(labelText: l10n.ruleTriggerType),
-                  items: triggerTypes
-                      .map(
-                        (t) => DropdownMenuItem(value: t, child: Text(t)),
-                      )
-                      .toList(),
-                  onChanged: (v) {
-                    if (v != null) {
-                      setDialogState(() => selectedTrigger = v);
-                    }
-                  },
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: priorityController,
-                  decoration: InputDecoration(labelText: l10n.rulePriority),
-                  keyboardType: TextInputType.number,
-                ),
-              ],
+          content: SizedBox(
+            width: 400,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Basic info ──
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(labelText: l10n.ruleName),
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.sentences,
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: descriptionController,
+                    decoration:
+                        InputDecoration(labelText: l10n.ruleDescription),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: selectedTrigger,
+                    decoration:
+                        InputDecoration(labelText: l10n.ruleTriggerType),
+                    items: triggerTypes
+                        .map(
+                          (t) => DropdownMenuItem(value: t, child: Text(t)),
+                        )
+                        .toList(),
+                    onChanged: (v) {
+                      if (v != null) {
+                        setDialogState(() => selectedTrigger = v);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: priorityController,
+                    decoration:
+                        InputDecoration(labelText: l10n.rulePriority),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── Condition (optional) ──
+                  Text(
+                    'Condition (optional)',
+                    style: Theme.of(dialogContext).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: condFieldController,
+                          decoration: const InputDecoration(
+                            labelText: 'Field',
+                            hintText: 'e.g. stage_id',
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 80,
+                        child: DropdownButtonFormField<String>(
+                          value: condOperator,
+                          decoration: const InputDecoration(
+                            labelText: 'Op',
+                            isDense: true,
+                          ),
+                          items: condOps
+                              .map(
+                                (o) => DropdownMenuItem(
+                                  value: o,
+                                  child: Text(o),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) {
+                            if (v != null) {
+                              setDialogState(() => condOperator = v);
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: condValueController,
+                          decoration: const InputDecoration(
+                            labelText: 'Value',
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── Action ──
+                  Text(
+                    'Action',
+                    style: Theme.of(dialogContext).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: selectedActionType,
+                    decoration: const InputDecoration(labelText: 'Type'),
+                    items: actionTypes
+                        .map(
+                          (t) => DropdownMenuItem(value: t, child: Text(t)),
+                        )
+                        .toList(),
+                    onChanged: (v) {
+                      if (v != null) {
+                        setDialogState(() => selectedActionType = v);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: actionTitleController,
+                    decoration: InputDecoration(
+                      labelText: switch (selectedActionType) {
+                        'create_task' => 'Task title',
+                        'send_email' => 'Template ID',
+                        'move_stage' => 'Stage ID',
+                        'assign_user' => 'User ID or "round_robin"',
+                        'add_tag' => 'Tag name',
+                        'update_field' => 'Field key',
+                        'send_webhook' => 'URL',
+                        _ => 'Value',
+                      },
+                    ),
+                  ),
+                  if (selectedActionType == 'create_task' ||
+                      selectedActionType == 'update_field' ||
+                      selectedActionType == 'send_webhook') ...[
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: actionValueController,
+                      decoration: InputDecoration(
+                        labelText: switch (selectedActionType) {
+                          'create_task' => 'Priority (low/medium/high)',
+                          'update_field' => 'New value',
+                          'send_webhook' => 'Method (GET/POST)',
+                          _ => 'Extra',
+                        },
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
           actions: [
@@ -143,16 +286,66 @@ class _AutomationView extends StatelessWidget {
               onPressed: () {
                 final name = nameController.text.trim();
                 if (name.isEmpty) return;
+
+                // Build conditions
+                Map<String, dynamic>? triggerConditions;
+                if (condFieldController.text.trim().isNotEmpty) {
+                  triggerConditions = {
+                    'operator': 'AND',
+                    'conditions': [
+                      {
+                        'field': condFieldController.text.trim(),
+                        'op': condOperator,
+                        'value': condValueController.text.trim(),
+                      },
+                    ],
+                  };
+                }
+
+                // Build action
+                final actionConfig = <String, dynamic>{
+                  'type': selectedActionType,
+                };
+                final mainVal = actionTitleController.text.trim();
+                final extraVal = actionValueController.text.trim();
+
+                switch (selectedActionType) {
+                  case 'create_task':
+                    actionConfig['title'] = mainVal;
+                    if (extraVal.isNotEmpty) {
+                      actionConfig['priority'] = extraVal;
+                    }
+                  case 'send_email':
+                    actionConfig['template_id'] = mainVal;
+                  case 'move_stage':
+                    actionConfig['stage_id'] = mainVal;
+                  case 'assign_user':
+                    actionConfig['user_id'] = mainVal;
+                  case 'add_tag':
+                    actionConfig['tag'] = mainVal;
+                  case 'update_field':
+                    actionConfig['field_key'] = mainVal;
+                    actionConfig['value'] = extraVal;
+                  case 'send_webhook':
+                    actionConfig['url'] = mainVal;
+                    actionConfig['method'] =
+                        extraVal.isNotEmpty ? extraVal : 'POST';
+                }
+
                 final now = DateTime.now();
                 final rule = AutomationRule(
                   id: '',
                   name: name,
-                  description: descriptionController.text.trim().isNotEmpty
-                      ? descriptionController.text.trim()
-                      : null,
+                  description:
+                      descriptionController.text.trim().isNotEmpty
+                          ? descriptionController.text.trim()
+                          : null,
                   isActive: true,
                   triggerType: selectedTrigger,
-                  priority: int.tryParse(priorityController.text.trim()) ?? 0,
+                  triggerConditions: triggerConditions,
+                  actions: [actionConfig],
+                  priority:
+                      int.tryParse(priorityController.text.trim()) ?? 0,
                   createdBy: '',
                   createdAt: now,
                   updatedAt: now,

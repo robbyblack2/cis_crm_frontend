@@ -119,5 +119,41 @@ void main() {
         ProductsLoaded(products: [tProduct]),
       ],
     );
+
+    blocTest<ProductsBloc, ProductsState>(
+      'emits [Loading, Loaded] when ProductDeleteRequested succeeds',
+      setUp: () {
+        when(() => mockRepository.deleteProduct(id: '1'))
+            .thenAnswer((_) async => const Success(null));
+        when(() => mockRepository.getProducts())
+            .thenAnswer((_) async => const Success([]));
+      },
+      build: () => ProductsBloc(repository: mockRepository),
+      act: (bloc) => bloc.add(const ProductDeleteRequested(id: '1')),
+      wait: const Duration(milliseconds: 100),
+      expect: () => [
+        const ProductsLoading(),
+        const ProductsLoaded(products: []),
+      ],
+      verify: (_) {
+        verify(() => mockRepository.deleteProduct(id: '1')).called(1);
+      },
+    );
+
+    blocTest<ProductsBloc, ProductsState>(
+      'emits [Loading, Error] when ProductDeleteRequested fails',
+      setUp: () {
+        when(() => mockRepository.deleteProduct(id: '1')).thenAnswer(
+          (_) async => const Failure(ServerFailure('Delete failed')),
+        );
+      },
+      build: () => ProductsBloc(repository: mockRepository),
+      act: (bloc) =>
+          bloc.add(const ProductDeleteRequested(id: '1')),
+      expect: () => [
+        const ProductsLoading(),
+        const ProductsError(message: 'Delete failed'),
+      ],
+    );
   });
 }

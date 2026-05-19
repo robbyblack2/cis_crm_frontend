@@ -279,6 +279,7 @@ class _TasksViewState extends State<_TasksView> {
               },
             ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'tasks_fab',
         tooltip: AppLocalizations.of(context)!.addTask,
         onPressed: () => _showCreateTaskDialog(context),
         child: const Icon(Icons.add),

@@ -205,6 +205,7 @@ class _LoadedPipelineView extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'pipeline_fab',
         onPressed: () => _showCreateRecordDialog(context),
         icon: const Icon(Icons.add),
         label: Text(AppLocalizations.of(context)!.newRecord),

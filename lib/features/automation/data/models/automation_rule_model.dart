@@ -1,9 +1,5 @@
 import 'package:cis_crm/features/automation/domain/entities/automation_rule.dart';
-import 'package:json_annotation/json_annotation.dart';
 
-part 'automation_rule_model.g.dart';
-
-@JsonSerializable(fieldRename: FieldRename.snake)
 class AutomationRuleModel extends AutomationRule {
   const AutomationRuleModel({
     required super.id,
@@ -15,10 +11,58 @@ class AutomationRuleModel extends AutomationRule {
     required super.createdAt,
     required super.updatedAt,
     super.description,
+    super.triggerConditions,
+    super.actions,
   });
 
-  factory AutomationRuleModel.fromJson(Map<String, dynamic> json) =>
-      _$AutomationRuleModelFromJson(json);
+  factory AutomationRuleModel.fromJson(Map<String, dynamic> json) {
+    final rawActions = json['actions'] as List<dynamic>?;
+    return AutomationRuleModel(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String?,
+      isActive: json['is_active'] as bool? ?? true,
+      triggerType: json['trigger_type'] as String,
+      triggerConditions:
+          json['trigger_conditions'] as Map<String, dynamic>?,
+      actions: rawActions
+              ?.map((a) => Map<String, dynamic>.from(a as Map))
+              .toList() ??
+          const [],
+      priority: json['priority'] as int? ?? 0,
+      createdBy: json['created_by'] as String? ?? '',
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+    );
+  }
 
-  Map<String, dynamic> toJson() => _$AutomationRuleModelToJson(this);
+  factory AutomationRuleModel.fromEntity(AutomationRule rule) =>
+      AutomationRuleModel(
+        id: rule.id,
+        name: rule.name,
+        description: rule.description,
+        isActive: rule.isActive,
+        triggerType: rule.triggerType,
+        triggerConditions: rule.triggerConditions,
+        actions: rule.actions,
+        priority: rule.priority,
+        createdBy: rule.createdBy,
+        createdAt: rule.createdAt,
+        updatedAt: rule.updatedAt,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'description': description,
+        'is_active': isActive,
+        'trigger_type': triggerType,
+        if (triggerConditions != null)
+          'trigger_conditions': triggerConditions,
+        'actions': actions,
+        'priority': priority,
+        'created_by': createdBy,
+        'created_at': createdAt.toIso8601String(),
+        'updated_at': updatedAt.toIso8601String(),
+      };
 }

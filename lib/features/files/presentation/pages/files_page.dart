@@ -29,6 +29,7 @@ class _FilesView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.filesTitle)),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'files_fab',
         tooltip: AppLocalizations.of(context)!.uploadFile,
         onPressed: () => _pickAndUploadFile(context),
         child: const Icon(Icons.upload_file),

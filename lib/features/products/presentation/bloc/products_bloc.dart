@@ -21,6 +21,10 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
       _onCreateRequested,
       transformer: droppable(),
     );
+    on<ProductDeleteRequested>(
+      _onDeleteRequested,
+      transformer: droppable(),
+    );
   }
 
   final ProductRepository _repository;
@@ -51,6 +55,20 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
       defaultPrice: event.defaultPrice,
       tags: event.tags,
     );
+    switch (result) {
+      case Success():
+        add(const ProductsLoadRequested());
+      case Failure(error: final failure):
+        emit(ProductsError(message: failure.message));
+    }
+  }
+
+  Future<void> _onDeleteRequested(
+    ProductDeleteRequested event,
+    Emitter<ProductsState> emit,
+  ) async {
+    emit(const ProductsLoading());
+    final result = await _repository.deleteProduct(id: event.id);
     switch (result) {
       case Success():
         add(const ProductsLoadRequested());

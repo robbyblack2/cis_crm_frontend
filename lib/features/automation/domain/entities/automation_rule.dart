@@ -13,6 +13,8 @@ class AutomationRule extends Equatable {
     required this.createdAt,
     required this.updatedAt,
     this.description,
+    this.triggerConditions,
+    this.actions = const [],
   });
 
   final String id;
@@ -20,6 +22,8 @@ class AutomationRule extends Equatable {
   final String? description;
   final bool isActive;
   final String triggerType;
+  final Map<String, dynamic>? triggerConditions;
+  final List<Map<String, dynamic>> actions;
   final int priority;
   final String createdBy;
   final DateTime createdAt;
@@ -32,6 +36,8 @@ class AutomationRule extends Equatable {
         description,
         isActive,
         triggerType,
+        triggerConditions,
+        actions,
         priority,
         createdBy,
         createdAt,

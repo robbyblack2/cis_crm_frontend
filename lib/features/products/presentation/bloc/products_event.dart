@@ -30,3 +30,12 @@ final class ProductCreateRequested extends ProductsEvent {
   @override
   List<Object?> get props => [name, type, currency, defaultPrice, tags];
 }
+
+final class ProductDeleteRequested extends ProductsEvent {
+  const ProductDeleteRequested({required this.id});
+
+  final String id;
+
+  @override
+  List<Object?> get props => [id];
+}

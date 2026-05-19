@@ -47,7 +47,7 @@ class AutomationRepositoryImpl implements AutomationRepository {
     AutomationRule rule,
   ) async {
     try {
-      final model = rule as AutomationRuleModel;
+      final model = AutomationRuleModel.fromEntity(rule);
       final created = await _remoteDataSource.createRule(model.toJson());
       return Success(created);
     } on ServerException catch (e) {

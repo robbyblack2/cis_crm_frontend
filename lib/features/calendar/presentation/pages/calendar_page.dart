@@ -272,6 +272,7 @@ class _CalendarViewState extends State<_CalendarView> {
               },
             ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'calendar_fab',
         tooltip: AppLocalizations.of(context)!.createEventTooltip,
         onPressed: () => _showCreateEventDialog(context),
         child: const Icon(Icons.add),

@@ -59,6 +59,7 @@ class _CallLogView extends StatelessWidget {
               itemBuilder: (context, index) => CallLogTile(log: logs[index]),
             ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'call_log_fab',
         tooltip: AppLocalizations.of(context)!.logCall,
         onPressed: () => _showLogCallDialog(context),
         child: const Icon(Icons.add_call),
