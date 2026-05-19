@@ -19,7 +19,9 @@ class GoogleRepositoryImpl implements GoogleRepository {
       final url = await _remoteDataSource.getAuthUrl();
       return Success(url);
     } on DioException catch (e) {
-      return Failure(_mapException(e));
+      return Failure(_mapDioException(e));
+    } on AppException catch (e) {
+      return Failure(ServerFailure(e.message));
     }
   }
 
@@ -29,7 +31,9 @@ class GoogleRepositoryImpl implements GoogleRepository {
       final model = await _remoteDataSource.getStatus();
       return Success(model);
     } on DioException catch (e) {
-      return Failure(_mapException(e));
+      return Failure(_mapDioException(e));
+    } on AppException catch (e) {
+      return Failure(ServerFailure(e.message));
     }
   }
 
@@ -39,11 +43,13 @@ class GoogleRepositoryImpl implements GoogleRepository {
       await _remoteDataSource.disconnect();
       return const Success(null);
     } on DioException catch (e) {
-      return Failure(_mapException(e));
+      return Failure(_mapDioException(e));
+    } on AppException catch (e) {
+      return Failure(ServerFailure(e.message));
     }
   }
 
-  AppFailure _mapException(DioException e) {
+  AppFailure _mapDioException(DioException e) {
     final error = e.error;
     if (error is NetworkException) {
       return const NetworkFailure();
@@ -54,6 +60,6 @@ class GoogleRepositoryImpl implements GoogleRepository {
     if (error is ServerException) {
       return ServerFailure(error.message, statusCode: error.statusCode);
     }
-    return const UnknownFailure();
+    return UnknownFailure(e.message ?? 'Unknown error');
   }
 }

@@ -7,6 +7,7 @@ import 'package:cis_crm/features/activity/domain/entities/task_priority.dart';
 import 'package:cis_crm/features/activity/domain/entities/task_status.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/tasks_bloc.dart';
 import 'package:cis_crm/features/activity/presentation/widgets/task_tile.dart';
+import 'package:cis_crm/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -109,14 +110,19 @@ class _TasksViewState extends State<_TasksView> {
                 final title = titleController.text.trim();
                 if (title.isEmpty) return;
                 final now = DateTime.now();
+                final authState = getIt<AuthBloc>().state;
+                final userId = authState is AuthAuthenticated
+                    ? authState.user.id
+                    : '';
                 final task = CrmTask(
                   id: '',
                   title: title,
                   status: TaskStatus.todo,
                   priority: selectedPriority,
-                  parentType: 'general',
-                  parentId: 'none',
-                  createdBy: '',
+                  parentType: 'contact',
+                  parentId:
+                      '00000000-0000-0000-0000-000000000000',
+                  createdBy: userId,
                   createdAt: now,
                   updatedAt: now,
                 );
