@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/core/forms/inputs/email_input.dart';
 import 'package:cis_crm/core/forms/inputs/password_input.dart';
@@ -47,13 +49,52 @@ class LoginFormCubit extends Cubit<LoginFormState> {
     emit(state.copyWith(status: FormzSubmissionStatus.inProgress));
 
     try {
-      getIt<AuthBloc>().add(
+      final authBloc = getIt<AuthBloc>();
+
+      // Listen for the auth result
+      final completer = Completer<AuthState>();
+      late StreamSubscription<AuthState> sub;
+      sub = authBloc.stream.listen((authState) {
+        if (authState is AuthAuthenticated ||
+            authState is AuthError ||
+            authState is AuthUnauthenticated) {
+          if (!completer.isCompleted) completer.complete(authState);
+          sub.cancel();
+        }
+      });
+
+      // Fire the sign-in event
+      authBloc.add(
         AuthSignInRequested(
           email: state.email.value,
           password: state.password.value,
         ),
       );
-      emit(state.copyWith(status: FormzSubmissionStatus.success));
+
+      // Wait for result (with timeout)
+      final result = await completer.future.timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => const AuthUnauthenticated(),
+      );
+
+      switch (result) {
+        case AuthAuthenticated():
+          emit(state.copyWith(status: FormzSubmissionStatus.success));
+        case AuthError(:final failure):
+          emit(
+            state.copyWith(
+              status: FormzSubmissionStatus.failure,
+              errorMessage: () => failure.message,
+            ),
+          );
+        default:
+          emit(
+            state.copyWith(
+              status: FormzSubmissionStatus.failure,
+              errorMessage: () => 'Sign in failed. Check credentials.',
+            ),
+          );
+      }
     } catch (e) {
       emit(
         state.copyWith(

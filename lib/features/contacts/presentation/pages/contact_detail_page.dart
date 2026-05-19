@@ -202,49 +202,50 @@ class ContactDetailPage extends StatelessWidget {
     });
   }
 
-  void _confirmDelete(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    showDialog<bool>(
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.contactDeleteTitle),
+        title: const Text('Delete Contact?'),
         content: Text(
-          l10n.contactDeleteConfirmName(_fullName(contact)),
+          'Are you sure you want to delete '
+          '${_fullName(contact)}? This cannot be undone.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.cancel),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(true),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: Text(l10n.delete),
+            child: const Text('Delete'),
           ),
         ],
       ),
-    ).then((confirmed) async {
-      if (confirmed != true || !context.mounted) return;
-      final result =
-          await getIt<ContactRepository>().deleteContact(contact.id);
-      if (!context.mounted) return;
-      switch (result) {
-        case Success():
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.contactDeleted)),
-          );
-          Navigator.of(context).pop();
-        case Failure(:final error):
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.contactDeleteFailed(error.message)),
-            ),
-          );
-      }
-    });
+    );
+
+    if (confirmed != true) return;
+    if (!context.mounted) return;
+
+    final result =
+        await getIt<ContactRepository>().deleteContact(contact.id);
+
+    if (!context.mounted) return;
+
+    switch (result) {
+      case Success():
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Contact deleted')),
+        );
+        Navigator.of(context).pop();
+      case Failure(:final error):
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Delete failed: ${error.message}')),
+        );
+    }
   }
 }
 

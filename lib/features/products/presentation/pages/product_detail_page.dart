@@ -126,9 +126,9 @@ class ProductDetailPage extends StatelessWidget {
       switch (result) {
         case Success():
           Navigator.of(context).pop();
-        case Failure():
+        case Failure(:final error):
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.comingSoon)),
+            SnackBar(content: Text('Delete failed: ${error.message}')),
           );
       }
     });

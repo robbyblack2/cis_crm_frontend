@@ -67,6 +67,8 @@ class ContactRepositoryImpl implements ContactRepository {
       return const Success(null);
     } on AppException catch (e) {
       return Failure(_mapExceptionToFailure(e));
+    } catch (e) {
+      return Failure(UnknownFailure(e.toString()));
     }
   }
 
