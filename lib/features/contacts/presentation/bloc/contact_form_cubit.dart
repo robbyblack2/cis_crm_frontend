@@ -23,6 +23,7 @@ class ContactFormCubit extends Cubit<ContactFormState> {
                   phone: existingContact.phone ?? '',
                   jobTitle: existingContact.jobTitle ?? '',
                   source: existingContact.source ?? '',
+                  companyId: existingContact.companyId,
                 )
               : const ContactFormState(),
         );
@@ -67,6 +68,13 @@ class ContactFormCubit extends Cubit<ContactFormState> {
     emit(state.copyWith(source: value));
   }
 
+  void companyChanged(String? id, String? name) {
+    emit(state.copyWith(
+      companyId: () => id,
+      companyName: () => name,
+    ));
+  }
+
   Future<void> submitted() async {
     final firstName = NameInput.dirty(state.firstName.value);
     final lastName = NameInput.dirty(state.lastName.value);
@@ -93,7 +101,7 @@ class ContactFormCubit extends Cubit<ContactFormState> {
         status: _existingContact?.status ?? 'lead',
         tags: _existingContact?.tags ?? const [],
         ownerId: _existingContact?.ownerId,
-        companyId: _existingContact?.companyId,
+        companyId: state.companyId ?? _existingContact?.companyId,
         version: _existingContact?.version ?? 1,
         createdAt: _existingContact?.createdAt ?? now,
         updatedAt: now,

@@ -8,6 +8,8 @@ class ContactFormState extends Equatable {
     this.phone = '',
     this.jobTitle = '',
     this.source = '',
+    this.companyId,
+    this.companyName,
     this.submissionStatus = FormzSubmissionStatus.initial,
     this.errorMessage,
   });
@@ -18,6 +20,8 @@ class ContactFormState extends Equatable {
   final String phone;
   final String jobTitle;
   final String source;
+  final String? companyId;
+  final String? companyName;
   final FormzSubmissionStatus submissionStatus;
   final String? errorMessage;
 
@@ -30,6 +34,8 @@ class ContactFormState extends Equatable {
     String? phone,
     String? jobTitle,
     String? source,
+    String? Function()? companyId,
+    String? Function()? companyName,
     FormzSubmissionStatus? submissionStatus,
     String? Function()? errorMessage,
   }) {
@@ -40,6 +46,8 @@ class ContactFormState extends Equatable {
       phone: phone ?? this.phone,
       jobTitle: jobTitle ?? this.jobTitle,
       source: source ?? this.source,
+      companyId: companyId != null ? companyId() : this.companyId,
+      companyName: companyName != null ? companyName() : this.companyName,
       submissionStatus: submissionStatus ?? this.submissionStatus,
       errorMessage: errorMessage != null ? errorMessage() : this.errorMessage,
     );
@@ -53,6 +61,8 @@ class ContactFormState extends Equatable {
         phone,
         jobTitle,
         source,
+        companyId,
+        companyName,
         submissionStatus,
         errorMessage,
       ];

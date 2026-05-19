@@ -214,105 +214,240 @@ class _ContactsView extends StatelessWidget {
   }
 
   void _addContact(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    showDialog<bool>(
+    showModalBottomSheet<bool>(
       context: context,
-      builder: (dialogContext) => BlocProvider(
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => BlocProvider(
         create: (_) => ContactFormCubit(
           contactRepository: getIt<ContactRepository>(),
         ),
-        child: BlocConsumer<ContactFormCubit, ContactFormState>(
-          listener: (ctx, state) {
-            if (state.submissionStatus == FormzSubmissionStatus.success) {
-              Navigator.of(ctx).pop(true);
-            }
-          },
-          builder: (ctx, state) {
-            final cubit = ctx.read<ContactFormCubit>();
-            return AlertDialog(
-              title: Text(l10n.addContact),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      decoration: InputDecoration(
-                        labelText: l10n.contactFirstName,
-                        errorText: state.firstName.displayError,
-                      ),
-                      onChanged: cubit.firstNameChanged,
-                      textCapitalization: TextCapitalization.words,
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      decoration: InputDecoration(
-                        labelText: l10n.contactLastName,
-                        errorText: state.lastName.displayError,
-                      ),
-                      onChanged: cubit.lastNameChanged,
-                      textCapitalization: TextCapitalization.words,
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      decoration: InputDecoration(labelText: l10n.contactEmail),
-                      onChanged: cubit.emailChanged,
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      decoration: InputDecoration(labelText: l10n.contactPhone),
-                      onChanged: cubit.phoneChanged,
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      decoration: InputDecoration(
-                        labelText: l10n.contactJobTitle,
-                      ),
-                      onChanged: cubit.jobTitleChanged,
-                      textCapitalization: TextCapitalization.words,
-                    ),
-                    if (state.errorMessage != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        state.errorMessage!,
-                        style: TextStyle(
-                          color: Theme.of(ctx).colorScheme.error,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: Text(l10n.cancel),
-                ),
-                FilledButton(
-                  onPressed: state.submissionStatus ==
-                          FormzSubmissionStatus.inProgress
-                      ? null
-                      : cubit.submitted,
-                  child: state.submissionStatus ==
-                          FormzSubmissionStatus.inProgress
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(l10n.create),
-                ),
-              ],
-            );
-          },
-        ),
+        child: const _ContactFormSheet(),
       ),
     ).then((created) {
       if ((created ?? false) && context.mounted) {
         context.read<ContactsBloc>().add(const ContactsLoadRequested());
       }
     });
+  }
+}
+
+class _ContactFormSheet extends StatefulWidget {
+  const _ContactFormSheet();
+
+  @override
+  State<_ContactFormSheet> createState() => _ContactFormSheetState();
+}
+
+class _ContactFormSheetState extends State<_ContactFormSheet> {
+  final _companySearchCtrl = TextEditingController();
+  List<Map<String, dynamic>> _companyResults = [];
+
+  @override
+  void dispose() {
+    _companySearchCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _searchCompanies(String q) async {
+    if (q.length < 2) {
+      setState(() => _companyResults = []);
+      return;
+    }
+    try {
+      final companies =
+          await getIt<CompanyRemoteDataSource>().getCompanies();
+      setState(() {
+        _companyResults = companies
+            .where((c) => c.name.toLowerCase().contains(q.toLowerCase()))
+            .map((c) => {'id': c.id, 'name': c.name})
+            .toList();
+      });
+    } catch (_) {
+      setState(() => _companyResults = []);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<ContactFormCubit, ContactFormState>(
+      listener: (ctx, state) {
+        if (state.submissionStatus == FormzSubmissionStatus.success) {
+          Navigator.of(ctx).pop(true);
+        }
+      },
+      builder: (ctx, state) {
+        final cubit = ctx.read<ContactFormCubit>();
+        final theme = Theme.of(ctx);
+
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.85,
+            maxChildSize: 0.95,
+            minChildSize: 0.4,
+            expand: false,
+            builder: (context, scrollController) =>
+                SingleChildScrollView(
+              controller: scrollController,
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Add Contact',
+                          style: theme.textTheme.headlineSmall,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 24),
+                  TextField(
+                    decoration: InputDecoration(
+                      labelText: 'First Name',
+                      errorText: state.firstName.displayError,
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: cubit.firstNameChanged,
+                    textCapitalization: TextCapitalization.words,
+                    autofocus: true,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    decoration: InputDecoration(
+                      labelText: 'Last Name',
+                      errorText: state.lastName.displayError,
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: cubit.lastNameChanged,
+                    textCapitalization: TextCapitalization.words,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: cubit.emailChanged,
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'Phone',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: cubit.phoneChanged,
+                    keyboardType: TextInputType.phone,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'Job Title',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: cubit.jobTitleChanged,
+                    textCapitalization: TextCapitalization.words,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── Company search ──
+                  Text(
+                    'Company',
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  if (state.companyId != null)
+                    Card(
+                      color: theme.colorScheme.primaryContainer,
+                      child: ListTile(
+                        leading: const Icon(Icons.business),
+                        title: Text(state.companyName ?? state.companyId!),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () =>
+                              cubit.companyChanged(null, null),
+                        ),
+                      ),
+                    )
+                  else ...[
+                    TextField(
+                      controller: _companySearchCtrl,
+                      decoration: const InputDecoration(
+                        hintText: 'Search companies...',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      onChanged: _searchCompanies,
+                    ),
+                    if (_companyResults.isNotEmpty)
+                      Card(
+                        child: Column(
+                          children: _companyResults.take(5).map(
+                            (c) => ListTile(
+                              dense: true,
+                              leading: const Icon(Icons.business),
+                              title: Text(c['name'] as String? ?? ''),
+                              onTap: () {
+                                cubit.companyChanged(
+                                  c['id'] as String?,
+                                  c['name'] as String?,
+                                );
+                                _companySearchCtrl.clear();
+                                setState(() => _companyResults = []);
+                              },
+                            ),
+                          ).toList(),
+                        ),
+                      ),
+                  ],
+
+                  if (state.errorMessage != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      state.errorMessage!,
+                      style: TextStyle(color: theme.colorScheme.error),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: state.submissionStatus ==
+                              FormzSubmissionStatus.inProgress
+                          ? null
+                          : cubit.submitted,
+                      icon: state.submissionStatus ==
+                              FormzSubmissionStatus.inProgress
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.add),
+                      label: const Text('Create Contact'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 
