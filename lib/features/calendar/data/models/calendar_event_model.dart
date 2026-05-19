@@ -52,8 +52,8 @@ class CalendarEventModel extends CalendarEvent {
 
   Map<String, dynamic> toJson() => {
         'title': title,
-        'start_time': start.toIso8601String(),
-        'end_time': end.toIso8601String(),
+        'start_time': start.toUtc().toIso8601String(),
+        'end_time': end.toUtc().toIso8601String(),
         'attendees': <Map<String, dynamic>>[],
         if (location != null && location!.isNotEmpty) 'location': location,
         if (meetingLink != null && meetingLink!.isNotEmpty)
