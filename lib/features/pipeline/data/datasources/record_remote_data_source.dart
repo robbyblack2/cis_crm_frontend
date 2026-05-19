@@ -37,6 +37,14 @@ abstract class RecordRemoteDataSource {
   });
 
   Future<List<StageTransitionModel>> getStageHistory(String recordId);
+
+  Future<List<Map<String, dynamic>>> getNotes(String recordId);
+  Future<Map<String, dynamic>> addNote(String recordId, String body);
+  Future<List<Map<String, dynamic>>> getLinkedContacts(String recordId);
+  Future<void> linkContact(String recordId, String contactId, String role);
+  Future<void> unlinkContact(String recordId, String contactId);
+  Future<RecordModel> claimRecord(String recordId);
+  Future<List<Map<String, dynamic>>> getEmails(String recordId);
 }
 
 class RecordRemoteDataSourceImpl implements RecordRemoteDataSource {
@@ -197,6 +205,126 @@ class RecordRemoteDataSourceImpl implements RecordRemoteDataSource {
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to fetch stage history',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getNotes(String recordId) async {
+    try {
+      final response = await _dio
+          .get<Map<String, dynamic>>('/api/records/$recordId/notes');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to fetch notes',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> addNote(
+    String recordId,
+    String body,
+  ) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/records/$recordId/internal-note',
+        data: {'body': body},
+      );
+      return response.data!['data'] as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to add note',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getLinkedContacts(
+    String recordId,
+  ) async {
+    try {
+      final response = await _dio
+          .get<Map<String, dynamic>>('/api/records/$recordId/contacts');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to fetch linked contacts',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<void> linkContact(
+    String recordId,
+    String contactId,
+    String role,
+  ) async {
+    try {
+      await _dio.post<void>(
+        '/api/records/$recordId/contacts',
+        data: {'contact_id': contactId, 'role': role},
+      );
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to link contact',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<void> unlinkContact(String recordId, String contactId) async {
+    try {
+      await _dio.delete<void>(
+        '/api/records/$recordId/contacts',
+        data: {'contact_id': contactId},
+      );
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to unlink contact',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<RecordModel> claimRecord(String recordId) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/records/$recordId/claim',
+      );
+      return RecordModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to claim record',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getEmails(String recordId) async {
+    try {
+      final response = await _dio
+          .get<Map<String, dynamic>>('/api/records/$recordId/emails');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to fetch emails',
         statusCode: e.response?.statusCode,
       );
     }

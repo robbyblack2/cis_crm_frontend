@@ -1,5 +1,6 @@
 import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/features/activity/domain/repositories/timeline_repository.dart';
+import 'package:cis_crm/features/pipeline/data/datasources/record_remote_data_source.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/pipeline.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/record.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/stage.dart';
@@ -86,6 +87,30 @@ class _RecordDetailScaffold extends StatelessWidget {
                 ),
               ),
             ),
+          IconButton(
+            icon: const Icon(Icons.person_add_alt_1),
+            tooltip: 'Claim',
+            onPressed: () async {
+              try {
+                await GetIt.instance<RecordRemoteDataSource>()
+                    .claimRecord(record.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Record claimed')),
+                  );
+                  context
+                      .read<RecordBloc>()
+                      .add(const RecordLoadRequested());
+                }
+              } catch (_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Failed to claim')),
+                  );
+                }
+              }
+            },
+          ),
           PopupMenuButton<String>(
             tooltip: AppLocalizations.of(context)!.moreActions,
             onSelected: (action) => _handleMenuAction(context, action),
@@ -227,6 +252,14 @@ class _RecordDetailScaffold extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+
+            // ── Notes ──
+            _NotesSection(recordId: record.id),
+            const SizedBox(height: 16),
+
+            // ── Linked Contacts ──
+            _LinkedContactsSection(recordId: record.id),
             const SizedBox(height: 16),
 
             // ── Timeline ──
@@ -419,6 +452,333 @@ class _RecordDetailScaffold extends StatelessWidget {
             child: const Text('Save'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _NotesSection extends StatefulWidget {
+  const _NotesSection({required this.recordId});
+
+  final String recordId;
+
+  @override
+  State<_NotesSection> createState() => _NotesSectionState();
+}
+
+class _NotesSectionState extends State<_NotesSection> {
+  List<Map<String, dynamic>>? _notes;
+  bool _loading = true;
+  final _noteController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotes();
+  }
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadNotes() async {
+    try {
+      final notes = await GetIt.instance<RecordRemoteDataSource>()
+          .getNotes(widget.recordId);
+      if (mounted) setState(() { _notes = notes; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() { _notes = []; _loading = false; });
+    }
+  }
+
+  Future<void> _addNote() async {
+    final body = _noteController.text.trim();
+    if (body.isEmpty) return;
+    _noteController.clear();
+    try {
+      await GetIt.instance<RecordRemoteDataSource>()
+          .addNote(widget.recordId, body);
+      await _loadNotes();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to add note')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Notes',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const Divider(height: 24),
+            // Add note field
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _noteController,
+                    decoration: const InputDecoration(
+                      hintText: 'Add a note...',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
+                    minLines: 1,
+                    textCapitalization: TextCapitalization.sentences,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  onPressed: _addNote,
+                  icon: const Icon(Icons.send),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_loading)
+              const Center(child: CircularProgressIndicator())
+            else if (_notes == null || _notes!.isEmpty)
+              Text(
+                'No notes yet',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              ...(_notes!).map(
+                (note) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Card(
+                    color: theme.colorScheme.surfaceContainerLow,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            note['body'] as String? ?? '',
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            note['created_at'] as String? ?? '',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LinkedContactsSection extends StatefulWidget {
+  const _LinkedContactsSection({required this.recordId});
+
+  final String recordId;
+
+  @override
+  State<_LinkedContactsSection> createState() =>
+      _LinkedContactsSectionState();
+}
+
+class _LinkedContactsSectionState extends State<_LinkedContactsSection> {
+  List<Map<String, dynamic>>? _contacts;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadContacts();
+  }
+
+  Future<void> _loadContacts() async {
+    try {
+      final contacts = await GetIt.instance<RecordRemoteDataSource>()
+          .getLinkedContacts(widget.recordId);
+      if (mounted) {
+        setState(() { _contacts = contacts; _loading = false; });
+      }
+    } catch (_) {
+      if (mounted) setState(() { _contacts = []; _loading = false; });
+    }
+  }
+
+  void _showLinkDialog() {
+    final contactIdCtrl = TextEditingController();
+    var role = 'champion';
+    final roles = ['champion', 'decision_maker', 'budget_holder', 'user'];
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Link Contact'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: contactIdCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Contact ID',
+                ),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: role,
+                decoration: const InputDecoration(labelText: 'Role'),
+                items: roles
+                    .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) setDialogState(() => role = v);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final id = contactIdCtrl.text.trim();
+                if (id.isEmpty) return;
+                Navigator.pop(ctx);
+                try {
+                  await GetIt.instance<RecordRemoteDataSource>()
+                      .linkContact(widget.recordId, id, role);
+                  await _loadContacts();
+                } catch (_) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Failed to link contact'),
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Link'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Linked Contacts',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.person_add_outlined),
+                  tooltip: 'Link contact',
+                  onPressed: _showLinkDialog,
+                ),
+              ],
+            ),
+            const Divider(height: 16),
+            if (_loading)
+              const Center(child: CircularProgressIndicator())
+            else if (_contacts == null || _contacts!.isEmpty)
+              Text(
+                'No linked contacts',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              ...(_contacts!).map(
+                (c) {
+                  final contact =
+                      c['contact'] as Map<String, dynamic>? ?? c;
+                  final data =
+                      contact['data'] as Map<String, dynamic>? ?? {};
+                  final name =
+                      '${data['first_name'] ?? ''} ${data['last_name'] ?? ''}'
+                          .trim();
+                  final role = c['role'] as String? ?? '';
+
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      child: Text(
+                        name.isNotEmpty ? name[0].toUpperCase() : '?',
+                      ),
+                    ),
+                    title: Text(name.isNotEmpty ? name : 'Contact'),
+                    subtitle: Text(role),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.link_off),
+                      tooltip: 'Unlink',
+                      onPressed: () async {
+                        final contactId =
+                            contact['id'] as String? ?? '';
+                        if (contactId.isEmpty) return;
+                        try {
+                          await GetIt.instance<RecordRemoteDataSource>()
+                              .unlinkContact(
+                            widget.recordId,
+                            contactId,
+                          );
+                          await _loadContacts();
+                        } catch (_) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Failed to unlink'),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
       ),
     );
   }
