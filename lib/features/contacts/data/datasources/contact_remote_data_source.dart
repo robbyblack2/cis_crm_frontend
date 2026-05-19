@@ -109,6 +109,10 @@ class ContactRemoteDataSourceImpl implements ContactRemoteDataSource {
   }
 
   AppException _handleDioException(DioException e) {
+    // ErrorInterceptor wraps errors as AppException in e.error
+    final wrapped = e.error;
+    if (wrapped is AppException) return wrapped;
+
     if (e.type == DioExceptionType.connectionError ||
         e.type == DioExceptionType.connectionTimeout) {
       return const NetworkException();

@@ -216,6 +216,9 @@ class _LoadedPipelineView extends StatelessWidget {
 
   void _showCreateRecordDialog(BuildContext context) {
     final titleController = TextEditingController();
+    final contactIdController = TextEditingController();
+    final companyIdController = TextEditingController();
+    final tagsController = TextEditingController();
     final recordBloc = context.read<RecordBloc>();
 
     final stages = (state.kanbanStages ?? <Stage>[]).toList()
@@ -233,39 +236,68 @@ class _LoadedPipelineView extends StatelessWidget {
             final l10n = AppLocalizations.of(context)!;
             return AlertDialog(
               title: Text(l10n.newRecord),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: titleController,
-                    decoration: InputDecoration(
-                      labelText: l10n.title,
-                      hintText: l10n.enterRecordTitle,
-                    ),
-                    autofocus: true,
-                    textCapitalization: TextCapitalization.sentences,
+              content: SizedBox(
+                width: 400,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: titleController,
+                        decoration: InputDecoration(
+                          labelText: l10n.title,
+                          hintText: l10n.enterRecordTitle,
+                        ),
+                        autofocus: true,
+                        textCapitalization: TextCapitalization.sentences,
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedStageId,
+                        decoration: InputDecoration(
+                          labelText: l10n.stage,
+                        ),
+                        items: stages
+                            .map(
+                              (s) => DropdownMenuItem(
+                                value: s.id,
+                                child: Text(s.name),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() => selectedStageId = value);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: contactIdController,
+                        decoration: InputDecoration(
+                          labelText: l10n.contact,
+                          hintText: 'Contact ID (optional)',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: companyIdController,
+                        decoration: InputDecoration(
+                          labelText: l10n.contactCompany,
+                          hintText: 'Company ID (optional)',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: tagsController,
+                        decoration: const InputDecoration(
+                          labelText: 'Tags',
+                          hintText: 'Comma-separated (optional)',
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedStageId,
-                    decoration: InputDecoration(
-                      labelText: l10n.stage,
-                    ),
-                    items: stages
-                        .map(
-                          (s) => DropdownMenuItem(
-                            value: s.id,
-                            child: Text(s.name),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => selectedStageId = value);
-                      }
-                    },
-                  ),
-                ],
+                ),
               ),
               actions: [
                 TextButton(
@@ -276,12 +308,28 @@ class _LoadedPipelineView extends StatelessWidget {
                   onPressed: () {
                     final title = titleController.text.trim();
                     if (title.isEmpty) return;
+                    final contactId =
+                        contactIdController.text.trim().isNotEmpty
+                            ? contactIdController.text.trim()
+                            : null;
+                    final companyId =
+                        companyIdController.text.trim().isNotEmpty
+                            ? companyIdController.text.trim()
+                            : null;
+                    final tags = tagsController.text
+                        .split(',')
+                        .map((t) => t.trim())
+                        .where((t) => t.isNotEmpty)
+                        .toList();
                     recordBloc.add(
                       RecordCreateRequested(
                         pipelineId: state.kanbanPipeline?.id ?? '',
                         stageId: selectedStageId,
                         title: title,
                         source: RecordSource.manual,
+                        contactId: contactId,
+                        companyId: companyId,
+                        tags: tags,
                       ),
                     );
                     Navigator.of(dialogContext).pop();

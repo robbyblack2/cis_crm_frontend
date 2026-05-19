@@ -13,6 +13,10 @@ class MockRecordRepository extends Mock implements RecordRepository {}
 void main() {
   late MockRecordRepository mockRepository;
 
+  setUpAll(() {
+    registerFallbackValue(RecordSource.manual);
+  });
+
   setUp(() {
     mockRepository = MockRecordRepository();
   });
@@ -162,10 +166,13 @@ void main() {
         setUp: () {
           when(
             () => mockRepository.createRecord(
-              pipelineId: 'p1',
-              stageId: 's1',
-              title: 'New Deal',
-              source: RecordSource.manual,
+              pipelineId: any(named: 'pipelineId'),
+              stageId: any(named: 'stageId'),
+              title: any(named: 'title'),
+              source: any(named: 'source'),
+              contactId: any(named: 'contactId'),
+              companyId: any(named: 'companyId'),
+              tags: any(named: 'tags'),
             ),
           ).thenAnswer((_) async => Success(tRecord));
           when(() => mockRepository.getRecords())
@@ -195,10 +202,13 @@ void main() {
         setUp: () {
           when(
             () => mockRepository.createRecord(
-              pipelineId: 'p1',
-              stageId: 's1',
-              title: 'New Deal',
-              source: RecordSource.manual,
+              pipelineId: any(named: 'pipelineId'),
+              stageId: any(named: 'stageId'),
+              title: any(named: 'title'),
+              source: any(named: 'source'),
+              contactId: any(named: 'contactId'),
+              companyId: any(named: 'companyId'),
+              tags: any(named: 'tags'),
             ),
           ).thenAnswer(
             (_) async => const Failure(ServerFailure('Create failed')),

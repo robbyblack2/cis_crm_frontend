@@ -17,6 +17,9 @@ abstract class RecordRepository {
     required String stageId,
     required String title,
     required RecordSource source,
+    String? contactId,
+    String? companyId,
+    List<String> tags,
   });
 
   Future<Result<PipelineRecord, AppFailure>> updateRecord({

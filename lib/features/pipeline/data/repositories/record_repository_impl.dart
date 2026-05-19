@@ -58,6 +58,9 @@ class RecordRepositoryImpl implements RecordRepository {
     required String stageId,
     required String title,
     required RecordSource source,
+    String? contactId,
+    String? companyId,
+    List<String> tags = const [],
   }) async {
     try {
       final record = await _remoteDataSource.createRecord(
@@ -65,6 +68,9 @@ class RecordRepositoryImpl implements RecordRepository {
         stageId: stageId,
         title: title,
         source: source,
+        contactId: contactId,
+        companyId: companyId,
+        tags: tags,
       );
       return Success(record);
     } on NetworkException {

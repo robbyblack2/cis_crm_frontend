@@ -16,6 +16,10 @@ void main() {
   late MockRecordRemoteDataSource mockDataSource;
   late RecordRepositoryImpl repository;
 
+  setUpAll(() {
+    registerFallbackValue(RecordSource.manual);
+  });
+
   setUp(() {
     mockDataSource = MockRecordRemoteDataSource();
     repository = RecordRepositoryImpl(remoteDataSource: mockDataSource);
@@ -126,10 +130,13 @@ void main() {
     test('returns Success when data source succeeds', () async {
       when(
         () => mockDataSource.createRecord(
-          pipelineId: 'p1',
-          stageId: 's1',
-          title: 'New Deal',
-          source: RecordSource.manual,
+          pipelineId: any(named: 'pipelineId'),
+          stageId: any(named: 'stageId'),
+          title: any(named: 'title'),
+          source: any(named: 'source'),
+          contactId: any(named: 'contactId'),
+          companyId: any(named: 'companyId'),
+          tags: any(named: 'tags'),
         ),
       ).thenAnswer((_) async => tRecordModel);
 
@@ -146,10 +153,13 @@ void main() {
     test('returns Failure on UnauthorizedException', () async {
       when(
         () => mockDataSource.createRecord(
-          pipelineId: 'p1',
-          stageId: 's1',
-          title: 'New Deal',
-          source: RecordSource.manual,
+          pipelineId: any(named: 'pipelineId'),
+          stageId: any(named: 'stageId'),
+          title: any(named: 'title'),
+          source: any(named: 'source'),
+          contactId: any(named: 'contactId'),
+          companyId: any(named: 'companyId'),
+          tags: any(named: 'tags'),
         ),
       ).thenThrow(const UnauthorizedException());
 

@@ -30,15 +30,22 @@ final class RecordCreateRequested extends RecordEvent {
     required this.stageId,
     required this.title,
     required this.source,
+    this.contactId,
+    this.companyId,
+    this.tags = const [],
   });
 
   final String pipelineId;
   final String stageId;
   final String title;
   final RecordSource source;
+  final String? contactId;
+  final String? companyId;
+  final List<String> tags;
 
   @override
-  List<Object?> get props => [pipelineId, stageId, title, source];
+  List<Object?> get props =>
+      [pipelineId, stageId, title, source, contactId, companyId, tags];
 }
 
 final class RecordMoveRequested extends RecordEvent {
@@ -216,6 +223,9 @@ class RecordBloc extends Bloc<RecordEvent, RecordState> {
       stageId: event.stageId,
       title: event.title,
       source: event.source,
+      contactId: event.contactId,
+      companyId: event.companyId,
+      tags: event.tags,
     );
     switch (result) {
       case Success():

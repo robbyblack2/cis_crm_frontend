@@ -18,6 +18,9 @@ abstract class RecordRemoteDataSource {
     required String stageId,
     required String title,
     required RecordSource source,
+    String? contactId,
+    String? companyId,
+    List<String> tags,
   });
 
   Future<RecordModel> updateRecord({
@@ -94,6 +97,9 @@ class RecordRemoteDataSourceImpl implements RecordRemoteDataSource {
     required String stageId,
     required String title,
     required RecordSource source,
+    String? contactId,
+    String? companyId,
+    List<String> tags = const [],
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
@@ -101,8 +107,11 @@ class RecordRemoteDataSourceImpl implements RecordRemoteDataSource {
         data: {
           'pipeline_id': pipelineId,
           'stage_id': stageId,
-          'title': title,
+          'data': {'title': title},
           'source': source.name,
+          'tags': tags,
+          if (contactId != null) 'contact_id': contactId,
+          if (companyId != null) 'company_id': companyId,
         },
       );
       return RecordModel.fromJson(
