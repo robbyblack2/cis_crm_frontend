@@ -102,13 +102,18 @@ class PipelineBloc extends Bloc<PipelineEvent, PipelineState> {
     PipelineKanbanRequested event,
     Emitter<PipelineState> emit,
   ) async {
+    // Preserve the pipeline list from previous load.
+    final currentPipelines = state is PipelineLoaded
+        ? (state as PipelineLoaded).pipelines
+        : <Pipeline>[];
+
     emit(const PipelineLoading());
     final result = await _repository.getKanban(event.pipelineId);
     switch (result) {
       case Success(:final data):
         emit(
           PipelineLoaded(
-            pipelines: const [],
+            pipelines: currentPipelines,
             kanbanPipeline: data.pipeline,
             kanbanStages: data.stages,
           ),
