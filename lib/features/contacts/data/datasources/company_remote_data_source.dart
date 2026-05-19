@@ -8,6 +8,9 @@ abstract class CompanyRemoteDataSource {
   Future<CompanyModel> createCompany(CompanyModel company);
   Future<CompanyModel> updateCompany(CompanyModel company);
   Future<void> deleteCompany(String id);
+  Future<List<Map<String, dynamic>>> getCompanyContacts(String id);
+  Future<List<Map<String, dynamic>>> getCompanyRecords(String id);
+  Future<List<Map<String, dynamic>>> getCompanySubscriptions(String id);
 }
 
 class CompanyRemoteDataSourceImpl implements CompanyRemoteDataSource {
@@ -83,6 +86,47 @@ class CompanyRemoteDataSourceImpl implements CompanyRemoteDataSource {
   Future<void> deleteCompany(String id) async {
     try {
       await dio.delete<void>('/api/companies/$id');
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getCompanyContacts(String id) async {
+    try {
+      final response =
+          await dio.get<Map<String, dynamic>>('/api/companies/$id/contacts');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getCompanyRecords(String id) async {
+    try {
+      final response =
+          await dio.get<Map<String, dynamic>>('/api/companies/$id/records');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getCompanySubscriptions(
+    String id,
+  ) async {
+    try {
+      final response = await dio
+          .get<Map<String, dynamic>>('/api/companies/$id/subscriptions');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list.cast<Map<String, dynamic>>();
     } on DioException catch (e) {
       throw _handleDioException(e);
     }

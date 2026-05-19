@@ -12,6 +12,11 @@ abstract class ContactRemoteDataSource {
   Future<ContactModel> createContact(ContactModel contact);
   Future<ContactModel> updateContact(ContactModel contact);
   Future<void> deleteContact(String id);
+  Future<List<Map<String, dynamic>>> getContactTimeline(String id);
+  Future<List<Map<String, dynamic>>> getContactRecords(String id);
+  Future<List<Map<String, dynamic>>> getContactNotes(String id);
+  Future<Map<String, dynamic>> addContactNote(String id, String body);
+  Future<List<Map<String, dynamic>>> getContactFiles(String id);
 }
 
 class ContactRemoteDataSourceImpl implements ContactRemoteDataSource {
@@ -103,6 +108,78 @@ class ContactRemoteDataSourceImpl implements ContactRemoteDataSource {
   Future<void> deleteContact(String id) async {
     try {
       await dio.delete<void>('/api/contacts/$id');
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getContactTimeline(String id) async {
+    try {
+      final response = await dio.get<Map<String, dynamic>>(
+        '/api/contacts/$id/timeline',
+      );
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getContactRecords(String id) async {
+    try {
+      final response = await dio.get<Map<String, dynamic>>(
+        '/api/contacts/$id/records',
+      );
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getContactNotes(String id) async {
+    try {
+      final response = await dio.get<Map<String, dynamic>>(
+        '/api/contacts/$id/notes',
+      );
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> addContactNote(
+    String id,
+    String body,
+  ) async {
+    try {
+      final response = await dio.post<Map<String, dynamic>>(
+        '/api/contacts/$id/notes',
+        data: {'body': body},
+      );
+      return response.data?['data'] as Map<String, dynamic>? ?? {};
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getContactFiles(String id) async {
+    try {
+      final response = await dio.get<Map<String, dynamic>>(
+        '/api/contacts/$id/files',
+      );
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list.cast<Map<String, dynamic>>();
     } on DioException catch (e) {
       throw _handleDioException(e);
     }

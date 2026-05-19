@@ -70,6 +70,24 @@ class SettingsPage extends StatelessWidget {
           ),
           const Divider(),
 
+          // ── Admin ──
+          _SectionHeader(title: 'Admin'),
+          ListTile(
+            leading: const Icon(Icons.people_outline),
+            title: const Text('Users'),
+            subtitle: const Text('Manage team members'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.users),
+          ),
+          ListTile(
+            leading: const Icon(Icons.history),
+            title: const Text('Audit Log'),
+            subtitle: const Text('Track changes'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.auditLog),
+          ),
+          const Divider(),
+
           // ── Sign out ──
           ListTile(
             leading: Icon(Icons.logout, color: theme.colorScheme.error),

@@ -11,6 +11,7 @@ import 'package:cis_crm/features/pipeline/domain/entities/record.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/stage.dart';
 import 'package:cis_crm/features/pipeline/presentation/bloc/pipeline_bloc.dart';
 import 'package:cis_crm/features/pipeline/presentation/bloc/record_bloc.dart';
+import 'package:cis_crm/features/pipeline/presentation/pages/pipeline_settings_page.dart';
 import 'package:cis_crm/features/pipeline/presentation/pages/record_detail_page.dart';
 import 'package:cis_crm/features/pipeline/presentation/widgets/stage_column.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
@@ -166,6 +167,27 @@ class _LoadedPipelineView extends StatelessWidget {
                 },
               ),
             ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Pipeline settings',
+            onPressed: () {
+              final pid =
+                  state.kanbanPipeline?.id ?? state.pipelines.firstOrNull?.id;
+              final pname = state.kanbanPipeline?.name ??
+                  state.pipelines.firstOrNull?.name ??
+                  'Pipeline';
+              if (pid != null) {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => PipelineSettingsPage(
+                      pipelineId: pid,
+                      pipelineName: pname,
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
         ],
       ),
       body: BlocBuilder<RecordBloc, RecordState>(

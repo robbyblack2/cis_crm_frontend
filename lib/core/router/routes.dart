@@ -22,6 +22,9 @@ abstract final class Routes {
   static const callLogs = '/call-logs';
   static const files = '/files';
 
+  static const users = '/users';
+  static const auditLog = '/audit-log';
+
   static const debugFlags = '/debug/flags';
 
   // ── Detail routes ───────────────────────────────────────────────

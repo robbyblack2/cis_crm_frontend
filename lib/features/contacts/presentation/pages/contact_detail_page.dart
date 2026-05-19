@@ -2,6 +2,7 @@ import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/core/error/failures.dart';
 import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/core/responsive/breakpoints.dart';
+import 'package:cis_crm/features/contacts/data/datasources/contact_remote_data_source.dart';
 import 'package:cis_crm/features/contacts/domain/entities/contact.dart';
 import 'package:cis_crm/features/contacts/domain/repositories/contact_repository.dart';
 import 'package:cis_crm/features/contacts/presentation/bloc/contact_form_cubit.dart';
@@ -560,6 +561,10 @@ class _CompactLayout extends StatelessWidget {
         ],
         const SizedBox(height: 16),
         _FilesSection(contactId: contact.id),
+        const SizedBox(height: 16),
+        _ContactNotesSection(contactId: contact.id),
+        const SizedBox(height: 16),
+        _ContactRecordsSection(contactId: contact.id),
       ],
     );
   }
@@ -590,10 +595,217 @@ class _WideLayout extends StatelessWidget {
               ],
               const SizedBox(height: 16),
               _FilesSection(contactId: contact.id),
+              const SizedBox(height: 16),
+              _ContactNotesSection(contactId: contact.id),
+              const SizedBox(height: 16),
+              _ContactRecordsSection(contactId: contact.id),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Contact Notes ──────────────────────────────────────────────────────
+
+class _ContactNotesSection extends StatefulWidget {
+  const _ContactNotesSection({required this.contactId});
+  final String contactId;
+
+  @override
+  State<_ContactNotesSection> createState() => _ContactNotesSectionState();
+}
+
+class _ContactNotesSectionState extends State<_ContactNotesSection> {
+  List<Map<String, dynamic>>? _notes;
+  bool _loading = true;
+  final _ctrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final notes = await getIt<ContactRemoteDataSource>()
+          .getContactNotes(widget.contactId);
+      if (mounted) setState(() { _notes = notes; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() { _notes = []; _loading = false; });
+    }
+  }
+
+  Future<void> _add() async {
+    final body = _ctrl.text.trim();
+    if (body.isEmpty) return;
+    _ctrl.clear();
+    try {
+      await getIt<ContactRemoteDataSource>()
+          .addContactNote(widget.contactId, body);
+      await _load();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to add note')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Notes',
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const Divider(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _ctrl,
+                    decoration: const InputDecoration(
+                      hintText: 'Add a note...',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
+                    minLines: 1,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  onPressed: _add,
+                  icon: const Icon(Icons.send),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_loading)
+              const Center(child: CircularProgressIndicator())
+            else if (_notes == null || _notes!.isEmpty)
+              Text(
+                'No notes yet',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              ...(_notes!).map(
+                (n) => Card(
+                  color: theme.colorScheme.surfaceContainerLow,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(n['body'] as String? ?? ''),
+                        const SizedBox(height: 4),
+                        Text(
+                          n['created_at'] as String? ?? '',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Contact Related Records ────────────────────────────────────────────
+
+class _ContactRecordsSection extends StatefulWidget {
+  const _ContactRecordsSection({required this.contactId});
+  final String contactId;
+
+  @override
+  State<_ContactRecordsSection> createState() =>
+      _ContactRecordsSectionState();
+}
+
+class _ContactRecordsSectionState extends State<_ContactRecordsSection> {
+  List<Map<String, dynamic>>? _records;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final records = await getIt<ContactRemoteDataSource>()
+          .getContactRecords(widget.contactId);
+      if (mounted) setState(() { _records = records; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() { _records = []; _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Related Records',
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const Divider(height: 24),
+            if (_loading)
+              const Center(child: CircularProgressIndicator())
+            else if (_records == null || _records!.isEmpty)
+              Text(
+                'No related records',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              ...(_records!).map((r) {
+                final data = r['data'] as Map<String, dynamic>? ?? {};
+                final title = data['title'] as String? ?? 'Record';
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.view_kanban_outlined),
+                  title: Text(title),
+                  subtitle: Text(r['source'] as String? ?? ''),
+                  trailing: const Icon(Icons.chevron_right),
+                );
+              }),
+          ],
+        ),
+      ),
     );
   }
 }

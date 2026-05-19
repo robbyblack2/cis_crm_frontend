@@ -92,7 +92,9 @@ import 'package:cis_crm/features/settings/data/datasources/google_remote_data_so
 import 'package:cis_crm/features/settings/data/repositories/google_repository_impl.dart';
 import 'package:cis_crm/features/settings/domain/repositories/google_repository.dart';
 import 'package:cis_crm/features/settings/presentation/bloc/google_integration_cubit.dart';
+import 'package:cis_crm/features/settings/presentation/pages/audit_log_page.dart';
 import 'package:cis_crm/features/settings/presentation/pages/integrations_page.dart';
+import 'package:cis_crm/features/settings/presentation/pages/users_page.dart';
 import 'package:cis_crm/features/settings/presentation/pages/profile_page.dart';
 import 'package:cis_crm/features/settings/presentation/pages/settings_page.dart';
 import 'package:dio/dio.dart';
@@ -532,6 +534,14 @@ Future<void> configureDependencies(FlavorConfig config) async {
         GoRoute(
           path: Routes.files,
           builder: (_, __) => const FilesPage(),
+        ),
+        GoRoute(
+          path: Routes.users,
+          builder: (_, __) => const UsersPage(),
+        ),
+        GoRoute(
+          path: Routes.auditLog,
+          builder: (_, __) => const AuditLogPage(),
         ),
       ],
     ),

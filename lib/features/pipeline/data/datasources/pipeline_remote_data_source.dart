@@ -21,6 +21,27 @@ abstract class PipelineRemoteDataSource {
     required String name,
     required bool isActive,
   });
+
+  Future<List<StageModel>> getStages(String pipelineId);
+
+  Future<StageModel> createStage({
+    required String pipelineId,
+    required String name,
+    required int position,
+    String color,
+    String stageType,
+  });
+
+  Future<StageModel> updateStage({
+    required String id,
+    required String name,
+    required int position,
+    String? color,
+  });
+
+  Future<void> deleteStage(String id);
+
+  Future<List<Map<String, dynamic>>> getStagePrompts(String stageId);
 }
 
 class PipelineRemoteDataSourceImpl implements PipelineRemoteDataSource {
@@ -117,6 +138,111 @@ class PipelineRemoteDataSourceImpl implements PipelineRemoteDataSource {
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to update pipeline',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<List<StageModel>> getStages(String pipelineId) async {
+    try {
+      final response = await _dio
+          .get<Map<String, dynamic>>('/api/pipelines/$pipelineId/stages');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list
+          .cast<Map<String, dynamic>>()
+          .map(StageModel.fromJson)
+          .toList();
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to fetch stages',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<StageModel> createStage({
+    required String pipelineId,
+    required String name,
+    required int position,
+    String color = '#9E9E9E',
+    String stageType = 'normal',
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/pipelines/$pipelineId/stages',
+        data: {
+          'name': name,
+          'position': position,
+          'color': color,
+          'stage_type': stageType,
+        },
+      );
+      return StageModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to create stage',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<StageModel> updateStage({
+    required String id,
+    required String name,
+    required int position,
+    String? color,
+  }) async {
+    try {
+      final response = await _dio.put<Map<String, dynamic>>(
+        '/api/stages/$id',
+        data: {
+          'name': name,
+          'position': position,
+          if (color != null) 'color': color,
+        },
+      );
+      return StageModel.fromJson(
+        response.data!['data'] as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to update stage',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<void> deleteStage(String id) async {
+    try {
+      await _dio.delete<void>('/api/stages/$id');
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to delete stage',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getStagePrompts(
+    String stageId,
+  ) async {
+    try {
+      final response = await _dio
+          .get<Map<String, dynamic>>('/api/stages/$stageId/prompts');
+      final list = response.data?['data'] as List<dynamic>?;
+      if (list == null) return [];
+      return list.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to fetch stage prompts',
         statusCode: e.response?.statusCode,
       );
     }
