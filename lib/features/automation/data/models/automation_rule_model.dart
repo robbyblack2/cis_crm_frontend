@@ -58,8 +58,7 @@ class AutomationRuleModel extends AutomationRule {
           'description': description,
         'is_active': isActive,
         'trigger_type': triggerType,
-        if (triggerConditions != null)
-          'trigger_conditions': triggerConditions,
+        'trigger_conditions': triggerConditions ?? <String, dynamic>{},
         'actions': actions,
         'priority': priority,
       };
