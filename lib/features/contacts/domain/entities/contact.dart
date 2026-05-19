@@ -18,9 +18,11 @@ class Contact extends Equatable {
     this.phone,
     this.jobTitle,
     this.source,
+    this.googleContactId,
   });
 
   final String id;
+  final String? googleContactId;
   final String? ownerId;
   final String? companyId;
   final String firstName;
@@ -38,6 +40,7 @@ class Contact extends Equatable {
   @override
   List<Object?> get props => [
         id,
+        googleContactId,
         ownerId,
         companyId,
         firstName,

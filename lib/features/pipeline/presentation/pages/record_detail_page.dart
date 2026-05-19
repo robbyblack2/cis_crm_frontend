@@ -12,6 +12,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 
+String _fmtTs(String? iso) {
+  if (iso == null || iso.isEmpty) return '';
+  try {
+    final dt = DateTime.parse(iso).toLocal();
+    return '${dt.day}/${dt.month}/${dt.year} '
+        '${dt.hour.toString().padLeft(2, '0')}:'
+        '${dt.minute.toString().padLeft(2, '0')}';
+  } catch (_) {
+    return iso;
+  }
+}
+
 Color _parseColor(String colorStr) {
   if (colorStr.startsWith('#')) {
     final hex = colorStr.replaceFirst('#', '');
@@ -586,7 +598,7 @@ class _NotesSectionState extends State<_NotesSection> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            note['created_at'] as String? ?? '',
+                            _fmtTs(note['created_at'] as String?),
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),

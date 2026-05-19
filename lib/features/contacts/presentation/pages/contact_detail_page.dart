@@ -13,6 +13,18 @@ import 'package:url_launcher/url_launcher.dart';
 
 String _fullName(Contact c) => '${c.firstName} ${c.lastName}'.trim();
 
+String _formatTimestamp(String? iso) {
+  if (iso == null || iso.isEmpty) return '';
+  try {
+    final dt = DateTime.parse(iso).toLocal();
+    return '${dt.day}/${dt.month}/${dt.year} '
+        '${dt.hour.toString().padLeft(2, '0')}:'
+        '${dt.minute.toString().padLeft(2, '0')}';
+  } catch (_) {
+    return iso;
+  }
+}
+
 String _initials(Contact c) {
   final first = c.firstName.isNotEmpty ? c.firstName[0] : '';
   final last = c.lastName.isNotEmpty ? c.lastName[0] : '';
@@ -666,7 +678,9 @@ class _ContactNotesSectionState extends State<_ContactNotesSection> {
                         Text(n['body'] as String? ?? ''),
                         const SizedBox(height: 4),
                         Text(
-                          n['created_at'] as String? ?? '',
+                          _formatTimestamp(
+                            n['created_at'] as String?,
+                          ),
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),

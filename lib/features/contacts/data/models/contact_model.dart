@@ -16,12 +16,14 @@ class ContactModel extends Contact {
     super.jobTitle,
     super.source,
     super.version,
+    super.googleContactId,
   });
 
   factory ContactModel.fromJson(Map<String, dynamic> json) {
     final data = json['data'] as Map<String, dynamic>? ?? {};
     return ContactModel(
       id: json['id'] as String,
+      googleContactId: json['google_contact_id'] as String?,
       ownerId: json['owner_id'] as String?,
       companyId: json['company_id'] as String?,
       firstName: data['first_name'] as String? ?? '',
@@ -40,6 +42,7 @@ class ContactModel extends Contact {
 
   factory ContactModel.fromEntity(Contact contact) => ContactModel(
         id: contact.id,
+        googleContactId: contact.googleContactId,
         ownerId: contact.ownerId,
         companyId: contact.companyId,
         firstName: contact.firstName,
