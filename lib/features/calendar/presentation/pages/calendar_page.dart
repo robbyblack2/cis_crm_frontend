@@ -123,6 +123,8 @@ class _CalendarViewState extends State<_CalendarView> {
 
   Future<void> _showCreateEventDialog(BuildContext context) async {
     final titleController = TextEditingController();
+    final locationController = TextEditingController();
+    final descriptionController = TextEditingController();
     var startDate = DateTime.now();
     var endDate = DateTime.now().add(const Duration(hours: 1));
 
@@ -210,6 +212,22 @@ class _CalendarViewState extends State<_CalendarView> {
                     });
                   },
                 ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: locationController,
+                  decoration: const InputDecoration(
+                    labelText: 'Location',
+                    hintText: 'e.g. Google Meet, Office',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                  ),
+                  maxLines: 3,
+                ),
               ],
             ),
           ),
@@ -225,6 +243,9 @@ class _CalendarViewState extends State<_CalendarView> {
                 final event = CalendarEvent(
                   id: '',
                   title: title,
+                  location: locationController.text.trim().isNotEmpty
+                      ? locationController.text.trim()
+                      : null,
                   start: startDate,
                   end: endDate,
                   createdAt: DateTime.now(),

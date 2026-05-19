@@ -1,6 +1,7 @@
 import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/features/contacts/data/datasources/company_remote_data_source.dart';
 import 'package:cis_crm/features/contacts/domain/entities/company.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 class CompanyDetailPage extends StatelessWidget {
@@ -25,6 +26,52 @@ class CompanyDetailPage extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: Text(company.name),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: 'Edit company',
+              onPressed: () => _showEditDialog(context, company),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outlined),
+              tooltip: 'Delete company',
+              onPressed: () async {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Delete Company?'),
+                    content: const Text('This cannot be undone.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Cancel'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: FilledButton.styleFrom(
+                          backgroundColor:
+                              Theme.of(context).colorScheme.error,
+                        ),
+                        child: const Text('Delete'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirmed != true || !context.mounted) return;
+                try {
+                  await getIt<CompanyRemoteDataSource>()
+                      .deleteCompany(company.id);
+                  if (context.mounted) Navigator.pop(context);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed: $e')),
+                    );
+                  }
+                }
+              },
+            ),
+          ],
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Info'),
@@ -134,6 +181,81 @@ class CompanyDetailPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  static void _showEditDialog(BuildContext context, Company company) {
+    final nameCtrl = TextEditingController(text: company.name);
+    final websiteCtrl =
+        TextEditingController(text: company.domain ?? '');
+    final industryCtrl =
+        TextEditingController(text: company.industry ?? '');
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Company'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: websiteCtrl,
+                decoration:
+                    const InputDecoration(labelText: 'Website'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: industryCtrl,
+                decoration:
+                    const InputDecoration(labelText: 'Industry'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await getIt<Dio>().put<void>(
+                  '/api/companies/${company.id}',
+                  data: {
+                    'data': {
+                      'name': nameCtrl.text.trim(),
+                      'website': websiteCtrl.text.trim(),
+                      'industry': industryCtrl.text.trim(),
+                    },
+                    'tags': company.tags,
+                    'version': company.version,
+                  },
+                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Company updated')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
       ),
     );
   }
