@@ -1,5 +1,4 @@
 import 'package:cis_crm/app/injection.dart';
-import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 

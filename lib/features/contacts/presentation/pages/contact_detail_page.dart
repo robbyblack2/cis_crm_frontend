@@ -621,18 +621,11 @@ class _ContactNotesSection extends StatefulWidget {
 class _ContactNotesSectionState extends State<_ContactNotesSection> {
   List<Map<String, dynamic>>? _notes;
   bool _loading = true;
-  final _ctrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _load();
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
   }
 
   Future<void> _load() async {
@@ -645,22 +638,7 @@ class _ContactNotesSectionState extends State<_ContactNotesSection> {
     }
   }
 
-  Future<void> _add() async {
-    final body = _ctrl.text.trim();
-    if (body.isEmpty) return;
-    _ctrl.clear();
-    try {
-      await getIt<ContactRemoteDataSource>()
-          .addContactNote(widget.contactId, body);
-      await _load();
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to add note')),
-        );
-      }
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {

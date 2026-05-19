@@ -52,17 +52,15 @@ class AutomationRuleModel extends AutomationRule {
       );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
+        if (id.isNotEmpty) 'id': id,
         'name': name,
-        'description': description,
+        if (description != null && description!.isNotEmpty)
+          'description': description,
         'is_active': isActive,
         'trigger_type': triggerType,
         if (triggerConditions != null)
           'trigger_conditions': triggerConditions,
         'actions': actions,
         'priority': priority,
-        'created_by': createdBy,
-        'created_at': createdAt.toIso8601String(),
-        'updated_at': updatedAt.toIso8601String(),
       };
 }

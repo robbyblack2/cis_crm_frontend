@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'dart:async';
-
 import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/core/network/web_socket_cubit.dart';
 import 'package:cis_crm/core/network/web_socket_event.dart';

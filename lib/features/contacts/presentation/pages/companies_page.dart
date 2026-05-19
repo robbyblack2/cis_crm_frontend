@@ -3,7 +3,6 @@ import 'package:cis_crm/core/widgets/state/empty_state.dart';
 import 'package:cis_crm/features/contacts/data/datasources/company_remote_data_source.dart';
 import 'package:cis_crm/features/contacts/data/models/company_model.dart';
 import 'package:cis_crm/features/contacts/domain/entities/company.dart';
-import 'package:cis_crm/features/contacts/domain/repositories/company_repository.dart';
 import 'package:cis_crm/features/contacts/presentation/pages/company_detail_page.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
