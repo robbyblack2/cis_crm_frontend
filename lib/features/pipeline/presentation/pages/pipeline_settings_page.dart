@@ -2,6 +2,7 @@ import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/features/pipeline/data/datasources/pipeline_remote_data_source.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/stage.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 class PipelineSettingsPage extends StatefulWidget {
@@ -173,6 +174,50 @@ class _PipelineSettingsPageState extends State<PipelineSettingsPage> {
     );
   }
 
+  Future<void> _deletePipeline(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete "${widget.pipelineName}"?'),
+        content: const Text(
+          'This will permanently delete this pipeline and all its stages. '
+          'Records must be moved to another pipeline first.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(AppLocalizations.of(ctx)!.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: Text(AppLocalizations.of(ctx)!.delete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await getIt<Dio>().delete<void>(
+        '/api/pipelines/${widget.pipelineId}',
+      );
+      if (mounted) {
+        Navigator.of(context).pop(); // Close settings page
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pipeline deleted')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _deleteStage(Stage stage) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -223,6 +268,16 @@ class _PipelineSettingsPageState extends State<PipelineSettingsPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.pipelineName} — Stages'),
+        actions: [
+          IconButton(
+            icon: Icon(
+              Icons.delete_forever,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            tooltip: 'Delete pipeline',
+            onPressed: () => _deletePipeline(context),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'pipeline_settings_fab',

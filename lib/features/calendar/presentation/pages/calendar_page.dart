@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'dart:async';
+
 import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/core/network/web_socket_cubit.dart';
 import 'package:cis_crm/core/network/web_socket_event.dart';
@@ -13,6 +15,7 @@ import 'package:cis_crm/features/calendar/presentation/widgets/event_tile.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class CalendarPage extends StatelessWidget {
   const CalendarPage({super.key});
@@ -45,6 +48,9 @@ const _calendarEventTypes = {
 
 class _CalendarViewState extends State<_CalendarView> {
   _CalendarViewMode _viewMode = _CalendarViewMode.week;
+  bool _showGrid = true;
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
   StreamSubscription<WebSocketEvent>? _wsSub;
   Timer? _pollTimer;
 
@@ -273,9 +279,16 @@ class _CalendarViewState extends State<_CalendarView> {
   }
 
   Widget _buildLoaded(BuildContext context, List<CalendarEvent> events) {
-    final filtered = _filterByViewMode(events);
-    final grouped = _groupByDate(filtered);
-    final sortedDates = grouped.keys.toList()..sort();
+    final eventMap = <DateTime, List<CalendarEvent>>{};
+    for (final event in events) {
+      final key = DateTime(event.start.year, event.start.month, event.start.day);
+      (eventMap[key] ??= []).add(event);
+    }
+
+    final selectedKey = _selectedDay != null
+        ? DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day)
+        : DateTime(_focusedDay.year, _focusedDay.month, _focusedDay.day);
+    final dayEvents = eventMap[selectedKey] ?? [];
 
     return Scaffold(
       appBar: AppBar(
@@ -283,62 +296,129 @@ class _CalendarViewState extends State<_CalendarView> {
         actions: [
           IconButton(
             tooltip: AppLocalizations.of(context)!.goToToday,
-            onPressed: () {
-              setState(() => _viewMode = _CalendarViewMode.day);
-            },
+            onPressed: () => setState(() {
+              _focusedDay = DateTime.now();
+              _selectedDay = DateTime.now();
+            }),
             icon: const Icon(Icons.today),
           ),
+          IconButton(
+            tooltip: _showGrid ? 'List view' : 'Calendar view',
+            onPressed: () => setState(() => _showGrid = !_showGrid),
+            icon: Icon(_showGrid ? Icons.list : Icons.calendar_month),
+          ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: SegmentedButton<_CalendarViewMode>(
-              segments: [
-                ButtonSegment(
-                  value: _CalendarViewMode.day,
-                  label: Text(AppLocalizations.of(context)!.viewDay),
+      ),
+      body: _showGrid
+          ? Column(
+              children: [
+                TableCalendar<CalendarEvent>(
+                  firstDay: DateTime(2020),
+                  lastDay: DateTime(2100),
+                  focusedDay: _focusedDay,
+                  calendarFormat: _viewMode == _CalendarViewMode.month
+                      ? CalendarFormat.month
+                      : CalendarFormat.week,
+                  selectedDayPredicate: (day) =>
+                      isSameDay(_selectedDay, day),
+                  onDaySelected: (selectedDay, focusedDay) => setState(() {
+                    _selectedDay = selectedDay;
+                    _focusedDay = focusedDay;
+                  }),
+                  onFormatChanged: (format) => setState(() {
+                    _viewMode = format == CalendarFormat.month
+                        ? _CalendarViewMode.month
+                        : _CalendarViewMode.week;
+                  }),
+                  onPageChanged: (focusedDay) =>
+                      _focusedDay = focusedDay,
+                  eventLoader: (day) {
+                    final key = DateTime(day.year, day.month, day.day);
+                    return eventMap[key] ?? [];
+                  },
+                  calendarStyle: CalendarStyle(
+                    markerDecoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    todayDecoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    selectedDecoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  headerStyle: const HeaderStyle(
+                    formatButtonVisible: true,
+                    titleCentered: true,
+                  ),
                 ),
-                ButtonSegment(
-                  value: _CalendarViewMode.week,
-                  label: Text(AppLocalizations.of(context)!.viewWeek),
-                ),
-                ButtonSegment(
-                  value: _CalendarViewMode.month,
-                  label: Text(AppLocalizations.of(context)!.viewMonth),
+                const Divider(height: 1),
+                Expanded(
+                  child: dayEvents.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No events on this day',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: dayEvents.length,
+                          itemBuilder: (context, index) {
+                            final event = dayEvents[index];
+                            return EventTile(
+                              event: event,
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) =>
+                                      EventDetailPage(event: event),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                 ),
               ],
-              selected: {_viewMode},
-              onSelectionChanged: (selection) {
-                setState(() => _viewMode = selection.first);
-              },
-            ),
-          ),
-        ),
-      ),
-      body: filtered.isEmpty
-          ? EmptyState(
-              icon: Icons.calendar_month,
-              title: AppLocalizations.of(context)!.noEvents,
-              message: AppLocalizations.of(context)!.noEventsMessage,
             )
-          : ListView.builder(
-              itemCount: sortedDates.length,
-              itemBuilder: (context, index) {
-                final date = sortedDates[index];
-                final dateEvents = grouped[date]!;
-                return _DateSection(
-                  date: date,
-                  events: dateEvents,
-                );
-              },
-            ),
+          : _buildListView(context, events),
       floatingActionButton: FloatingActionButton(
         heroTag: 'calendar_fab',
         tooltip: AppLocalizations.of(context)!.createEventTooltip,
         onPressed: () => _showCreateEventDialog(context),
         child: const Icon(Icons.add),
       ),
+    );
+  }
+
+  Widget _buildListView(BuildContext context, List<CalendarEvent> events) {
+    final filtered = _filterByViewMode(events);
+    final grouped = _groupByDate(filtered);
+    final sortedDates = grouped.keys.toList()..sort();
+    if (filtered.isEmpty) {
+      return EmptyState(
+        icon: Icons.calendar_month,
+        title: AppLocalizations.of(context)!.noEvents,
+        message: AppLocalizations.of(context)!.noEventsMessage,
+      );
+    }
+    return ListView.builder(
+      itemCount: sortedDates.length,
+      itemBuilder: (context, index) {
+        final date = sortedDates[index];
+        return _DateSection(date: date, events: grouped[date]!);
+      },
     );
   }
 
