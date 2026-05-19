@@ -27,6 +27,7 @@ class RecordModel extends PipelineRecord {
     super.contactId,
     super.companyId,
     super.ownerId,
+    super.version,
   });
 
   factory RecordModel.fromJson(Map<String, dynamic> json) {
@@ -43,6 +44,7 @@ class RecordModel extends PipelineRecord {
       tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? const [],
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      version: json['version'] as int? ?? 1,
     );
   }
 
@@ -57,6 +59,7 @@ class RecordModel extends PipelineRecord {
         'tags': tags,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
+        'version': version,
         'data': {
           'title': title,
         },

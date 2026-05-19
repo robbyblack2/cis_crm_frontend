@@ -19,6 +19,7 @@ class CrmTask extends Equatable {
     this.assigneeId,
     this.dueDate,
     this.completedAt,
+    this.version = 1,
   });
 
   final String id;
@@ -34,6 +35,7 @@ class CrmTask extends Equatable {
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? completedAt;
+  final int version;
 
   @override
   List<Object?> get props => [
@@ -50,5 +52,6 @@ class CrmTask extends Equatable {
         createdAt,
         updatedAt,
         completedAt,
+        version,
       ];
 }

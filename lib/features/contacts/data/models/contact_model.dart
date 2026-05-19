@@ -15,6 +15,7 @@ class ContactModel extends Contact {
     super.phone,
     super.jobTitle,
     super.source,
+    super.version,
   });
 
   factory ContactModel.fromJson(Map<String, dynamic> json) {
@@ -31,6 +32,7 @@ class ContactModel extends Contact {
       source: data['source'] as String?,
       status: json['status'] as String? ?? 'active',
       tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? const [],
+      version: json['version'] as int? ?? 1,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -48,6 +50,7 @@ class ContactModel extends Contact {
         source: contact.source,
         status: contact.status,
         tags: contact.tags,
+        version: contact.version,
         createdAt: contact.createdAt,
         updatedAt: contact.updatedAt,
       );
@@ -58,8 +61,7 @@ class ContactModel extends Contact {
         'company_id': companyId,
         'status': status,
         'tags': tags,
-        'created_at': createdAt.toIso8601String(),
-        'updated_at': updatedAt.toIso8601String(),
+        'version': version,
         'data': {
           'first_name': firstName,
           'last_name': lastName,

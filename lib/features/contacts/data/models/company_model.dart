@@ -12,6 +12,7 @@ class CompanyModel extends Company {
     super.industry,
     super.phone,
     super.employeeCount,
+    super.version,
   });
 
   factory CompanyModel.fromJson(Map<String, dynamic> json) {
@@ -27,6 +28,7 @@ class CompanyModel extends Company {
       tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? const [],
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      version: json['version'] as int? ?? 1,
     );
   }
 
@@ -41,6 +43,7 @@ class CompanyModel extends Company {
         tags: company.tags,
         createdAt: company.createdAt,
         updatedAt: company.updatedAt,
+        version: company.version,
       );
 
   Map<String, dynamic> toJson() => {
@@ -49,6 +52,7 @@ class CompanyModel extends Company {
         'tags': tags,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
+        'version': version,
         'data': {
           'name': name,
           'domain': domain,

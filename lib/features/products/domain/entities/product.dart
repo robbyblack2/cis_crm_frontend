@@ -14,6 +14,7 @@ class Product extends Equatable {
     required this.createdAt,
     required this.updatedAt,
     this.defaultPrice,
+    this.version = 1,
   });
 
   final String id;
@@ -25,6 +26,7 @@ class Product extends Equatable {
   final List<String> tags;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int version;
 
   @override
   List<Object?> get props => [
@@ -37,5 +39,6 @@ class Product extends Equatable {
         tags,
         createdAt,
         updatedAt,
+        version,
       ];
 }

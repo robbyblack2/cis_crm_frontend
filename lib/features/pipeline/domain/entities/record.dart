@@ -17,6 +17,7 @@ class PipelineRecord extends Equatable {
     this.contactId,
     this.companyId,
     this.ownerId,
+    this.version = 1,
   });
 
   final String id;
@@ -30,6 +31,7 @@ class PipelineRecord extends Equatable {
   final List<String> tags;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int version;
 
   @override
   List<Object?> get props => [
@@ -44,5 +46,6 @@ class PipelineRecord extends Equatable {
         tags,
         createdAt,
         updatedAt,
+        version,
       ];
 }

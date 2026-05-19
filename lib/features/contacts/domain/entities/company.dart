@@ -14,6 +14,7 @@ class Company extends Equatable {
     this.industry,
     this.phone,
     this.employeeCount,
+    this.version = 1,
   });
 
   final String id;
@@ -26,6 +27,7 @@ class Company extends Equatable {
   final List<String> tags;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int version;
 
   @override
   List<Object?> get props => [
@@ -39,5 +41,6 @@ class Company extends Equatable {
         tags,
         createdAt,
         updatedAt,
+        version,
       ];
 }

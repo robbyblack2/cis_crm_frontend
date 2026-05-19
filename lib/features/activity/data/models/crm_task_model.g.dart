@@ -24,6 +24,7 @@ CrmTaskModel _$CrmTaskModelFromJson(Map<String, dynamic> json) => CrmTaskModel(
       completedAt: json['completed_at'] == null
           ? null
           : DateTime.parse(json['completed_at'] as String),
+      version: (json['version'] as num?)?.toInt() ?? 1,
     );
 
 Map<String, dynamic> _$CrmTaskModelToJson(CrmTaskModel instance) =>
@@ -41,6 +42,7 @@ Map<String, dynamic> _$CrmTaskModelToJson(CrmTaskModel instance) =>
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
       'completed_at': instance.completedAt?.toIso8601String(),
+      'version': instance.version,
     };
 
 const _$TaskStatusEnumMap = {

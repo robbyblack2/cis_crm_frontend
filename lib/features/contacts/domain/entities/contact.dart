@@ -12,6 +12,7 @@ class Contact extends Equatable {
     required this.tags,
     required this.createdAt,
     required this.updatedAt,
+    this.version = 1,
     this.ownerId,
     this.companyId,
     this.phone,
@@ -30,6 +31,7 @@ class Contact extends Equatable {
   final String? source;
   final String status;
   final List<String> tags;
+  final int version;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -46,6 +48,7 @@ class Contact extends Equatable {
         source,
         status,
         tags,
+        version,
         createdAt,
         updatedAt,
       ];

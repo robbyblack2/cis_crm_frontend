@@ -21,6 +21,7 @@ class CrmTaskModel extends CrmTask {
     super.assigneeId,
     super.dueDate,
     super.completedAt,
+    super.version,
   });
 
   factory CrmTaskModel.fromJson(Map<String, dynamic> json) =>
@@ -40,6 +41,7 @@ class CrmTaskModel extends CrmTask {
         assigneeId: task.assigneeId,
         dueDate: task.dueDate,
         completedAt: task.completedAt,
+        version: task.version,
       );
 
   Map<String, dynamic> toJson() => _$CrmTaskModelToJson(this);

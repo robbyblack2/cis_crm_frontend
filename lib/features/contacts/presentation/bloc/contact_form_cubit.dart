@@ -94,6 +94,7 @@ class ContactFormCubit extends Cubit<ContactFormState> {
         tags: _existingContact?.tags ?? const [],
         ownerId: _existingContact?.ownerId,
         companyId: _existingContact?.companyId,
+        version: _existingContact?.version ?? 1,
         createdAt: _existingContact?.createdAt ?? now,
         updatedAt: now,
       );

@@ -16,6 +16,7 @@ ProductModel _$ProductModelFromJson(Map<String, dynamic> json) => ProductModel(
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
       defaultPrice: (json['default_price'] as num?)?.toDouble(),
+      version: (json['version'] as num?)?.toInt() ?? 1,
     );
 
 Map<String, dynamic> _$ProductModelToJson(ProductModel instance) =>
@@ -29,6 +30,7 @@ Map<String, dynamic> _$ProductModelToJson(ProductModel instance) =>
       'tags': instance.tags,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
+      'version': instance.version,
     };
 
 const _$ProductTypeEnumMap = {
