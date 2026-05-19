@@ -217,25 +217,8 @@ class ContactDetailPage extends StatelessWidget {
             child: Text(l10n.cancel),
           ),
           FilledButton(
-            onPressed: () async {
-              Navigator.of(dialogContext).pop();
-              final result = await getIt<ContactRepository>()
-                  .deleteContact(contact.id);
-              if (!context.mounted) return;
-              switch (result) {
-                case Success():
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.contactDeleted)),
-                  );
-                  Navigator.of(context).pop();
-                case Failure(:final error):
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(l10n.contactDeleteFailed(error.message)),
-                    ),
-                  );
-              }
-            },
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(true),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
@@ -243,7 +226,25 @@ class ContactDetailPage extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ).then((confirmed) async {
+      if (confirmed != true || !context.mounted) return;
+      final result =
+          await getIt<ContactRepository>().deleteContact(contact.id);
+      if (!context.mounted) return;
+      switch (result) {
+        case Success():
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.contactDeleted)),
+          );
+          Navigator.of(context).pop();
+        case Failure(:final error):
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.contactDeleteFailed(error.message)),
+            ),
+          );
+      }
+    });
   }
 }
 

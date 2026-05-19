@@ -332,26 +332,82 @@ class _CalendarViewState extends State<_CalendarView> {
                   }),
                   onPageChanged: (focusedDay) =>
                       _focusedDay = focusedDay,
+                  rowHeight: 80,
                   eventLoader: (day) {
                     final key = DateTime(day.year, day.month, day.day);
                     return eventMap[key] ?? [];
                   },
                   calendarStyle: CalendarStyle(
-                    markerDecoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      shape: BoxShape.circle,
-                    ),
+                    markersMaxCount: 0,
+                    cellMargin: const EdgeInsets.all(2),
                     todayDecoration: BoxDecoration(
                       color: Theme.of(context)
                           .colorScheme
                           .primary
-                          .withValues(alpha: 0.3),
-                      shape: BoxShape.circle,
+                          .withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     selectedDecoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      shape: BoxShape.circle,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(8),
                     ),
+                    defaultDecoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    weekendDecoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    outsideDecoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  calendarBuilders: CalendarBuilders(
+                    markerBuilder: (ctx, date, events) {
+                      if (events.isEmpty) return null;
+                      return Positioned(
+                        bottom: 2,
+                        left: 2,
+                        right: 2,
+                        child: Column(
+                          children: events
+                              .take(2)
+                              .map(
+                                (e) => Container(
+                                  margin:
+                                      const EdgeInsets.only(bottom: 1),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 2,
+                                    vertical: 1,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(ctx)
+                                        .colorScheme
+                                        .primary
+                                        .withValues(alpha: 0.2),
+                                    borderRadius:
+                                        BorderRadius.circular(3),
+                                  ),
+                                  child: Text(
+                                    e.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      color: Theme.of(ctx)
+                                          .colorScheme
+                                          .primary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      );
+                    },
                   ),
                   headerStyle: const HeaderStyle(
                     formatButtonVisible: true,
