@@ -13,13 +13,18 @@ class FilterSidebar extends StatelessWidget {
     super.key,
   });
 
-  final List<FilterSection> sections;
+  final List<Widget> sections;
   final VoidCallback onClearAll;
   final int? resultCount;
   final int? totalCount;
 
-  int get activeFilterCount =>
-      sections.where((s) => s.hasActiveFilters).length;
+  int get activeFilterCount {
+    var count = 0;
+    for (final s in sections) {
+      if (s is FilterSection && s.hasActiveFilters) count++;
+    }
+    return count;
+  }
 
   @override
   Widget build(BuildContext context) {

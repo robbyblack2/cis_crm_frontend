@@ -1,4 +1,5 @@
 import 'package:cis_crm/app/injection.dart';
+import 'package:cis_crm/core/widgets/filter_sidebar.dart';
 import 'package:cis_crm/core/widgets/search_or_create_field.dart';
 import 'package:cis_crm/core/widgets/state/empty_state.dart';
 import 'package:cis_crm/core/widgets/state/page_error.dart';
@@ -63,16 +64,36 @@ class _ContactsTabView extends StatelessWidget {
   }
 }
 
-class _ContactsView extends StatelessWidget {
+class _ContactsView extends StatefulWidget {
   const _ContactsView();
+
+  @override
+  State<_ContactsView> createState() => _ContactsViewState();
+}
+
+class _ContactsViewState extends State<_ContactsView> {
+  bool _sidebarOpen = false;
+  Set<String> _statusFilter = {};
+  Set<String> _tagFilter = {};
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+
+    // Compute active filter count for badge
+    var activeCount = 0;
+    if (_statusFilter.isNotEmpty) activeCount++;
+    if (_tagFilter.isNotEmpty) activeCount++;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.contactsTitle),
         actions: [
+          FilterToggleButton(
+            activeCount: activeCount,
+            isOpen: _sidebarOpen,
+            onPressed: () => setState(() => _sidebarOpen = !_sidebarOpen),
+          ),
           IconButton(
             icon: const Icon(Icons.sync),
             tooltip: 'Sync Google Contacts',
@@ -83,21 +104,16 @@ class _ContactsView extends StatelessWidget {
             tooltip: 'Merge contacts',
             onPressed: () => _showMergeDialog(context),
           ),
-          IconButton(
-            icon: const Icon(Icons.search),
-            tooltip: l10n.contactSearch,
-            onPressed: () => _openSearch(context),
-          ),
         ],
       ),
       body: BlocBuilder<ContactsBloc, ContactsState>(
         buildWhen: (previous, current) =>
             previous.runtimeType != current.runtimeType || previous != current,
         builder: (context, state) {
-          return switch (state) {
+          final listContent = switch (state) {
             ContactsInitial() || ContactsLoading() => const Center(
                 child: CircularProgressIndicator(),
-              ),
+              ) as Widget,
             ContactsLoaded(:final contacts) => contacts.isEmpty
                 ? EmptyState(
                     icon: Icons.contacts_outlined,
@@ -109,7 +125,11 @@ class _ContactsView extends StatelessWidget {
                       label: Text(l10n.addContact),
                     ),
                   )
-                : _ContactsList(state: state),
+                : _ContactsList(
+                    state: state,
+                    statusFilter: _statusFilter,
+                    tagFilter: _tagFilter,
+                  ),
             ContactsError(:final failure) => PageError(
                 title: l10n.failedToLoadContacts,
                 message: failure.message,
@@ -118,6 +138,52 @@ class _ContactsView extends StatelessWidget {
                     .add(const ContactsLoadRequested()),
               ),
           };
+
+          // Build sidebar sections from loaded data
+          final allStatuses = <String>[];
+          final allTags = <String>[];
+          int totalCount = 0;
+          if (state is ContactsLoaded) {
+            allStatuses.addAll(
+              state.contacts.map((c) => c.status).toSet().toList()..sort(),
+            );
+            allTags.addAll(
+              state.contacts.expand((c) => c.tags).toSet().toList()..sort(),
+            );
+            totalCount = state.contacts.length;
+          }
+
+          return Row(
+            children: [
+              Expanded(child: listContent),
+              if (_sidebarOpen)
+                FilterSidebar(
+                  totalCount: totalCount,
+                  onClearAll: () => setState(() {
+                    _statusFilter = {};
+                    _tagFilter = {};
+                  }),
+                  sections: [
+                    FilterSection.checkboxGroup(
+                      title: 'Status',
+                      options: allStatuses
+                          .map((s) => FilterOption(value: s, label: s))
+                          .toList(),
+                      selected: _statusFilter,
+                      onChanged: (v) => setState(() => _statusFilter = v),
+                    ),
+                    FilterSection.checkboxGroup(
+                      title: 'Tags',
+                      options: allTags
+                          .map((t) => FilterOption(value: t, label: t))
+                          .toList(),
+                      selected: _tagFilter,
+                      onChanged: (v) => setState(() => _tagFilter = v),
+                    ),
+                  ],
+                ),
+            ],
+          );
         },
       ),
       floatingActionButton: FloatingActionButton(
@@ -539,9 +605,15 @@ class _ContactFormSheetState extends State<_ContactFormSheet> {
 }
 
 class _ContactsList extends StatefulWidget {
-  const _ContactsList({required this.state});
+  const _ContactsList({
+    required this.state,
+    this.statusFilter = const {},
+    this.tagFilter = const {},
+  });
 
   final ContactsLoaded state;
+  final Set<String> statusFilter;
+  final Set<String> tagFilter;
 
   @override
   State<_ContactsList> createState() => _ContactsListState();
@@ -590,7 +662,7 @@ class _ContactsListState extends State<_ContactsList> {
     final allStatuses = contacts.map((c) => c.status).toSet().toList()..sort();
     final allTags = contacts.expand((c) => c.tags).toSet().toList()..sort();
 
-    // Apply local filters
+    // Apply local search
     if (_search.isNotEmpty) {
       final q = _search.toLowerCase();
       contacts = contacts.where((c) {
@@ -601,11 +673,23 @@ class _ContactsListState extends State<_ContactsList> {
             (c.jobTitle ?? '').toLowerCase().contains(q);
       }).toList();
     }
+    // Apply inline chip filters
     if (_statusFilter != null) {
       contacts = contacts.where((c) => c.status == _statusFilter).toList();
     }
     if (_tagFilter != null) {
       contacts = contacts.where((c) => c.tags.contains(_tagFilter)).toList();
+    }
+    // Apply sidebar filters
+    if (widget.statusFilter.isNotEmpty) {
+      contacts = contacts
+          .where((c) => widget.statusFilter.contains(c.status))
+          .toList();
+    }
+    if (widget.tagFilter.isNotEmpty) {
+      contacts = contacts
+          .where((c) => c.tags.any(widget.tagFilter.contains))
+          .toList();
     }
 
     return Column(
