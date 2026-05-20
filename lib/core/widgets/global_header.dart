@@ -16,16 +16,17 @@ class GlobalHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Container(
-      height: 48,
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        border: Border(
-          bottom: BorderSide(color: colorScheme.outlineVariant),
+    return Material(
+      color: colorScheme.surface,
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: colorScheme.outlineVariant),
+          ),
         ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
         children: [
           // App branding
           InkWell(
@@ -67,6 +68,7 @@ class GlobalHeader extends StatelessWidget {
           // Profile menu
           _ProfileMenu(),
         ],
+      ),
       ),
     );
   }
