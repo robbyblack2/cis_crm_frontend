@@ -622,8 +622,6 @@ class _ContactsList extends StatefulWidget {
 class _ContactsListState extends State<_ContactsList> {
   final _scrollController = ScrollController();
   String _search = '';
-  String? _statusFilter;
-  String? _tagFilter;
 
   @override
   void initState() {
@@ -658,11 +656,7 @@ class _ContactsListState extends State<_ContactsList> {
     var contacts = widget.state.contacts;
     final hasMore = widget.state.hasMore;
 
-    // Collect unique statuses and tags for filter chips
-    final allStatuses = contacts.map((c) => c.status).toSet().toList()..sort();
-    final allTags = contacts.expand((c) => c.tags).toSet().toList()..sort();
-
-    // Apply local search
+    // Apply search
     if (_search.isNotEmpty) {
       final q = _search.toLowerCase();
       contacts = contacts.where((c) {
@@ -672,13 +666,6 @@ class _ContactsListState extends State<_ContactsList> {
             (c.phone ?? '').contains(q) ||
             (c.jobTitle ?? '').toLowerCase().contains(q);
       }).toList();
-    }
-    // Apply inline chip filters
-    if (_statusFilter != null) {
-      contacts = contacts.where((c) => c.status == _statusFilter).toList();
-    }
-    if (_tagFilter != null) {
-      contacts = contacts.where((c) => c.tags.contains(_tagFilter)).toList();
     }
     // Apply sidebar filters
     if (widget.statusFilter.isNotEmpty) {
@@ -691,6 +678,14 @@ class _ContactsListState extends State<_ContactsList> {
           .where((c) => c.tags.any(widget.tagFilter.contains))
           .toList();
     }
+
+    // Build active filter chips for display
+    final activeFilters = <ActiveFilter>[
+      for (final s in widget.statusFilter)
+        ActiveFilter(label: 'Status: $s', onRemove: () {}),
+      for (final t in widget.tagFilter)
+        ActiveFilter(label: 'Tag: $t', onRemove: () {}),
+    ];
 
     return Column(
       children: [
@@ -719,53 +714,8 @@ class _ContactsListState extends State<_ContactsList> {
             onChanged: (v) => setState(() => _search = v),
           ),
         ),
-        // Filter chips
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(
-            children: [
-              // Status filters
-              ...allStatuses.map((s) => Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: FilterChip(
-                      label: Text(s),
-                      selected: _statusFilter == s,
-                      onSelected: (_) => setState(() =>
-                          _statusFilter = _statusFilter == s ? null : s),
-                    ),
-                  )),
-              if (allStatuses.isNotEmpty && allTags.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: SizedBox(
-                    height: 24,
-                    child: VerticalDivider(
-                      color: theme.colorScheme.outlineVariant,
-                    ),
-                  ),
-                ),
-              // Tag filters
-              ...allTags.take(8).map((t) => Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: FilterChip(
-                      label: Text(t),
-                      selected: _tagFilter == t,
-                      onSelected: (_) => setState(() =>
-                          _tagFilter = _tagFilter == t ? null : t),
-                    ),
-                  )),
-              if (_statusFilter != null || _tagFilter != null)
-                TextButton(
-                  onPressed: () => setState(() {
-                    _statusFilter = null;
-                    _tagFilter = null;
-                  }),
-                  child: const Text('Clear'),
-                ),
-            ],
-          ),
-        ),
+        // Active filter chips (from sidebar)
+        ActiveFilterChips(filters: activeFilters),
         // List
         Expanded(
           child: ListView.separated(
