@@ -1,5 +1,6 @@
 import 'package:cis_crm/core/responsive/breakpoints.dart';
 import 'package:cis_crm/core/router/routes.dart';
+import 'package:cis_crm/core/widgets/global_header.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -25,7 +26,8 @@ class AdaptiveScaffold extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = windowSizeFor(constraints.maxWidth);
-        return switch (size) {
+        final showHeader = size != WindowSize.compact;
+        final nav = switch (size) {
           WindowSize.compact => _Bottom(
               shell: navigationShell,
               destinations: destinations,
@@ -42,6 +44,13 @@ class AdaptiveScaffold extends StatelessWidget {
               onTap: _onTap,
             ),
         };
+        if (!showHeader) return nav;
+        return Column(
+          children: [
+            const GlobalHeader(),
+            Expanded(child: nav),
+          ],
+        );
       },
     );
   }
