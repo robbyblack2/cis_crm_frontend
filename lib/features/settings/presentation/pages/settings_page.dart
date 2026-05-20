@@ -44,13 +44,6 @@ class SettingsPage extends StatelessWidget {
             onTap: () => context.push(Routes.companies),
           ),
           ListTile(
-            leading: const Icon(Icons.bolt_outlined),
-            title: Text(l10n.automationTitle),
-            subtitle: Text(l10n.automationSubtitle),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push(Routes.automation),
-          ),
-          ListTile(
             leading: const Icon(Icons.email_outlined),
             title: Text(l10n.emailCompose),
             trailing: const Icon(Icons.chevron_right),
@@ -79,6 +72,20 @@ class SettingsPage extends StatelessWidget {
 
           // ── Configuration ──
           _SectionHeader(title: 'Configuration'),
+          ListTile(
+            leading: const Icon(Icons.view_kanban_outlined),
+            title: const Text('Pipelines'),
+            subtitle: const Text('Manage pipelines, stages, and workflow'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.pipelineManagement),
+          ),
+          ListTile(
+            leading: const Icon(Icons.bolt_outlined),
+            title: Text(l10n.automationTitle),
+            subtitle: Text(l10n.automationSubtitle),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.automation),
+          ),
           ListTile(
             leading: const Icon(Icons.text_fields),
             title: const Text('Field Definitions'),

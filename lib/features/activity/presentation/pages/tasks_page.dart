@@ -6,6 +6,7 @@ import 'package:cis_crm/features/activity/domain/entities/crm_task.dart';
 import 'package:cis_crm/features/activity/domain/entities/task_priority.dart';
 import 'package:cis_crm/features/activity/domain/entities/task_status.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/tasks_bloc.dart';
+import 'package:cis_crm/features/activity/presentation/pages/task_detail_page.dart';
 import 'package:cis_crm/features/activity/presentation/widgets/task_tile.dart';
 import 'package:cis_crm/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
@@ -33,6 +34,7 @@ class _TasksView extends StatefulWidget {
 
 class _TasksViewState extends State<_TasksView> {
   TaskStatus? _filter;
+  String _search = '';
 
   @override
   Widget build(BuildContext context) {
@@ -54,207 +56,256 @@ class _TasksViewState extends State<_TasksView> {
     );
   }
 
-  void _showCreateTaskDialog(BuildContext context) {
-    final titleController = TextEditingController();
-    var selectedPriority = TaskPriority.medium;
+  void _showCreateTaskSheet(BuildContext context) {
+    final titleCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
+    var priority = TaskPriority.medium;
+    var status = TaskStatus.todo;
+    DateTime? dueDate;
 
-    showDialog<void>(
+    showModalBottomSheet<void>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(AppLocalizations.of(dialogContext)!.createTask),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: InputDecoration(
-                  labelText: AppLocalizations.of(dialogContext)!.title,
-                  hintText: AppLocalizations.of(dialogContext)!.enterTaskTitle,
-                ),
-                autofocus: true,
-                textCapitalization: TextCapitalization.sentences,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<TaskPriority>(
-                initialValue: selectedPriority,
-                decoration: InputDecoration(
-                  labelText: AppLocalizations.of(dialogContext)!.priority,
-                ),
-                items: TaskPriority.values
-                    .map(
-                      (p) => DropdownMenuItem(
-                        value: p,
-                        child: Text(
-                          p.name[0].toUpperCase() +
-                              p.name.substring(1),
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setDialogState(() => selectedPriority = value);
-                  }
-                },
-              ),
-            ],
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(AppLocalizations.of(dialogContext)!.cancel),
-            ),
-            FilledButton(
-              onPressed: () {
-                final title = titleController.text.trim();
-                if (title.isEmpty) return;
-                final now = DateTime.now();
-                final authState = getIt<AuthBloc>().state;
-                final userId = authState is AuthAuthenticated
-                    ? authState.user.id
-                    : '';
-                final task = CrmTask(
-                  id: '',
-                  title: title,
-                  status: TaskStatus.todo,
-                  priority: selectedPriority,
-                  parentType: 'contact',
-                  parentId:
-                      '00000000-0000-0000-0000-000000000000',
-                  createdBy: userId,
-                  createdAt: now,
-                  updatedAt: now,
-                );
-                context.read<TasksBloc>().add(TaskCreateRequested(task: task));
-                Navigator.of(dialogContext).pop();
-              },
-              child: Text(AppLocalizations.of(dialogContext)!.create),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showEditTaskDialog(BuildContext context, CrmTask task) {
-    final titleController = TextEditingController(text: task.title);
-    var selectedPriority = task.priority;
-    var selectedStatus = task.status;
-
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: const Text('Edit Task'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Title',
-                  hintText: 'Enter task title',
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'New Task',
+                  style: Theme.of(ctx).textTheme.headlineSmall,
                 ),
-                autofocus: true,
-                textCapitalization: TextCapitalization.sentences,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<TaskPriority>(
-                initialValue: selectedPriority,
-                decoration: InputDecoration(
-                  labelText: AppLocalizations.of(dialogContext)!.priority,
+                const SizedBox(height: 20),
+                TextField(
+                  controller: titleCtrl,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Title *',
+                    border: OutlineInputBorder(),
+                  ),
+                  textCapitalization: TextCapitalization.sentences,
                 ),
-                items: TaskPriority.values
-                    .map(
-                      (p) => DropdownMenuItem(
-                        value: p,
-                        child: Text(
-                          p.name[0].toUpperCase() + p.name.substring(1),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                  minLines: 2,
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<TaskPriority>(
+                        value: priority,
+                        decoration: const InputDecoration(
+                          labelText: 'Priority',
+                          border: OutlineInputBorder(),
                         ),
+                        items: TaskPriority.values
+                            .map(
+                              (p) => DropdownMenuItem(
+                                value: p,
+                                child: Text(
+                                  p.name[0].toUpperCase() +
+                                      p.name.substring(1),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) {
+                          if (v != null) {
+                            setSheetState(() => priority = v);
+                          }
+                        },
                       ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setDialogState(() => selectedPriority = value);
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<TaskStatus>(
-                initialValue: selectedStatus,
-                decoration: const InputDecoration(
-                  labelText: 'Status',
-                ),
-                items: TaskStatus.values
-                    .map(
-                      (s) => DropdownMenuItem(
-                        value: s,
-                        child: Text(
-                          s.name[0].toUpperCase() + s.name.substring(1),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonFormField<TaskStatus>(
+                        value: status,
+                        decoration: const InputDecoration(
+                          labelText: 'Status',
+                          border: OutlineInputBorder(),
                         ),
+                        items: TaskStatus.values
+                            .map(
+                              (s) => DropdownMenuItem(
+                                value: s,
+                                child: Text(
+                                  s == TaskStatus.inProgress
+                                      ? 'In Progress'
+                                      : s.name[0].toUpperCase() +
+                                          s.name.substring(1),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) {
+                          if (v != null) {
+                            setSheetState(() => status = v);
+                          }
+                        },
                       ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setDialogState(() => selectedStatus = value);
-                  }
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final title = titleController.text.trim();
-                if (title.isEmpty) return;
-                final updated = CrmTask(
-                  id: task.id,
-                  title: title,
-                  status: selectedStatus,
-                  priority: selectedPriority,
-                  parentType: task.parentType,
-                  parentId: task.parentId,
-                  createdBy: task.createdBy,
-                  createdAt: task.createdAt,
-                  updatedAt: DateTime.now(),
-                  description: task.description,
-                  assigneeId: task.assigneeId,
-                  dueDate: task.dueDate,
-                  completedAt: task.completedAt,
-                );
-                context.read<TasksBloc>().add(
-                      TaskUpdateRequested(task: updated),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // Due date picker
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.event_outlined),
+                  label: Text(
+                    dueDate != null
+                        ? 'Due: ${dueDate!.year}-'
+                            '${dueDate!.month.toString().padLeft(2, '0')}-'
+                            '${dueDate!.day.toString().padLeft(2, '0')}'
+                        : 'Set due date',
+                  ),
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: dueDate ?? DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
                     );
-                Navigator.of(dialogContext).pop();
-              },
-              child: const Text('Save'),
+                    if (picked != null) {
+                      setSheetState(() => dueDate = picked);
+                    }
+                  },
+                ),
+                const SizedBox(height: 20),
+                FilledButton(
+                  onPressed: () {
+                    final title = titleCtrl.text.trim();
+                    if (title.isEmpty) return;
+                    final now = DateTime.now();
+                    final authState = getIt<AuthBloc>().state;
+                    final userId = authState is AuthAuthenticated
+                        ? authState.user.id
+                        : null;
+                    final task = CrmTask(
+                      id: '',
+                      title: title,
+                      description: descCtrl.text.trim().isNotEmpty
+                          ? descCtrl.text.trim()
+                          : null,
+                      status: status,
+                      priority: priority,
+                      createdBy: userId,
+                      dueDate: dueDate,
+                      createdAt: now,
+                      updatedAt: now,
+                    );
+                    context
+                        .read<TasksBloc>()
+                        .add(TaskCreateRequested(task: task));
+                    Navigator.pop(ctx);
+                  },
+                  child: const Text('Create Task'),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildLoaded(BuildContext context, List<CrmTask> tasks) {
-    final filtered = _filter == null
+    // Apply search
+    var filtered = _search.isEmpty
         ? tasks
-        : tasks.where((t) => t.status == _filter).toList();
+        : tasks.where((t) {
+            final q = _search.toLowerCase();
+            return t.title.toLowerCase().contains(q) ||
+                (t.description?.toLowerCase().contains(q) ?? false);
+          }).toList();
+
+    // Apply status filter
+    if (_filter != null) {
+      filtered = filtered.where((t) => t.status == _filter).toList();
+    }
+
+    // Count per status (from all tasks, not filtered)
+    final todoCount = tasks.where((t) => t.status == TaskStatus.todo).length;
+    final ipCount =
+        tasks.where((t) => t.status == TaskStatus.inProgress).length;
+    final doneCount = tasks.where((t) => t.status == TaskStatus.done).length;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.tasksTitle),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
-          child: _FilterChips(
-            selected: _filter,
-            onSelected: (filter) => setState(() => _filter = filter),
+          preferredSize: const Size.fromHeight(100),
+          child: Column(
+            children: [
+              // Search bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Search tasks...',
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    isDense: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                  onChanged: (v) => setState(() => _search = v),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Filter chips with counts
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Row(
+                  children: [
+                    _filterChip(
+                      context,
+                      label: 'All (${tasks.length})',
+                      value: null,
+                    ),
+                    const SizedBox(width: 8),
+                    _filterChip(
+                      context,
+                      label: 'To Do ($todoCount)',
+                      value: TaskStatus.todo,
+                    ),
+                    const SizedBox(width: 8),
+                    _filterChip(
+                      context,
+                      label: 'In Progress ($ipCount)',
+                      value: TaskStatus.inProgress,
+                    ),
+                    const SizedBox(width: 8),
+                    _filterChip(
+                      context,
+                      label: 'Done ($doneCount)',
+                      value: TaskStatus.done,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -264,13 +315,22 @@ class _TasksViewState extends State<_TasksView> {
               title: AppLocalizations.of(context)!.tasksEmpty,
               message: AppLocalizations.of(context)!.tasksEmptyAction,
             )
-          : ListView.builder(
+          : ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: filtered.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 2),
               itemBuilder: (context, index) {
                 final task = filtered[index];
                 return TaskTile(
                   task: task,
-                  onTap: () => _showEditTaskDialog(context, task),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => BlocProvider.value(
+                        value: context.read<TasksBloc>(),
+                        child: TaskDetailPage(task: task),
+                      ),
+                    ),
+                  ),
                   onStatusToggled: (updated) =>
                       context.read<TasksBloc>().add(TaskUpdated(updated)),
                   onDeleted: (id) =>
@@ -278,63 +338,26 @@ class _TasksViewState extends State<_TasksView> {
                 );
               },
             ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         heroTag: 'tasks_fab',
         tooltip: AppLocalizations.of(context)!.addTask,
-        onPressed: () => _showCreateTaskDialog(context),
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-}
-
-class _FilterChips extends StatelessWidget {
-  const _FilterChips({
-    required this.selected,
-    required this.onSelected,
-  });
-
-  final TaskStatus? selected;
-  final ValueChanged<TaskStatus?> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Builder(
-        builder: (context) {
-          final l10n = AppLocalizations.of(context)!;
-          return Row(
-            children: [
-              _chip(context, label: l10n.filterAll, value: null),
-              const SizedBox(width: 8),
-              _chip(context, label: l10n.filterTodo, value: TaskStatus.todo),
-              const SizedBox(width: 8),
-              _chip(
-                context,
-                label: l10n.filterInProgress,
-                value: TaskStatus.inProgress,
-              ),
-              const SizedBox(width: 8),
-              _chip(context, label: l10n.filterDone, value: TaskStatus.done),
-            ],
-          );
-        },
+        onPressed: () => _showCreateTaskSheet(context),
+        icon: const Icon(Icons.add),
+        label: const Text('New Task'),
       ),
     );
   }
 
-  Widget _chip(
+  Widget _filterChip(
     BuildContext context, {
     required String label,
     required TaskStatus? value,
   }) {
-    final isSelected = selected == value;
+    final isSelected = _filter == value;
     return FilterChip(
       label: Text(label),
       selected: isSelected,
-      onSelected: (_) => onSelected(value),
+      onSelected: (_) => setState(() => _filter = value),
     );
   }
 }

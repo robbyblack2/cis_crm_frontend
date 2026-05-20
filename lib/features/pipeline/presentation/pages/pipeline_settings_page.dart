@@ -310,7 +310,16 @@ class _PipelineSettingsPageState extends State<PipelineSettingsPage> {
                           name: _stages![i].name,
                           position: i,
                         );
-                      } catch (_) {}
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to reorder stage: $e'),
+                            ),
+                          );
+                        }
+                        break;
+                      }
                     }
                   },
                   itemBuilder: (context, index) {

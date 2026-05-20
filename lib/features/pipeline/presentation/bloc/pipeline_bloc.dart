@@ -30,6 +30,43 @@ final class PipelineKanbanRequested extends PipelineEvent {
   List<Object?> get props => [pipelineId];
 }
 
+final class PipelineCreateRequested extends PipelineEvent {
+  const PipelineCreateRequested({
+    required this.name,
+    required this.pipelineType,
+  });
+
+  final String name;
+  final PipelineType pipelineType;
+
+  @override
+  List<Object?> get props => [name, pipelineType];
+}
+
+final class PipelineUpdateRequested extends PipelineEvent {
+  const PipelineUpdateRequested({
+    required this.id,
+    required this.name,
+    required this.isActive,
+  });
+
+  final String id;
+  final String name;
+  final bool isActive;
+
+  @override
+  List<Object?> get props => [id, name, isActive];
+}
+
+final class PipelineDeleteRequested extends PipelineEvent {
+  const PipelineDeleteRequested({required this.id});
+
+  final String id;
+
+  @override
+  List<Object?> get props => [id];
+}
+
 // ── States ──────────────────────────────────────────────────────────────────
 
 @immutable
@@ -80,6 +117,9 @@ class PipelineBloc extends Bloc<PipelineEvent, PipelineState> {
         super(const PipelineInitial()) {
     on<PipelineLoadRequested>(_onLoad, transformer: restartable());
     on<PipelineKanbanRequested>(_onKanban, transformer: restartable());
+    on<PipelineCreateRequested>(_onCreate, transformer: droppable());
+    on<PipelineUpdateRequested>(_onUpdate, transformer: droppable());
+    on<PipelineDeleteRequested>(_onDelete, transformer: droppable());
   }
 
   final PipelineRepository _repository;
@@ -118,6 +158,73 @@ class PipelineBloc extends Bloc<PipelineEvent, PipelineState> {
             kanbanStages: data.stages,
           ),
         );
+      case Failure(:final error):
+        emit(PipelineError(message: error.message));
+    }
+  }
+
+  Future<void> _onCreate(
+    PipelineCreateRequested event,
+    Emitter<PipelineState> emit,
+  ) async {
+    emit(const PipelineLoading());
+    final result = await _repository.createPipeline(
+      name: event.name,
+      pipelineType: event.pipelineType,
+    );
+    switch (result) {
+      case Success():
+        final listResult = await _repository.getPipelines();
+        switch (listResult) {
+          case Success(:final data):
+            emit(PipelineLoaded(pipelines: data));
+          case Failure(:final error):
+            emit(PipelineError(message: error.message));
+        }
+      case Failure(:final error):
+        emit(PipelineError(message: error.message));
+    }
+  }
+
+  Future<void> _onUpdate(
+    PipelineUpdateRequested event,
+    Emitter<PipelineState> emit,
+  ) async {
+    emit(const PipelineLoading());
+    final result = await _repository.updatePipeline(
+      id: event.id,
+      name: event.name,
+      isActive: event.isActive,
+    );
+    switch (result) {
+      case Success():
+        final listResult = await _repository.getPipelines();
+        switch (listResult) {
+          case Success(:final data):
+            emit(PipelineLoaded(pipelines: data));
+          case Failure(:final error):
+            emit(PipelineError(message: error.message));
+        }
+      case Failure(:final error):
+        emit(PipelineError(message: error.message));
+    }
+  }
+
+  Future<void> _onDelete(
+    PipelineDeleteRequested event,
+    Emitter<PipelineState> emit,
+  ) async {
+    emit(const PipelineLoading());
+    final result = await _repository.deletePipeline(event.id);
+    switch (result) {
+      case Success():
+        final listResult = await _repository.getPipelines();
+        switch (listResult) {
+          case Success(:final data):
+            emit(PipelineLoaded(pipelines: data));
+          case Failure(:final error):
+            emit(PipelineError(message: error.message));
+        }
       case Failure(:final error):
         emit(PipelineError(message: error.message));
     }

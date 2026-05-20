@@ -2,9 +2,11 @@ import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/features/automation/domain/entities/automation_rule.dart';
 import 'package:cis_crm/features/automation/domain/repositories/automation_repository.dart';
+import 'package:cis_crm/features/automation/presentation/bloc/automation_bloc.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class AutomationRuleDetailPage extends StatefulWidget {
   const AutomationRuleDetailPage({required this.ruleId, super.key});
@@ -77,6 +79,11 @@ class _AutomationRuleDetailPageState extends State<AutomationRuleDetailPage> {
       appBar: AppBar(
         title: Text(rule.name),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: 'Edit',
+            onPressed: () => _showEditSheet(context, rule),
+          ),
           IconButton(
             icon: const Icon(Icons.delete_outlined),
             tooltip: l10n.delete,
@@ -317,6 +324,111 @@ class _AutomationRuleDetailPageState extends State<AutomationRuleDetailPage> {
           );
       }
     });
+  }
+
+  void _showEditSheet(BuildContext context, AutomationRule rule) {
+    final nameCtrl = TextEditingController(text: rule.name);
+    final descCtrl = TextEditingController(text: rule.description ?? '');
+    var priority = rule.priority;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Edit Rule',
+                  style: Theme.of(ctx).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: nameCtrl,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Rule Name',
+                    border: OutlineInputBorder(),
+                  ),
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                  minLines: 2,
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<int>(
+                  value: priority,
+                  decoration: const InputDecoration(
+                    labelText: 'Priority',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [1, 2, 3, 4, 5]
+                      .map(
+                        (p) => DropdownMenuItem(
+                          value: p,
+                          child: Text('Priority $p'),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) {
+                      setSheetState(() => priority = v);
+                    }
+                  },
+                ),
+                const SizedBox(height: 20),
+                FilledButton(
+                  onPressed: () {
+                    final name = nameCtrl.text.trim();
+                    if (name.isEmpty) return;
+                    final updated = AutomationRule(
+                      id: rule.id,
+                      name: name,
+                      description: descCtrl.text.trim().isNotEmpty
+                          ? descCtrl.text.trim()
+                          : null,
+                      isActive: rule.isActive,
+                      triggerType: rule.triggerType,
+                      triggerConditions: rule.triggerConditions,
+                      actions: rule.actions,
+                      priority: priority,
+                      createdBy: rule.createdBy,
+                      createdAt: rule.createdAt,
+                      updatedAt: DateTime.now(),
+                    );
+                    context
+                        .read<AutomationBloc>()
+                        .add(AutomationRuleUpdateRequested(rule: updated));
+                    Navigator.pop(ctx);
+                    // Reload the detail
+                    _loadRule();
+                  },
+                  child: const Text('Save Changes'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _dryRun(BuildContext context, String ruleId) async {

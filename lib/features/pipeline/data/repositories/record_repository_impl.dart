@@ -165,4 +165,22 @@ class RecordRepositoryImpl implements RecordRepository {
       return Failure(UnknownFailure(e.message));
     }
   }
+
+  @override
+  Future<Result<PipelineRecord, AppFailure>> claimRecord(
+    String recordId,
+  ) async {
+    try {
+      final record = await _remoteDataSource.claimRecord(recordId);
+      return Success(record);
+    } on NetworkException {
+      return const Failure(NetworkFailure());
+    } on UnauthorizedException {
+      return const Failure(UnauthorizedFailure());
+    } on ServerException catch (e) {
+      return Failure(ServerFailure(e.message, statusCode: e.statusCode));
+    } on AppException catch (e) {
+      return Failure(UnknownFailure(e.message));
+    }
+  }
 }

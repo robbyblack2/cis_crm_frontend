@@ -37,6 +37,42 @@ class Contact extends Equatable {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  Contact copyWith({
+    String? id,
+    String? firstName,
+    String? lastName,
+    String? email,
+    String? status,
+    List<String>? tags,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    int? version,
+    String? ownerId,
+    String? companyId,
+    String? phone,
+    String? jobTitle,
+    String? source,
+    String? googleContactId,
+  }) {
+    return Contact(
+      id: id ?? this.id,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      email: email ?? this.email,
+      status: status ?? this.status,
+      tags: tags ?? this.tags,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      version: version ?? this.version,
+      ownerId: ownerId ?? this.ownerId,
+      companyId: companyId ?? this.companyId,
+      phone: phone ?? this.phone,
+      jobTitle: jobTitle ?? this.jobTitle,
+      source: source ?? this.source,
+      googleContactId: googleContactId ?? this.googleContactId,
+    );
+  }
+
   @override
   List<Object?> get props => [
         id,

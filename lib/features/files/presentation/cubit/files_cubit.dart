@@ -67,6 +67,30 @@ class FilesCubit extends Cubit<FilesState> {
     }
   }
 
+  Future<void> uploadFileBytes({
+    required String parentType,
+    required String parentId,
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    final currentFiles = state is FilesLoaded
+        ? (state as FilesLoaded).files
+        : <FileAttachment>[];
+    emit(FilesUploading(currentFiles));
+    final result = await _repository.uploadBytes(
+      parentType: parentType,
+      parentId: parentId,
+      bytes: bytes,
+      filename: filename,
+    );
+    switch (result) {
+      case Success(:final data):
+        emit(FilesLoaded([...currentFiles, data]));
+      case Failure(:final error):
+        emit(FilesError(error));
+    }
+  }
+
   Future<void> deleteFile(String fileId) async {
     final currentState = state;
     if (currentState is! FilesLoaded) return;

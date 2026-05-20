@@ -281,14 +281,31 @@ class RecordBloc extends Bloc<RecordEvent, RecordState> {
     RecordMoveRequested event,
     Emitter<RecordState> emit,
   ) async {
-    emit(const RecordLoading());
+    final current = state;
+
+    // Optimistic update: move the card instantly in the UI.
+    if (current is RecordLoaded) {
+      final optimisticRecords = current.records.map((r) {
+        if (r.id == event.recordId) {
+          return r.copyWith(stageId: event.toStageId);
+        }
+        return r;
+      }).toList();
+      emit(current.copyWith(records: optimisticRecords));
+    }
+
     final result = await _repository.moveRecord(
       id: event.recordId,
       toStageId: event.toStageId,
       promptData: event.promptData,
     );
     switch (result) {
-      case Success():
+      case Success(:final data):
+        // Auto-claim if the record has no owner yet.
+        if (data.ownerId == null) {
+          await _repository.claimRecord(event.recordId);
+        }
+        // Background refresh to sync with server state.
         final listResult = await _repository.getRecords();
         switch (listResult) {
           case Success(:final data):
@@ -300,11 +317,16 @@ class RecordBloc extends Bloc<RecordEvent, RecordState> {
                 perPage: data.perPage,
               ),
             );
-          case Failure(:final error):
-            emit(RecordError(message: error.message));
+          case Failure():
+            break; // Keep the optimistic state; WebSocket will eventually sync.
         }
       case Failure(:final error):
-        emit(RecordError(message: error.message));
+        // Revert: restore the previous state.
+        if (current is RecordLoaded) {
+          emit(current);
+        } else {
+          emit(RecordError(message: error.message));
+        }
     }
   }
 

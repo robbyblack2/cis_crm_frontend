@@ -161,11 +161,6 @@
     "description": "Empty-state text when a timeline has no entries."
   },
 
-  "activityTimelineComingSoon": "Activity timeline coming soon",
-  "@activityTimelineComingSoon": {
-    "description": "Placeholder text for the record detail timeline section."
-  },
-
   "timelineLoadFailed": "Failed to load timeline",
   "@timelineLoadFailed": {
     "description": "Error text when timeline fails to load."
@@ -1187,17 +1182,6 @@
   "ruleDetail": "Rule Detail",
   "@ruleDetail": {
     "description": "Page title for the automation rule detail view."
-  },
-
-  "ruleDetailComingSoon": "Detail for rule {ruleId} — coming soon.",
-  "@ruleDetailComingSoon": {
-    "description": "Placeholder text for the rule detail page.",
-    "placeholders": {
-      "ruleId": {
-        "type": "String",
-        "example": "rule-123"
-      }
-    }
   },
 
   "deactivateRule": "Deactivate rule",

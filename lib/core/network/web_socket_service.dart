@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:cis_crm/core/network/token_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:cis_crm/core/network/web_socket_event.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -34,6 +35,9 @@ class WebSocketService {
 
   /// Maximum back-off duration in seconds.
   static const int maxBackoffSeconds = 30;
+
+  /// Maximum reconnect attempts before giving up.
+  static const int maxReconnectAttempts = 10;
 
   // ---------------------------------------------------------------------------
   // Public API
@@ -120,8 +124,8 @@ class WebSocketService {
       for (final channel in _activeChannels) {
         _send({'action': 'subscribe', 'channel': channel});
       }
-    } catch (_) {
-      // Connection failed — schedule a reconnect silently.
+    } catch (e) {
+      debugPrint('WebSocket connection failed: $e');
       _channel = null;
       if (!_intentionalDisconnect) {
         _scheduleReconnect();
@@ -144,8 +148,8 @@ class WebSocketService {
     if (raw is! String) return;
     try {
       _controller.add(WebSocketEvent.fromJson(raw));
-    } catch (_) {
-      // Silently ignore malformed messages.
+    } catch (e) {
+      debugPrint('Malformed WebSocket message: $e');
     }
   }
 
@@ -166,6 +170,14 @@ class WebSocketService {
       min(pow(2, attempt).toInt(), maxBackoffSeconds);
 
   void _scheduleReconnect() {
+    if (_reconnectAttempts >= maxReconnectAttempts) {
+      debugPrint(
+        'WebSocket: max reconnect attempts ($maxReconnectAttempts) reached, '
+        'giving up. Call connect() to retry manually.',
+      );
+      return;
+    }
+
     final delay = backoffSeconds(_reconnectAttempts);
     _reconnectAttempts++;
 

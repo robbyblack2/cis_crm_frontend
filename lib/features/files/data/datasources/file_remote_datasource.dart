@@ -15,6 +15,13 @@ abstract interface class FileRemoteDatasource {
     required String filename,
   });
 
+  Future<FileAttachmentModel> uploadBytes({
+    required String parentType,
+    required String parentId,
+    required List<int> bytes,
+    required String filename,
+  });
+
   Future<FileAttachmentModel> getMetadata(String id);
 
   Future<List<int>> download(String id);
@@ -66,6 +73,34 @@ class FileRemoteDatasourceImpl implements FileRemoteDatasource {
         'parent_type': parentType,
         'parent_id': parentId,
         'file': await MultipartFile.fromFile(filePath, filename: filename),
+      });
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/files/upload',
+        data: formData,
+      );
+      final data = response.data?['data'] as Map<String, dynamic>?;
+      if (data == null) {
+        throw const ServerException('Empty response');
+      }
+      return FileAttachmentModel.fromJson(data);
+    } on DioException catch (e) {
+      if (e.error is AppException) throw e.error! as AppException;
+      throw ServerException(e.message ?? 'Upload failed.');
+    }
+  }
+
+  @override
+  Future<FileAttachmentModel> uploadBytes({
+    required String parentType,
+    required String parentId,
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        'parent_type': parentType,
+        'parent_id': parentId,
+        'file': MultipartFile.fromBytes(bytes, filename: filename),
       });
       final response = await _dio.post<Map<String, dynamic>>(
         '/api/files/upload',

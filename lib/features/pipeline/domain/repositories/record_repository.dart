@@ -39,4 +39,6 @@ abstract class RecordRepository {
   Future<Result<List<StageTransition>, AppFailure>> getStageHistory(
     String recordId,
   );
+
+  Future<Result<PipelineRecord, AppFailure>> claimRecord(String recordId);
 }

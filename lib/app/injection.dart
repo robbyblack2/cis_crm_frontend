@@ -1,4 +1,5 @@
 import 'package:cis_crm/app/app.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cis_crm/core/analytics/analytics_service.dart';
 import 'package:cis_crm/core/env/flavor_config.dart';
 import 'package:cis_crm/core/flags/feature_flag_service.dart';
@@ -63,6 +64,7 @@ import 'package:cis_crm/features/pipeline/domain/repositories/pipeline_repositor
 import 'package:cis_crm/features/pipeline/domain/repositories/record_repository.dart';
 import 'package:cis_crm/features/pipeline/presentation/bloc/pipeline_bloc.dart';
 import 'package:cis_crm/features/pipeline/presentation/bloc/record_bloc.dart';
+import 'package:cis_crm/features/pipeline/presentation/pages/pipeline_management_page.dart';
 import 'package:cis_crm/features/pipeline/presentation/pages/pipeline_page.dart';
 import 'package:cis_crm/features/products/data/datasources/product_remote_datasource.dart';
 import 'package:cis_crm/features/products/data/datasources/subscription_remote_datasource.dart';
@@ -556,6 +558,13 @@ Future<void> configureDependencies(FlavorConfig config) async {
         GoRoute(
           path: Routes.importExport,
           builder: (_, __) => const ImportExportPage(),
+        ),
+        GoRoute(
+          path: Routes.pipelineManagement,
+          builder: (_, __) => BlocProvider.value(
+            value: getIt<PipelineBloc>(),
+            child: const PipelineManagementPage(),
+          ),
         ),
         GoRoute(
           path: Routes.fieldDefinitions,

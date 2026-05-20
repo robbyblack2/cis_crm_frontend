@@ -26,7 +26,7 @@ Dio createDioClient({
 
   dio.interceptors.addAll([
     LoggingInterceptor(logger: logger, isProd: config.isProd),
-    AuthInterceptor(tokens: tokens, authApi: authApi),
+    AuthInterceptor(tokens: tokens, authApi: authApi, logger: logger),
     ErrorInterceptor(),
   ]);
 

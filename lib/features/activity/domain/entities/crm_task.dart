@@ -10,9 +10,9 @@ class CrmTask extends Equatable {
     required this.title,
     required this.status,
     required this.priority,
-    required this.parentType,
-    required this.parentId,
-    required this.createdBy,
+    this.parentType,
+    this.parentId,
+    this.createdBy,
     required this.createdAt,
     required this.updatedAt,
     this.description,
@@ -29,9 +29,9 @@ class CrmTask extends Equatable {
   final TaskPriority priority;
   final String? assigneeId;
   final DateTime? dueDate;
-  final String parentType;
-  final String parentId;
-  final String createdBy;
+  final String? parentType;
+  final String? parentId;
+  final String? createdBy;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? completedAt;

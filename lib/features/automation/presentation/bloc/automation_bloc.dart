@@ -25,6 +25,10 @@ class AutomationBloc extends Bloc<AutomationEvent, AutomationState> {
       _onRuleToggleRequested,
       transformer: sequential(),
     );
+    on<AutomationRuleUpdateRequested>(
+      _onRuleUpdateRequested,
+      transformer: droppable(),
+    );
     on<AutomationRuleDeleteRequested>(
       _onRuleDeleteRequested,
       transformer: droppable(),
@@ -73,6 +77,26 @@ class AutomationBloc extends Bloc<AutomationEvent, AutomationState> {
   ) async {
     emit(const AutomationLoading());
     final result = await _repository.toggleRule(event.ruleId);
+    switch (result) {
+      case Success():
+        final listResult = await _repository.getRules();
+        switch (listResult) {
+          case Success(:final data):
+            emit(AutomationLoaded(rules: data));
+          case Failure(:final error):
+            emit(AutomationError(message: error.message));
+        }
+      case Failure(:final error):
+        emit(AutomationError(message: error.message));
+    }
+  }
+
+  Future<void> _onRuleUpdateRequested(
+    AutomationRuleUpdateRequested event,
+    Emitter<AutomationState> emit,
+  ) async {
+    emit(const AutomationLoading());
+    final result = await _repository.updateRule(event.rule);
     switch (result) {
       case Success():
         final listResult = await _repository.getRules();

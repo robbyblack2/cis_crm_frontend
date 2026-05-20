@@ -332,11 +332,18 @@ void main() {
 
     group('RecordMoveRequested', () {
       blocTest<RecordBloc, RecordState>(
-        'emits [RecordLoading, RecordLoaded] when move + reload succeeds',
+        'optimistically moves record then syncs when move + reload succeeds',
+        seed: () => RecordLoaded(
+          records: [tRecord],
+          currentPage: 1,
+          total: 1,
+        ),
         setUp: () {
           when(
             () => mockRepository.moveRecord(id: 'r1', toStageId: 's2'),
           ).thenAnswer((_) async => Success(tRecord));
+          when(() => mockRepository.claimRecord('r1'))
+              .thenAnswer((_) async => Success(tRecord));
           when(() => mockRepository.getRecords())
               .thenAnswer((_) async => Success(tPaginatedResponse));
         },
@@ -345,17 +352,79 @@ void main() {
           const RecordMoveRequested(recordId: 'r1', toStageId: 's2'),
         ),
         expect: () => [
-          const RecordLoading(),
+          // Optimistic: record moved instantly in UI
+          RecordLoaded(
+            records: [tRecord.copyWith(stageId: 's2')],
+            currentPage: 1,
+            total: 1,
+          ),
+          // Server sync: refreshed list
           RecordLoaded(
             records: [tRecord],
             currentPage: 1,
             total: 1,
           ),
         ],
+        verify: (_) {
+          verify(() => mockRepository.claimRecord('r1')).called(1);
+        },
       );
 
       blocTest<RecordBloc, RecordState>(
-        'emits [RecordLoading, RecordError] when move fails',
+        'does not auto-claim when record already has an owner',
+        seed: () => RecordLoaded(
+          records: [tRecord],
+          currentPage: 1,
+          total: 1,
+        ),
+        setUp: () {
+          final ownedRecord = PipelineRecord(
+            id: 'r1',
+            pipelineId: 'p1',
+            stageId: 's2',
+            title: 'Test Deal',
+            source: RecordSource.manual,
+            tags: const ['hot'],
+            createdAt: tNow,
+            updatedAt: tNow,
+            ownerId: 'user-123',
+          );
+          when(
+            () => mockRepository.moveRecord(id: 'r1', toStageId: 's2'),
+          ).thenAnswer((_) async => Success(ownedRecord));
+          when(() => mockRepository.getRecords())
+              .thenAnswer((_) async => Success(tPaginatedResponse));
+        },
+        build: () => RecordBloc(recordRepository: mockRepository),
+        act: (bloc) => bloc.add(
+          const RecordMoveRequested(recordId: 'r1', toStageId: 's2'),
+        ),
+        expect: () => [
+          // Optimistic
+          RecordLoaded(
+            records: [tRecord.copyWith(stageId: 's2')],
+            currentPage: 1,
+            total: 1,
+          ),
+          // Server sync
+          RecordLoaded(
+            records: [tRecord],
+            currentPage: 1,
+            total: 1,
+          ),
+        ],
+        verify: (_) {
+          verifyNever(() => mockRepository.claimRecord(any()));
+        },
+      );
+
+      blocTest<RecordBloc, RecordState>(
+        'reverts to previous state when move fails',
+        seed: () => RecordLoaded(
+          records: [tRecord],
+          currentPage: 1,
+          total: 1,
+        ),
         setUp: () {
           when(
             () => mockRepository.moveRecord(id: 'r1', toStageId: 's2'),
@@ -367,9 +436,19 @@ void main() {
         act: (bloc) => bloc.add(
           const RecordMoveRequested(recordId: 'r1', toStageId: 's2'),
         ),
-        expect: () => const [
-          RecordLoading(),
-          RecordError(message: 'No internet connection.'),
+        expect: () => [
+          // Optimistic
+          RecordLoaded(
+            records: [tRecord.copyWith(stageId: 's2')],
+            currentPage: 1,
+            total: 1,
+          ),
+          // Reverted back to original
+          RecordLoaded(
+            records: [tRecord],
+            currentPage: 1,
+            total: 1,
+          ),
         ],
       );
     });

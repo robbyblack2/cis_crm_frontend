@@ -73,6 +73,11 @@ class _ContactsView extends StatelessWidget {
         title: Text(l10n.contactsTitle),
         actions: [
           IconButton(
+            icon: const Icon(Icons.sync),
+            tooltip: 'Sync Google Contacts',
+            onPressed: () => _triggerSync(context),
+          ),
+          IconButton(
             icon: const Icon(Icons.merge_type),
             tooltip: 'Merge contacts',
             onPressed: () => _showMergeDialog(context),
@@ -121,6 +126,27 @@ class _ContactsView extends StatelessWidget {
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  Future<void> _triggerSync(BuildContext context) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Syncing Google Contacts...')),
+    );
+    try {
+      await getIt<Dio>().post<void>('/api/contacts/sync');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sync complete')),
+        );
+        context.read<ContactsBloc>().add(const ContactsLoadRequested());
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sync failed: $e')),
+        );
+      }
+    }
   }
 
   void _openSearch(BuildContext context) {

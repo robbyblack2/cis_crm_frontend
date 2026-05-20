@@ -1,9 +1,14 @@
 import 'package:cis_crm/app/injection.dart';
+import 'package:cis_crm/core/utils/html_utils.dart';
+import 'package:cis_crm/core/widgets/activities_section.dart';
 import 'package:cis_crm/core/error/failures.dart';
 import 'package:cis_crm/core/error/result.dart';
+import 'package:cis_crm/features/contacts/data/datasources/company_remote_data_source.dart';
 import 'package:cis_crm/features/contacts/data/datasources/contact_remote_data_source.dart';
+import 'package:cis_crm/features/contacts/domain/entities/company.dart';
 import 'package:cis_crm/features/contacts/domain/entities/contact.dart';
 import 'package:cis_crm/features/contacts/domain/repositories/contact_repository.dart';
+import 'package:cis_crm/features/contacts/presentation/pages/company_detail_page.dart';
 import 'package:cis_crm/features/files/domain/entities/file_attachment.dart';
 import 'package:cis_crm/features/files/domain/repositories/file_repository.dart';
 import 'package:cis_crm/features/files/presentation/widgets/file_tile.dart';
@@ -182,7 +187,12 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
             const SizedBox(height: 16),
             _editing
                 ? _buildEditForm(context)
-                : _ContactInfoCard(contact: _contact),
+                : _ContactInfoCard(
+                    contact: _contact,
+                    onFieldSaved: (updated) {
+                      setState(() => _contact = updated);
+                    },
+                  ),
             if (_contact.tags.isNotEmpty && !_editing) ...[
               const SizedBox(height: 16),
               _TagsCard(tags: _contact.tags),
@@ -190,9 +200,16 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
             const SizedBox(height: 16),
             _FilesSection(contactId: _contact.id),
             const SizedBox(height: 16),
+            _ContactEmailsSection(contactId: _contact.id),
+            const SizedBox(height: 16),
             _ContactNotesSection(contactId: _contact.id),
             const SizedBox(height: 16),
             _ContactRecordsSection(contactId: _contact.id),
+            const SizedBox(height: 16),
+            ActivitiesSection(
+              entityType: 'contacts',
+              entityId: _contact.id,
+            ),
           ],
         ),
       ),
@@ -370,9 +387,10 @@ class _ContactHeader extends StatelessWidget {
 }
 
 class _ContactInfoCard extends StatelessWidget {
-  const _ContactInfoCard({required this.contact});
+  const _ContactInfoCard({required this.contact, this.onFieldSaved});
 
   final Contact contact;
+  final void Function(Contact updated)? onFieldSaved;
 
   @override
   Widget build(BuildContext context) {
@@ -383,33 +401,74 @@ class _ContactInfoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _InfoRow(
+            _EditableInfoRow(
               icon: Icons.email_outlined,
               label: l10n.contactEmail,
               value: contact.email,
+              keyboardType: TextInputType.emailAddress,
+              onSaved: (v) => _saveField(
+                context,
+                contact.copyWith(email: v),
+              ),
             ),
-            if (contact.phone != null)
-              _InfoRow(
-                icon: Icons.phone_outlined,
-                label: l10n.contactPhone,
-                value: contact.phone!,
+            _EditableInfoRow(
+              icon: Icons.phone_outlined,
+              label: l10n.contactPhone,
+              value: contact.phone ?? '',
+              placeholder: 'Add phone',
+              keyboardType: TextInputType.phone,
+              onSaved: (v) => _saveField(
+                context,
+                contact.copyWith(
+                  phone: v.isNotEmpty ? v : null,
+                ),
               ),
-            if (contact.source != null)
-              _InfoRow(
-                icon: Icons.source_outlined,
-                label: l10n.contactSource,
-                value: contact.source!,
+            ),
+            _EditableInfoRow(
+              icon: Icons.work_outline,
+              label: 'Job Title',
+              value: contact.jobTitle ?? '',
+              placeholder: 'Add job title',
+              onSaved: (v) => _saveField(
+                context,
+                contact.copyWith(
+                  jobTitle: v.isNotEmpty ? v : null,
+                ),
               ),
-            if (contact.companyId != null)
-              _InfoRow(
-                icon: Icons.business_outlined,
-                label: l10n.contactCompany,
-                value: contact.companyId!,
+            ),
+            _EditableInfoRow(
+              icon: Icons.source_outlined,
+              label: l10n.contactSource,
+              value: contact.source ?? '',
+              placeholder: 'Add source',
+              onSaved: (v) => _saveField(
+                context,
+                contact.copyWith(
+                  source: v.isNotEmpty ? v : null,
+                ),
               ),
+            ),
+            _CompanyRow(
+              companyId: contact.companyId,
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _saveField(BuildContext context, Contact updated) async {
+    final result =
+        await getIt<ContactRepository>().updateContact(updated);
+    if (!context.mounted) return;
+    switch (result) {
+      case Success(:final data):
+        onFieldSaved?.call(data);
+      case Failure(:final error):
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Save failed: ${error.message}')),
+        );
+    }
   }
 }
 
@@ -449,25 +508,201 @@ class _TagsCard extends StatelessWidget {
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({
+class _EditableInfoRow extends StatefulWidget {
+  const _EditableInfoRow({
     required this.icon,
     required this.label,
     required this.value,
+    required this.onSaved,
+    this.placeholder,
+    this.keyboardType,
   });
 
   final IconData icon;
   final String label;
   final String value;
+  final String? placeholder;
+  final TextInputType? keyboardType;
+  final ValueChanged<String> onSaved;
+
+  @override
+  State<_EditableInfoRow> createState() => _EditableInfoRowState();
+}
+
+class _EditableInfoRowState extends State<_EditableInfoRow> {
+  bool _editing = false;
+  late final TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.value);
+  }
+
+  @override
+  void didUpdateWidget(_EditableInfoRow old) {
+    super.didUpdateWidget(old);
+    if (old.value != widget.value && !_editing) {
+      _ctrl.text = widget.value;
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final newValue = _ctrl.text.trim();
+    setState(() => _editing = false);
+    if (newValue != widget.value) {
+      widget.onSaved(newValue);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    if (_editing) {
+      return ListTile(
+        leading: Icon(widget.icon, color: theme.colorScheme.primary),
+        title: TextField(
+          controller: _ctrl,
+          autofocus: true,
+          keyboardType: widget.keyboardType,
+          decoration: InputDecoration(
+            labelText: widget.label,
+            isDense: true,
+            border: const OutlineInputBorder(),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.check, size: 20),
+              onPressed: _submit,
+            ),
+          ),
+          onSubmitted: (_) => _submit,
+        ),
+      );
+    }
+
+    final hasValue = widget.value.isNotEmpty;
+
     return ListTile(
-      leading: Icon(icon, color: theme.colorScheme.onSurfaceVariant),
-      title: Text(label, style: theme.textTheme.labelMedium),
-      subtitle: Text(value, style: theme.textTheme.bodyLarge),
+      leading: Icon(widget.icon, color: theme.colorScheme.onSurfaceVariant),
+      title: Text(widget.label, style: theme.textTheme.labelMedium),
+      subtitle: Text(
+        hasValue ? widget.value : (widget.placeholder ?? ''),
+        style: theme.textTheme.bodyLarge?.copyWith(
+          color: hasValue ? null : theme.colorScheme.onSurfaceVariant,
+          fontStyle: hasValue ? null : FontStyle.italic,
+        ),
+      ),
+      trailing: Icon(
+        Icons.edit_outlined,
+        size: 16,
+        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+      ),
+      onTap: () => setState(() => _editing = true),
+    );
+  }
+}
+
+class _CompanyRow extends StatefulWidget {
+  const _CompanyRow({required this.companyId});
+
+  final String? companyId;
+
+  @override
+  State<_CompanyRow> createState() => _CompanyRowState();
+}
+
+class _CompanyRowState extends State<_CompanyRow> {
+  Company? _company;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.companyId != null) _loadCompany();
+  }
+
+  Future<void> _loadCompany() async {
+    setState(() => _loading = true);
+    try {
+      final company = await getIt<CompanyRemoteDataSource>()
+          .getCompany(widget.companyId!);
+      if (mounted) setState(() { _company = company; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    if (widget.companyId == null) {
+      return ListTile(
+        leading: Icon(
+          Icons.business_outlined,
+          color: colorScheme.onSurfaceVariant,
+        ),
+        title: Text('Company', style: theme.textTheme.labelMedium),
+        subtitle: Text(
+          'No company linked',
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      );
+    }
+
+    if (_loading) {
+      return ListTile(
+        leading: Icon(
+          Icons.business_outlined,
+          color: colorScheme.onSurfaceVariant,
+        ),
+        title: Text('Company', style: theme.textTheme.labelMedium),
+        subtitle: const SizedBox(
+          height: 16,
+          width: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+
+    final name = _company?.name ?? widget.companyId!;
+
+    return ListTile(
+      leading: CircleAvatar(
+        radius: 16,
+        backgroundColor: colorScheme.tertiaryContainer,
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : '?',
+          style: theme.textTheme.labelMedium?.copyWith(
+            color: colorScheme.onTertiaryContainer,
+          ),
+        ),
+      ),
+      title: Text('Company', style: theme.textTheme.labelMedium),
+      subtitle: Text(
+        name,
+        style: theme.textTheme.bodyLarge?.copyWith(
+          color: colorScheme.primary,
+        ),
+      ),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: _company != null
+          ? () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => CompanyDetailPage(company: _company!),
+                ),
+              )
+          : null,
     );
   }
 }
@@ -607,6 +842,247 @@ class _FilesSection extends StatelessWidget {
               },
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Contact Email History ──────────────────────────────────────────────
+
+class _ContactEmailsSection extends StatefulWidget {
+  const _ContactEmailsSection({required this.contactId});
+  final String contactId;
+
+  @override
+  State<_ContactEmailsSection> createState() => _ContactEmailsSectionState();
+}
+
+class _ContactEmailsSectionState extends State<_ContactEmailsSection> {
+  List<Map<String, dynamic>>? _emails;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final emails = await getIt<ContactRemoteDataSource>()
+          .getContactEmails(widget.contactId);
+      if (mounted) setState(() { _emails = emails; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() { _emails = []; _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.email_outlined, color: colorScheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Email History',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh, size: 20),
+                  tooltip: 'Refresh',
+                  onPressed: () {
+                    setState(() => _loading = true);
+                    _load();
+                  },
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            if (_loading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (_emails == null || _emails!.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: Text(
+                    'No emails yet',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              )
+            else
+              ...(_emails!).map((email) {
+                final subject =
+                    email['subject'] as String? ?? '(no subject)';
+                final body = email['body'] as String? ??
+                    email['text_body'] as String? ??
+                    email['body_html'] as String? ??
+                    '';
+                final from = email['from_address'] as String? ??
+                    email['sender_email'] as String? ??
+                    '';
+                final to = email['to_address'] as String? ??
+                    email['to'] as String? ??
+                    '';
+                final timestamp = email['created_at'] as String? ??
+                    email['sent_at'] as String? ??
+                    '';
+                final direction =
+                    (email['direction'] as String? ?? '').toLowerCase();
+                final isOutbound = direction == 'outbound' ||
+                    direction == 'out' ||
+                    direction == 'sent';
+
+                return _EmailBubble(
+                  subject: subject,
+                  body: body,
+                  from: from,
+                  to: to,
+                  timestamp: _formatTimestamp(timestamp),
+                  isOutbound: isOutbound,
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmailBubble extends StatefulWidget {
+  const _EmailBubble({
+    required this.subject,
+    required this.body,
+    required this.from,
+    required this.to,
+    required this.timestamp,
+    required this.isOutbound,
+  });
+
+  final String subject;
+  final String body;
+  final String from;
+  final String to;
+  final String timestamp;
+  final bool isOutbound;
+
+  @override
+  State<_EmailBubble> createState() => _EmailBubbleState();
+}
+
+class _EmailBubbleState extends State<_EmailBubble> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Card(
+        color: widget.isOutbound
+            ? colorScheme.primaryContainer
+            : colorScheme.surfaceContainerHighest,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: colorScheme.outlineVariant),
+        ),
+        child: InkWell(
+          onTap: widget.body.isNotEmpty
+              ? () => setState(() => _expanded = !_expanded)
+              : null,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Icon(
+                      widget.isOutbound
+                          ? Icons.arrow_upward_rounded
+                          : Icons.arrow_downward_rounded,
+                      size: 16,
+                      color: widget.isOutbound
+                          ? colorScheme.primary
+                          : colorScheme.tertiary,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        widget.isOutbound
+                            ? 'To: ${widget.to}'
+                            : 'From: ${widget.from}',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (widget.timestamp.isNotEmpty)
+                      Text(
+                        widget.timestamp,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                // Subject
+                Text(
+                  widget.subject,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                // Body (expandable)
+                if (_expanded && widget.body.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  const Divider(height: 1),
+                  const SizedBox(height: 8),
+                  SelectableText(
+                    renderEmailBody(widget.body),
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ],
+                if (widget.body.isNotEmpty && !_expanded)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Tap to expand',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );

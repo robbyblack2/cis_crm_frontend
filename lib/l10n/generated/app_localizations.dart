@@ -298,12 +298,6 @@ abstract class AppLocalizations {
   /// **'No timeline entries'**
   String get noTimelineEntries;
 
-  /// Placeholder text for the record detail timeline section.
-  ///
-  /// In en, this message translates to:
-  /// **'Activity timeline coming soon'**
-  String get activityTimelineComingSoon;
-
   /// Error text when timeline fails to load.
   ///
   /// In en, this message translates to:
@@ -1491,12 +1485,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rule Detail'**
   String get ruleDetail;
-
-  /// Placeholder text for the rule detail page.
-  ///
-  /// In en, this message translates to:
-  /// **'Detail for rule {ruleId} — coming soon.'**
-  String ruleDetailComingSoon(String ruleId);
 
   /// Tooltip when an automation rule is active and can be deactivated.
   ///

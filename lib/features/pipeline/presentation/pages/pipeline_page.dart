@@ -11,6 +11,7 @@ import 'package:cis_crm/features/pipeline/domain/entities/record.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/stage.dart';
 import 'package:cis_crm/features/pipeline/presentation/bloc/pipeline_bloc.dart';
 import 'package:cis_crm/features/pipeline/presentation/bloc/record_bloc.dart';
+import 'package:cis_crm/features/pipeline/presentation/pages/pipeline_management_page.dart';
 import 'package:cis_crm/features/contacts/data/datasources/company_remote_data_source.dart';
 import 'package:cis_crm/features/contacts/data/datasources/contact_remote_data_source.dart';
 import 'package:cis_crm/features/contacts/data/models/company_model.dart';
@@ -133,28 +134,39 @@ class _PipelineViewState extends State<_PipelineView> {
   }
 }
 
-class _LoadedPipelineView extends StatelessWidget {
+class _LoadedPipelineView extends StatefulWidget {
   const _LoadedPipelineView({required this.state});
 
   final PipelineLoaded state;
+
+  @override
+  State<_LoadedPipelineView> createState() => _LoadedPipelineViewState();
+}
+
+class _LoadedPipelineViewState extends State<_LoadedPipelineView> {
+  bool _listView = false;
+
+  PipelineLoaded get state => widget.state;
 
   @override
   Widget build(BuildContext context) {
     final stages = (state.kanbanStages ?? <Stage>[]).toList()
       ..sort((a, b) => a.position.compareTo(b.position));
 
+    final activePipelines = state.pipelines.where((p) => p.isActive).toList();
+    final currentName =
+        state.kanbanPipeline?.name ?? activePipelines.firstOrNull?.name ?? 'Pipeline';
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.pipelineTitle),
-        actions: [
-          if (state.pipelines.length > 1)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: DropdownButton<String>(
+        title: activePipelines.length > 1
+            ? DropdownButton<String>(
                 value: state.kanbanPipeline?.id,
                 underline: const SizedBox.shrink(),
                 borderRadius: BorderRadius.circular(12),
-                items: state.pipelines
+                icon: const Icon(Icons.arrow_drop_down),
+                style: Theme.of(context).textTheme.titleLarge,
+                items: activePipelines
                     .map(
                       (p) => DropdownMenuItem(
                         value: p.id,
@@ -169,8 +181,30 @@ class _LoadedPipelineView extends StatelessWidget {
                         .add(PipelineKanbanRequested(pipelineId: id));
                   }
                 },
-              ),
+              )
+            : Text(currentName),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _listView ? Icons.view_kanban : Icons.view_list,
             ),
+            tooltip: _listView ? 'Board view' : 'List view',
+            onPressed: () => setState(() => _listView = !_listView),
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Manage Pipelines',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => BlocProvider.value(
+                    value: context.read<PipelineBloc>(),
+                    child: const PipelineManagementPage(),
+                  ),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Pipeline settings',
@@ -222,11 +256,16 @@ class _LoadedPipelineView extends StatelessWidget {
                   ],
                 ),
               ),
-            RecordLoaded(:final records) => _KanbanBoard(
-                stages: stages,
-                records: records,
-                pipelineId: state.kanbanPipeline?.id ?? '',
-              ),
+            RecordLoaded(:final records) => _listView
+                ? _RecordListView(
+                    stages: stages,
+                    records: records,
+                  )
+                : _KanbanBoard(
+                    stages: stages,
+                    records: records,
+                    pipelineId: state.kanbanPipeline?.id ?? '',
+                  ),
           };
         },
       ),
@@ -850,6 +889,110 @@ class _CreateRecordSheetState extends State<_CreateRecordSheet> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _RecordListView extends StatelessWidget {
+  const _RecordListView({
+    required this.stages,
+    required this.records,
+  });
+
+  final List<Stage> stages;
+  final List<PipelineRecord> records;
+
+  Stage? _stageForRecord(PipelineRecord record) {
+    return stages.cast<Stage?>().firstWhere(
+          (s) => s!.id == record.stageId,
+          orElse: () => null,
+        );
+  }
+
+  Color _parseColor(String colorStr) {
+    if (colorStr.startsWith('#')) {
+      final hex = colorStr.replaceFirst('#', '');
+      return Color(int.parse('FF$hex', radix: 16));
+    }
+    return Color(int.tryParse(colorStr) ?? 0xFF9E9E9E);
+  }
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inDays > 0) return '${diff.inDays}d ago';
+    if (diff.inHours > 0) return '${diff.inHours}h ago';
+    if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
+    return 'Just now';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: records.length,
+      separatorBuilder: (_, __) => const Divider(height: 1, indent: 16),
+      itemBuilder: (context, index) {
+        final record = records[index];
+        final stage = _stageForRecord(record);
+        final stageColor =
+            stage != null ? _parseColor(stage.color) : Colors.grey;
+
+        return ListTile(
+          onTap: () {
+            final pipelineBloc = context.read<PipelineBloc>();
+            final recordBloc = context.read<RecordBloc>();
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => MultiBlocProvider(
+                  providers: [
+                    BlocProvider<PipelineBloc>.value(value: pipelineBloc),
+                    BlocProvider<RecordBloc>.value(value: recordBloc),
+                  ],
+                  child: RecordDetailPage(recordId: record.id),
+                ),
+              ),
+            );
+          },
+          leading: Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: stageColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+          title: Text(
+            record.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: Text(
+            [
+              if (stage != null) stage.name,
+              record.source.name,
+              _timeAgo(record.createdAt),
+            ].join(' · '),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          trailing: record.ownerId != null
+              ? CircleAvatar(
+                  radius: 14,
+                  backgroundColor: colorScheme.primaryContainer,
+                  child: Text(
+                    record.ownerId![0].toUpperCase(),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                )
+              : null,
+        );
+      },
     );
   }
 }

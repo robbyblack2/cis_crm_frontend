@@ -100,12 +100,12 @@ class _FilesView extends StatelessWidget {
             filename: file.name,
           );
     } else if (file.bytes != null) {
-      // Web fallback — show message since upload needs server-side handling
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('File upload on web requires native platform'),
-        ),
-      );
+      await context.read<FilesCubit>().uploadFileBytes(
+            parentType: 'general',
+            parentId: 'default',
+            bytes: file.bytes!,
+            filename: file.name,
+          );
     }
   }
 }

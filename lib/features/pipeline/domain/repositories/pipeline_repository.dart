@@ -19,4 +19,6 @@ abstract class PipelineRepository {
     required String name,
     required bool isActive,
   });
+
+  Future<Result<void, AppFailure>> deletePipeline(String id);
 }

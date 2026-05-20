@@ -17,6 +17,7 @@ class PipelineRecord extends Equatable {
     this.contactId,
     this.companyId,
     this.ownerId,
+    this.senderEmail,
     this.version = 1,
   });
 
@@ -26,12 +27,45 @@ class PipelineRecord extends Equatable {
   final String? contactId;
   final String? companyId;
   final String? ownerId;
+  final String? senderEmail;
   final String title;
   final RecordSource source;
   final List<String> tags;
   final DateTime createdAt;
   final DateTime updatedAt;
   final int version;
+
+  PipelineRecord copyWith({
+    String? id,
+    String? pipelineId,
+    String? stageId,
+    String? title,
+    RecordSource? source,
+    List<String>? tags,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? contactId,
+    String? companyId,
+    String? ownerId,
+    String? senderEmail,
+    int? version,
+  }) {
+    return PipelineRecord(
+      id: id ?? this.id,
+      pipelineId: pipelineId ?? this.pipelineId,
+      stageId: stageId ?? this.stageId,
+      title: title ?? this.title,
+      source: source ?? this.source,
+      tags: tags ?? this.tags,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      contactId: contactId ?? this.contactId,
+      companyId: companyId ?? this.companyId,
+      ownerId: ownerId ?? this.ownerId,
+      senderEmail: senderEmail ?? this.senderEmail,
+      version: version ?? this.version,
+    );
+  }
 
   @override
   List<Object?> get props => [
@@ -41,6 +75,7 @@ class PipelineRecord extends Equatable {
         contactId,
         companyId,
         ownerId,
+        senderEmail,
         title,
         source,
         tags,

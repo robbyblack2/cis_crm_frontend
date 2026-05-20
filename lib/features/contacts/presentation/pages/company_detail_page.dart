@@ -1,4 +1,5 @@
 import 'package:cis_crm/app/injection.dart';
+import 'package:cis_crm/core/widgets/activities_section.dart';
 import 'package:cis_crm/features/contacts/data/datasources/company_remote_data_source.dart';
 import 'package:cis_crm/features/contacts/domain/entities/company.dart';
 import 'package:dio/dio.dart';
@@ -22,7 +23,7 @@ class CompanyDetailPage extends StatelessWidget {
     };
 
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: Text(company.name),
@@ -77,6 +78,7 @@ class CompanyDetailPage extends StatelessWidget {
               Tab(text: 'Info'),
               Tab(text: 'Contacts'),
               Tab(text: 'Records'),
+              Tab(text: 'Activities'),
             ],
           ),
         ),
@@ -178,6 +180,15 @@ class CompanyDetailPage extends StatelessWidget {
                       Text(item['source'] as String? ?? ''),
                 );
               },
+            ),
+
+            // ── Activities tab ──
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: ActivitiesSection(
+                entityType: 'companies',
+                entityId: company.id,
+              ),
             ),
           ],
         ),

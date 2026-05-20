@@ -117,9 +117,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noTimelineEntries => 'No timeline entries';
 
   @override
-  String get activityTimelineComingSoon => 'Activity timeline coming soon';
-
-  @override
   String get timelineLoadFailed => 'Failed to load timeline';
 
   @override
@@ -725,11 +722,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ruleDetail => 'Rule Detail';
-
-  @override
-  String ruleDetailComingSoon(String ruleId) {
-    return 'Detail for rule $ruleId — coming soon.';
-  }
 
   @override
   String get deactivateRule => 'Deactivate rule';

@@ -42,6 +42,23 @@ class FileRepositoryImpl implements FileRepository {
   }
 
   @override
+  Future<Result<FileAttachment, AppFailure>> uploadBytes({
+    required String parentType,
+    required String parentId,
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    return _guard(
+      () => _datasource.uploadBytes(
+        parentType: parentType,
+        parentId: parentId,
+        bytes: bytes,
+        filename: filename,
+      ),
+    );
+  }
+
+  @override
   Future<Result<FileAttachment, AppFailure>> getMetadata(String id) async {
     return _guard(() => _datasource.getMetadata(id));
   }

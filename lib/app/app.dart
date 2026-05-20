@@ -41,6 +41,7 @@ class App extends StatelessWidget {
         child: BlocBuilder<ThemeCubit, ThemeMode>(
           builder: (context, themeMode) {
             return MaterialApp.router(
+              debugShowCheckedModeBanner: false,
               onGenerateTitle: (context) =>
                   AppLocalizations.of(context)?.appTitle ?? 'CIS CRM',
               theme: AppTheme.light,

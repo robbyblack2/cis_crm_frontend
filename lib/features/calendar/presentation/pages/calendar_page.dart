@@ -27,7 +27,7 @@ class CalendarPage extends StatelessWidget {
   }
 }
 
-enum _CalendarViewMode { day, week, month }
+enum _CalendarViewMode { day, month }
 
 class _CalendarView extends StatefulWidget {
   const _CalendarView();
@@ -45,7 +45,7 @@ const _calendarEventTypes = {
 };
 
 class _CalendarViewState extends State<_CalendarView> {
-  _CalendarViewMode _viewMode = _CalendarViewMode.week;
+  final _CalendarViewMode _viewMode = _CalendarViewMode.month;
   bool _showGrid = true;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
@@ -121,12 +121,25 @@ class _CalendarViewState extends State<_CalendarView> {
     );
   }
 
-  Future<void> _showCreateEventDialog(BuildContext context) async {
+  Future<void> _showCreateEventDialog(
+    BuildContext context, {
+    DateTime? defaultDate,
+  }) async {
     final titleController = TextEditingController();
     final locationController = TextEditingController();
     final descriptionController = TextEditingController();
-    var startDate = DateTime.now();
-    var endDate = DateTime.now().add(const Duration(hours: 1));
+    final base = defaultDate ?? DateTime.now();
+    // If a date was selected, use that date with the current time.
+    var startDate = defaultDate != null
+        ? DateTime(
+            base.year,
+            base.month,
+            base.day,
+            DateTime.now().hour,
+            DateTime.now().minute,
+          )
+        : base;
+    var endDate = startDate.add(const Duration(hours: 1));
 
     await showDialog<void>(
       context: context,
@@ -282,16 +295,11 @@ class _CalendarViewState extends State<_CalendarView> {
                 e.start.day == today.day,
           )
           .toList(),
-      _CalendarViewMode.week => events.where((e) {
-          final weekStart =
-              today.subtract(Duration(days: today.weekday - 1));
-          final weekEnd = weekStart.add(const Duration(days: 7));
-          return !e.start.isBefore(weekStart) && e.start.isBefore(weekEnd);
-        }).toList(),
       _CalendarViewMode.month => events
           .where(
             (e) =>
-                e.start.year == today.year && e.start.month == today.month,
+                e.start.year == _focusedDay.year &&
+                e.start.month == _focusedDay.month,
           )
           .toList(),
     };
@@ -335,19 +343,15 @@ class _CalendarViewState extends State<_CalendarView> {
                   firstDay: DateTime(2020),
                   lastDay: DateTime(2100),
                   focusedDay: _focusedDay,
-                  calendarFormat: _viewMode == _CalendarViewMode.month
-                      ? CalendarFormat.month
-                      : CalendarFormat.week,
+                  calendarFormat: CalendarFormat.month,
+                  availableCalendarFormats: const {
+                    CalendarFormat.month: 'Month',
+                  },
                   selectedDayPredicate: (day) =>
                       isSameDay(_selectedDay, day),
                   onDaySelected: (selectedDay, focusedDay) => setState(() {
                     _selectedDay = selectedDay;
                     _focusedDay = focusedDay;
-                  }),
-                  onFormatChanged: (format) => setState(() {
-                    _viewMode = format == CalendarFormat.month
-                        ? _CalendarViewMode.month
-                        : _CalendarViewMode.week;
                   }),
                   onPageChanged: (focusedDay) =>
                       _focusedDay = focusedDay,
@@ -429,7 +433,7 @@ class _CalendarViewState extends State<_CalendarView> {
                     },
                   ),
                   headerStyle: const HeaderStyle(
-                    formatButtonVisible: true,
+                    formatButtonVisible: false,
                     titleCentered: true,
                   ),
                 ),
@@ -471,7 +475,10 @@ class _CalendarViewState extends State<_CalendarView> {
       floatingActionButton: FloatingActionButton(
         heroTag: 'calendar_fab',
         tooltip: AppLocalizations.of(context)!.createEventTooltip,
-        onPressed: () => _showCreateEventDialog(context),
+        onPressed: () => _showCreateEventDialog(
+          context,
+          defaultDate: _selectedDay,
+        ),
         child: const Icon(Icons.add),
       ),
     );

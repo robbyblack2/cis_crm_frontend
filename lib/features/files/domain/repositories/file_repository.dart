@@ -15,6 +15,13 @@ abstract interface class FileRepository {
     required String filename,
   });
 
+  Future<Result<FileAttachment, AppFailure>> uploadBytes({
+    required String parentType,
+    required String parentId,
+    required List<int> bytes,
+    required String filename,
+  });
+
   Future<Result<FileAttachment, AppFailure>> getMetadata(String id);
 
   Future<Result<List<int>, AppFailure>> download(String id);

@@ -93,4 +93,20 @@ class PipelineRepositoryImpl implements PipelineRepository {
       return Failure(UnknownFailure(e.message));
     }
   }
+
+  @override
+  Future<Result<void, AppFailure>> deletePipeline(String id) async {
+    try {
+      await _remoteDataSource.deletePipeline(id);
+      return const Success(null);
+    } on NetworkException {
+      return const Failure(NetworkFailure());
+    } on UnauthorizedException {
+      return const Failure(UnauthorizedFailure());
+    } on ServerException catch (e) {
+      return Failure(ServerFailure(e.message, statusCode: e.statusCode));
+    } on AppException catch (e) {
+      return Failure(UnknownFailure(e.message));
+    }
+  }
 }

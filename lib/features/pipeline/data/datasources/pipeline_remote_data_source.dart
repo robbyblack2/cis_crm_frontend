@@ -22,6 +22,8 @@ abstract class PipelineRemoteDataSource {
     required bool isActive,
   });
 
+  Future<void> deletePipeline(String id);
+
   Future<List<StageModel>> getStages(String pipelineId);
 
   Future<StageModel> createStage({
@@ -147,6 +149,18 @@ class PipelineRemoteDataSourceImpl implements PipelineRemoteDataSource {
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to update pipeline',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<void> deletePipeline(String id) async {
+    try {
+      await _dio.delete<void>('/api/pipelines/$id');
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to delete pipeline',
         statusCode: e.response?.statusCode,
       );
     }

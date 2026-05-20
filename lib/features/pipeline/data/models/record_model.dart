@@ -27,6 +27,7 @@ class RecordModel extends PipelineRecord {
     super.contactId,
     super.companyId,
     super.ownerId,
+    super.senderEmail,
     super.version,
   });
 
@@ -40,6 +41,8 @@ class RecordModel extends PipelineRecord {
       companyId: json['company_id'] as String?,
       ownerId: json['owner_id'] as String?,
       title: data['title'] as String? ?? '',
+      senderEmail: data['sender_email'] as String? ??
+          data['from_address'] as String?,
       source: _sourceMap[json['source'] as String?] ?? RecordSource.manual,
       tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? const [],
       createdAt: DateTime.parse(json['created_at'] as String),
