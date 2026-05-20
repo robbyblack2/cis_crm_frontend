@@ -1,24 +1,15 @@
 import 'package:cis_crm/app/injection.dart';
+import 'package:cis_crm/core/utils/tag_color_cache.dart';
+import 'package:cis_crm/core/widgets/crm_tag_chip.dart';
 import 'package:cis_crm/core/widgets/state/empty_state.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
-// Preset colors for tags
-const _tagColors = [
-  Color(0xFFEF4444), Color(0xFFF97316), Color(0xFFF59E0B),
-  Color(0xFFEAB308), Color(0xFF22C55E), Color(0xFF14B8A6),
-  Color(0xFF06B6D4), Color(0xFF3B82F6), Color(0xFF6366F1),
-  Color(0xFFA855F7), Color(0xFF8B5CF6), Color(0xFFEC4899),
-  Color(0xFFF43F5E), Color(0xFF64748B), Color(0xFF10B981),
-  Color(0xFF84CC16),
-];
-
-Color _colorForTag(String name) {
-  var hash = 0;
-  for (var i = 0; i < name.length; i++) {
-    hash = name.codeUnitAt(i) + ((hash << 5) - hash);
+Color _parseHex(String hex) {
+  if (hex.startsWith('#') && hex.length == 7) {
+    return Color(int.parse('FF${hex.substring(1)}', radix: 16));
   }
-  return _tagColors[hash.abs() % _tagColors.length];
+  return Colors.grey;
 }
 
 class TagsPage extends StatefulWidget {
@@ -66,21 +57,36 @@ class _TagsPageState extends State<TagsPage> {
   }
 
   void _showCreateDialog() {
-    _showTagForm(title: 'Create Tag', onSave: (name) async {
-      await getIt<Dio>().post<void>('/api/tags', data: {'name': name});
-      await _load();
-    });
+    _showTagForm(
+      title: 'Create Tag',
+      initialColor: TagColorCache.presetColors.first.hex,
+      onSave: (name, color) async {
+        await getIt<Dio>().post<void>(
+          '/api/tags',
+          data: {'name': name, 'color': color},
+        );
+        TagColorCache.instance.put(name, color);
+        await _load();
+      },
+    );
   }
 
   void _showEditDialog(Map<String, dynamic> tag) {
     final id = tag['id'] as String? ?? '';
     final currentName = tag['name'] as String? ?? '';
+    final currentColor = tag['color'] as String? ??
+        TagColorCache.instance.hexFor(currentName);
     _showTagForm(
       title: 'Edit Tag',
       initialName: currentName,
+      initialColor: currentColor,
       excludeId: id,
-      onSave: (name) async {
-        await getIt<Dio>().put<void>('/api/tags/$id', data: {'name': name});
+      onSave: (name, color) async {
+        await getIt<Dio>().put<void>(
+          '/api/tags/$id',
+          data: {'name': name, 'color': color},
+        );
+        TagColorCache.instance.put(name, color);
         await _load();
       },
     );
@@ -88,11 +94,13 @@ class _TagsPageState extends State<TagsPage> {
 
   void _showTagForm({
     required String title,
-    required Future<void> Function(String name) onSave,
+    required Future<void> Function(String name, String color) onSave,
     String initialName = '',
+    String initialColor = '#3B82F6',
     String? excludeId,
   }) {
     final ctrl = TextEditingController(text: initialName);
+    var selectedColor = initialColor;
 
     showModalBottomSheet<void>(
       context: context,
@@ -102,7 +110,7 @@ class _TagsPageState extends State<TagsPage> {
         builder: (ctx, setSheetState) {
           final name = ctrl.text.trim();
           final isDup = name.isNotEmpty && _isDuplicate(name, excludeId: excludeId);
-          final color = name.isNotEmpty ? _colorForTag(name) : Colors.grey;
+          final color = _parseHex(selectedColor);
 
           return Padding(
             padding: EdgeInsets.only(
@@ -124,51 +132,55 @@ class _TagsPageState extends State<TagsPage> {
                     errorText: isDup ? 'Tag "$name" already exists' : null,
                   ),
                   onChanged: (_) => setSheetState(() {}),
-                  onSubmitted: isDup || name.isEmpty
-                      ? null
-                      : (_) async {
-                          Navigator.pop(ctx);
-                          try {
-                            await onSave(name);
-                          } catch (e) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Failed: $e')),
-                              );
-                            }
-                          }
-                        },
+                ),
+                const SizedBox(height: 16),
+                // Color picker
+                Text('Color',
+                    style: Theme.of(ctx).textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        )),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: TagColorCache.presetColors.map((c) {
+                    final isSelected = c.hex == selectedColor;
+                    final parsed = _parseHex(c.hex);
+                    return GestureDetector(
+                      onTap: () =>
+                          setSheetState(() => selectedColor = c.hex),
+                      child: Tooltip(
+                        message: c.name,
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: parsed,
+                            shape: BoxShape.circle,
+                            border: isSelected
+                                ? Border.all(
+                                    color: Theme.of(ctx)
+                                        .colorScheme
+                                        .onSurface,
+                                    width: 2.5,
+                                  )
+                                : null,
+                          ),
+                          child: isSelected
+                              ? const Icon(Icons.check,
+                                  size: 16, color: Colors.white)
+                              : null,
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ),
                 if (name.isNotEmpty && !isDup) ...[
                   const SizedBox(height: 16),
-                  Text(
-                    'Preview',
-                    style: Theme.of(ctx).textTheme.labelMedium,
-                  ),
+                  Text('Preview',
+                      style: Theme.of(ctx).textTheme.labelMedium),
                   const SizedBox(height: 8),
-                  Wrap(
-                    children: [
-                      Chip(
-                        avatar: CircleAvatar(
-                          radius: 6,
-                          backgroundColor: color,
-                        ),
-                        label: Text(name),
-                        backgroundColor: color.withValues(alpha: 0.1),
-                        side: BorderSide(
-                          color: color.withValues(alpha: 0.4),
-                        ),
-                        labelStyle: TextStyle(color: color),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Color is auto-assigned based on the tag name.',
-                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
+                  Wrap(children: [CrmTagChip(name: name)]),
                 ],
                 const SizedBox(height: 20),
                 FilledButton(
@@ -177,7 +189,7 @@ class _TagsPageState extends State<TagsPage> {
                       : () async {
                           Navigator.pop(ctx);
                           try {
-                            await onSave(name);
+                            await onSave(name, selectedColor);
                           } catch (e) {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -288,7 +300,7 @@ class _TagsPageState extends State<TagsPage> {
                           final tag = filtered![index];
                           final name = tag['name'] as String? ?? '';
                           final id = tag['id'] as String? ?? '';
-                          final color = _colorForTag(name);
+                          final color = TagColorCache.instance.colorFor(name);
 
                           return ListTile(
                             leading: CircleAvatar(
