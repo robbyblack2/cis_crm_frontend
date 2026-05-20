@@ -17,6 +17,9 @@ class _AuditLogPageState extends State<AuditLogPage> {
   String _search = '';
   String? _actionFilter;
   String? _entityTypeFilter;
+  String _dateRange = 'all'; // 'all', 'today', '7d', '30d', 'custom'
+  DateTime? _customFrom;
+  DateTime? _customTo;
 
   @override
   void initState() {
@@ -26,8 +29,10 @@ class _AuditLogPageState extends State<AuditLogPage> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    // Pre-load user names for actor resolution
+    // Pre-load names for resolution
     NameResolver.instance.loadUsers();
+    NameResolver.instance.loadContacts();
+    NameResolver.instance.loadCompanies();
     try {
       final response =
           await getIt<Dio>().get<Map<String, dynamic>>('/api/audit-log');
@@ -151,6 +156,38 @@ class _AuditLogPageState extends State<AuditLogPage> {
           )
           .toList();
     }
+    // Date range filter
+    if (_dateRange != 'all') {
+      final now = DateTime.now();
+      DateTime? cutoff;
+      switch (_dateRange) {
+        case 'today':
+          cutoff = DateTime(now.year, now.month, now.day);
+        case '7d':
+          cutoff = now.subtract(const Duration(days: 7));
+        case '30d':
+          cutoff = now.subtract(const Duration(days: 30));
+        case 'custom':
+          cutoff = _customFrom;
+      }
+      if (cutoff != null) {
+        filtered = filtered.where((e) {
+          final ts = e['created_at'] as String?;
+          if (ts == null) return false;
+          try {
+            final dt = DateTime.parse(ts);
+            if (dt.isBefore(cutoff!)) return false;
+            if (_dateRange == 'custom' && _customTo != null) {
+              final end = _customTo!.add(const Duration(days: 1));
+              if (dt.isAfter(end)) return false;
+            }
+            return true;
+          } catch (_) {
+            return false;
+          }
+        }).toList();
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -165,7 +202,7 @@ class _AuditLogPageState extends State<AuditLogPage> {
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(140),
+          preferredSize: const Size.fromHeight(190),
           child: Column(
             children: [
               // Search bar
@@ -208,6 +245,54 @@ class _AuditLogPageState extends State<AuditLogPage> {
                     _filterChip('Moved', 'move'),
                     const SizedBox(width: 8),
                     _filterChip('Login', 'login'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
+              // Date range filter
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                child: Row(
+                  children: [
+                    _dateChip('All time', 'all'),
+                    const SizedBox(width: 8),
+                    _dateChip('Today', 'today'),
+                    const SizedBox(width: 8),
+                    _dateChip('Last 7 days', '7d'),
+                    const SizedBox(width: 8),
+                    _dateChip('Last 30 days', '30d'),
+                    const SizedBox(width: 8),
+                    FilterChip(
+                      label: Text(_dateRange == 'custom' && _customFrom != null
+                          ? 'Custom: ${_customFrom!.day}/${_customFrom!.month}'
+                              '${_customTo != null ? ' – ${_customTo!.day}/${_customTo!.month}' : ''}'
+                          : 'Custom...'),
+                      selected: _dateRange == 'custom',
+                      onSelected: (_) async {
+                        final picked = await showDateRangePicker(
+                          context: context,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now(),
+                          initialDateRange: _customFrom != null
+                              ? DateTimeRange(
+                                  start: _customFrom!,
+                                  end: _customTo ?? DateTime.now(),
+                                )
+                              : null,
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            _dateRange = 'custom';
+                            _customFrom = picked.start;
+                            _customTo = picked.end;
+                          });
+                        }
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -308,6 +393,15 @@ class _AuditLogPageState extends State<AuditLogPage> {
     );
   }
 
+  Widget _dateChip(String label, String value) {
+    final isSelected = _dateRange == value;
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => setState(() => _dateRange = value),
+    );
+  }
+
   Widget _entityChip(String label, String? value) {
     final isSelected = _entityTypeFilter == value;
     return FilterChip(
@@ -400,9 +494,21 @@ class _AuditLogPageState extends State<AuditLogPage> {
                       const Divider(height: 24),
                       _detailRow(theme, 'Action', action),
                       _detailRow(theme, 'Entity Type', entityType),
-                      if (entityId.isNotEmpty)
-                        _detailRow(theme, 'Entity ID', entityId),
-                      _detailRow(theme, 'Actor', actor),
+                      if (entityId.isNotEmpty) ...[
+                        _detailRow(
+                          theme,
+                          'Entity',
+                          _resolveEntityName(entityType, entityId),
+                        ),
+                      ],
+                      _detailRow(
+                        theme,
+                        'Actor',
+                        NameResolver.instance.userName(
+                              entry['actor_id'] as String?,
+                            ) ??
+                            actor,
+                      ),
                       _detailRow(theme, 'Timestamp', _formatDateTime(ts)),
                     ],
                   ),
@@ -490,6 +596,17 @@ class _AuditLogPageState extends State<AuditLogPage> {
         ),
       ),
     );
+  }
+
+  String _resolveEntityName(String entityType, String entityId) {
+    final resolver = NameResolver.instance;
+    final name = switch (entityType.toLowerCase()) {
+      'contact' => resolver.contactName(entityId),
+      'company' => resolver.companyName(entityId),
+      'user' => resolver.userName(entityId),
+      _ => null,
+    };
+    return name ?? entityId;
   }
 
   Widget _detailRow(ThemeData theme, String label, String value) {

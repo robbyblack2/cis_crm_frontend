@@ -77,14 +77,20 @@ final class RecordUpdateRequested extends RecordEvent {
     required this.id,
     required this.title,
     this.tags,
+    this.contactId,
+    this.companyId,
+    this.ownerId,
   });
 
   final String id;
   final String title;
   final List<String>? tags;
+  final String? contactId;
+  final String? companyId;
+  final String? ownerId;
 
   @override
-  List<Object?> get props => [id, title, tags];
+  List<Object?> get props => [id, title, tags, contactId, companyId, ownerId];
 }
 
 // ── States ──────────────────────────────────────────────────────────────────
@@ -339,6 +345,9 @@ class RecordBloc extends Bloc<RecordEvent, RecordState> {
       id: event.id,
       title: event.title,
       tags: event.tags,
+      contactId: event.contactId,
+      companyId: event.companyId,
+      ownerId: event.ownerId,
     );
     switch (result) {
       case Success():

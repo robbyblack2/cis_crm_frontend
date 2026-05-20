@@ -12,6 +12,7 @@ import 'package:cis_crm/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class TasksPage extends StatelessWidget {
   const TasksPage({super.key});
@@ -35,6 +36,7 @@ class _TasksView extends StatefulWidget {
 class _TasksViewState extends State<_TasksView> {
   TaskStatus? _filter;
   String _search = '';
+  bool _calendarView = false;
 
   @override
   Widget build(BuildContext context) {
@@ -247,8 +249,18 @@ class _TasksViewState extends State<_TasksView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.tasksTitle),
-        bottom: PreferredSize(
+        title: const Text('Activities'),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _calendarView ? Icons.view_list : Icons.calendar_month,
+            ),
+            tooltip: _calendarView ? 'List view' : 'Calendar view',
+            onPressed: () =>
+                setState(() => _calendarView = !_calendarView),
+          ),
+        ],
+        bottom: _calendarView ? null : PreferredSize(
           preferredSize: const Size.fromHeight(100),
           child: Column(
             children: [
@@ -309,7 +321,9 @@ class _TasksViewState extends State<_TasksView> {
           ),
         ),
       ),
-      body: filtered.isEmpty
+      body: _calendarView
+          ? _CalendarGridView(tasks: tasks)
+          : filtered.isEmpty
           ? EmptyState(
               icon: Icons.task_alt,
               title: AppLocalizations.of(context)!.tasksEmpty,
@@ -358,6 +372,140 @@ class _TasksViewState extends State<_TasksView> {
       label: Text(label),
       selected: isSelected,
       onSelected: (_) => setState(() => _filter = value),
+    );
+  }
+}
+
+class _CalendarGridView extends StatefulWidget {
+  const _CalendarGridView({required this.tasks});
+
+  final List<CrmTask> tasks;
+
+  @override
+  State<_CalendarGridView> createState() => _CalendarGridViewState();
+}
+
+class _CalendarGridViewState extends State<_CalendarGridView> {
+  CalendarFormat _format = CalendarFormat.month;
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
+
+  List<CrmTask> _tasksForDay(DateTime day) {
+    return widget.tasks.where((t) {
+      final due = t.dueDate;
+      if (due == null) return false;
+      return due.year == day.year &&
+          due.month == day.month &&
+          due.day == day.day;
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final selectedTasks =
+        _selectedDay != null ? _tasksForDay(_selectedDay!) : <CrmTask>[];
+
+    return Column(
+      children: [
+        TableCalendar<CrmTask>(
+          firstDay: DateTime(2020),
+          lastDay: DateTime(2030),
+          focusedDay: _focusedDay,
+          calendarFormat: _format,
+          selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+          eventLoader: _tasksForDay,
+          onDaySelected: (selected, focused) {
+            setState(() {
+              _selectedDay = selected;
+              _focusedDay = focused;
+            });
+          },
+          onFormatChanged: (format) {
+            setState(() => _format = format);
+          },
+          onPageChanged: (focused) {
+            _focusedDay = focused;
+          },
+          calendarStyle: CalendarStyle(
+            markerDecoration: BoxDecoration(
+              color: theme.colorScheme.primary,
+              shape: BoxShape.circle,
+            ),
+            markerSize: 6,
+            markersMaxCount: 3,
+            todayDecoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              shape: BoxShape.circle,
+            ),
+            selectedDecoration: BoxDecoration(
+              color: theme.colorScheme.primary,
+              shape: BoxShape.circle,
+            ),
+          ),
+          headerStyle: const HeaderStyle(
+            formatButtonShowsNext: false,
+          ),
+        ),
+        const Divider(height: 1),
+        if (_selectedDay != null) ...[
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(
+              '${selectedTasks.length} '
+              'activit${selectedTasks.length == 1 ? 'y' : 'ies'} '
+              'on ${_selectedDay!.month}/${_selectedDay!.day}',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: selectedTasks.isEmpty
+                ? Center(
+                    child: Text(
+                      'No activities on this day',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: selectedTasks.length,
+                    itemBuilder: (context, index) {
+                      final task = selectedTasks[index];
+                      return TaskTile(
+                        task: task,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => BlocProvider.value(
+                              value: context.read<TasksBloc>(),
+                              child: TaskDetailPage(task: task),
+                            ),
+                          ),
+                        ),
+                        onStatusToggled: (updated) => context
+                            .read<TasksBloc>()
+                            .add(TaskUpdated(updated)),
+                        onDeleted: (id) => context
+                            .read<TasksBloc>()
+                            .add(TaskDeleted(id)),
+                      );
+                    },
+                  ),
+          ),
+        ] else
+          Expanded(
+            child: Center(
+              child: Text(
+                'Tap a day to see activities',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

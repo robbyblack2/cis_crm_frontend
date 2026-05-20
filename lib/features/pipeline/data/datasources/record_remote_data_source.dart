@@ -27,6 +27,9 @@ abstract class RecordRemoteDataSource {
     required String id,
     required String title,
     List<String>? tags,
+    String? contactId,
+    String? companyId,
+    String? ownerId,
   });
 
   Future<void> deleteRecord(String id);
@@ -158,6 +161,9 @@ class RecordRemoteDataSourceImpl implements RecordRemoteDataSource {
     required String id,
     required String title,
     List<String>? tags,
+    String? contactId,
+    String? companyId,
+    String? ownerId,
   }) async {
     try {
       final response = await _dio.put<Map<String, dynamic>>(
@@ -165,6 +171,9 @@ class RecordRemoteDataSourceImpl implements RecordRemoteDataSource {
         data: {
           'title': title,
           if (tags != null) 'tags': tags,
+          if (contactId != null) 'contact_id': contactId,
+          if (companyId != null) 'company_id': companyId,
+          if (ownerId != null) 'owner_id': ownerId,
         },
       );
       return RecordModel.fromJson(

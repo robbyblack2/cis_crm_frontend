@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 
 // Preset colors for tags
 const _tagColors = [
-  Color(0xFFEF4444), Color(0xFFF97316), Color(0xFFEAB308),
-  Color(0xFF22C55E), Color(0xFF14B8A6), Color(0xFF3B82F6),
-  Color(0xFF6366F1), Color(0xFF8B5CF6), Color(0xFFEC4899),
-  Color(0xFF64748B), Color(0xFF78716C), Color(0xFF0EA5E9),
+  Color(0xFFEF4444), Color(0xFFF97316), Color(0xFFF59E0B),
+  Color(0xFFEAB308), Color(0xFF22C55E), Color(0xFF14B8A6),
+  Color(0xFF06B6D4), Color(0xFF3B82F6), Color(0xFF6366F1),
+  Color(0xFFA855F7), Color(0xFF8B5CF6), Color(0xFFEC4899),
+  Color(0xFFF43F5E), Color(0xFF64748B), Color(0xFF10B981),
+  Color(0xFF84CC16),
 ];
 
 Color _colorForTag(String name) {
@@ -54,16 +56,43 @@ class _TagsPageState extends State<TagsPage> {
     }
   }
 
-  bool _isDuplicate(String name) {
+  bool _isDuplicate(String name, {String? excludeId}) {
     if (_tags == null) return false;
     final lower = name.toLowerCase();
-    return _tags!.any(
-      (t) => (t['name'] as String? ?? '').toLowerCase() == lower,
-    );
+    return _tags!.any((t) {
+      if (excludeId != null && t['id'] == excludeId) return false;
+      return (t['name'] as String? ?? '').toLowerCase() == lower;
+    });
   }
 
   void _showCreateDialog() {
-    final ctrl = TextEditingController();
+    _showTagForm(title: 'Create Tag', onSave: (name) async {
+      await getIt<Dio>().post<void>('/api/tags', data: {'name': name});
+      await _load();
+    });
+  }
+
+  void _showEditDialog(Map<String, dynamic> tag) {
+    final id = tag['id'] as String? ?? '';
+    final currentName = tag['name'] as String? ?? '';
+    _showTagForm(
+      title: 'Edit Tag',
+      initialName: currentName,
+      excludeId: id,
+      onSave: (name) async {
+        await getIt<Dio>().put<void>('/api/tags/$id', data: {'name': name});
+        await _load();
+      },
+    );
+  }
+
+  void _showTagForm({
+    required String title,
+    required Future<void> Function(String name) onSave,
+    String initialName = '',
+    String? excludeId,
+  }) {
+    final ctrl = TextEditingController(text: initialName);
 
     showModalBottomSheet<void>(
       context: context,
@@ -72,7 +101,7 @@ class _TagsPageState extends State<TagsPage> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) {
           final name = ctrl.text.trim();
-          final isDup = name.isNotEmpty && _isDuplicate(name);
+          final isDup = name.isNotEmpty && _isDuplicate(name, excludeId: excludeId);
           final color = name.isNotEmpty ? _colorForTag(name) : Colors.grey;
 
           return Padding(
@@ -84,7 +113,7 @@ class _TagsPageState extends State<TagsPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Create Tag', style: Theme.of(ctx).textTheme.headlineSmall),
+                Text(title, style: Theme.of(ctx).textTheme.headlineSmall),
                 const SizedBox(height: 16),
                 TextField(
                   controller: ctrl,
@@ -95,19 +124,50 @@ class _TagsPageState extends State<TagsPage> {
                     errorText: isDup ? 'Tag "$name" already exists' : null,
                   ),
                   onChanged: (_) => setSheetState(() {}),
+                  onSubmitted: isDup || name.isEmpty
+                      ? null
+                      : (_) async {
+                          Navigator.pop(ctx);
+                          try {
+                            await onSave(name);
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Failed: $e')),
+                              );
+                            }
+                          }
+                        },
                 ),
                 if (name.isNotEmpty && !isDup) ...[
                   const SizedBox(height: 16),
-                  Row(
+                  Text(
+                    'Preview',
+                    style: Theme.of(ctx).textTheme.labelMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
                     children: [
-                      Text('Preview: ', style: Theme.of(ctx).textTheme.labelMedium),
                       Chip(
-                        avatar: CircleAvatar(radius: 6, backgroundColor: color),
+                        avatar: CircleAvatar(
+                          radius: 6,
+                          backgroundColor: color,
+                        ),
                         label: Text(name),
                         backgroundColor: color.withValues(alpha: 0.1),
-                        side: BorderSide(color: color.withValues(alpha: 0.4)),
+                        side: BorderSide(
+                          color: color.withValues(alpha: 0.4),
+                        ),
+                        labelStyle: TextStyle(color: color),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Color is auto-assigned based on the tag name.',
+                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 20),
@@ -117,11 +177,7 @@ class _TagsPageState extends State<TagsPage> {
                       : () async {
                           Navigator.pop(ctx);
                           try {
-                            await getIt<Dio>().post<void>(
-                              '/api/tags',
-                              data: {'name': name},
-                            );
-                            await _load();
+                            await onSave(name);
                           } catch (e) {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -130,7 +186,7 @@ class _TagsPageState extends State<TagsPage> {
                             }
                           }
                         },
-                  child: const Text('Create'),
+                  child: Text(initialName.isEmpty ? 'Create' : 'Save'),
                 ),
               ],
             ),
@@ -140,7 +196,30 @@ class _TagsPageState extends State<TagsPage> {
     );
   }
 
-  Future<void> _deleteTag(String id) async {
+  Future<void> _deleteTag(String id, String name) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Tag'),
+        content: Text(
+          'Delete "$name"? This will not remove the tag from existing records.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     try {
       await getIt<Dio>().delete<void>('/api/tags/$id');
       await _load();
@@ -203,7 +282,8 @@ class _TagsPageState extends State<TagsPage> {
                     Expanded(
                       child: ListView.separated(
                         itemCount: filtered?.length ?? 0,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        separatorBuilder: (_, __) =>
+                            const Divider(height: 1),
                         itemBuilder: (context, index) {
                           final tag = filtered![index];
                           final name = tag['name'] as String? ?? '';
@@ -213,16 +293,34 @@ class _TagsPageState extends State<TagsPage> {
                           return ListTile(
                             leading: CircleAvatar(
                               radius: 14,
-                              backgroundColor: color.withValues(alpha: 0.15),
-                              child: Icon(Icons.label, size: 16, color: color),
+                              backgroundColor:
+                                  color.withValues(alpha: 0.15),
+                              child: Icon(
+                                Icons.label,
+                                size: 16,
+                                color: color,
+                              ),
                             ),
                             title: Text(name),
-                            trailing: IconButton(
-                              icon: Icon(
-                                Icons.delete_outline,
-                                color: colorScheme.error,
-                              ),
-                              onPressed: () => _deleteTag(id),
+                            onTap: () => _showEditDialog(tag),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit_outlined,
+                                      size: 18),
+                                  tooltip: 'Edit',
+                                  onPressed: () => _showEditDialog(tag),
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.delete_outline,
+                                    color: colorScheme.error,
+                                  ),
+                                  tooltip: 'Delete',
+                                  onPressed: () => _deleteTag(id, name),
+                                ),
+                              ],
                             ),
                           );
                         },

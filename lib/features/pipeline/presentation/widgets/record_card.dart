@@ -9,6 +9,7 @@ class RecordCard extends StatelessWidget {
     this.onEmail,
     this.onAddNote,
     this.onMoveStage,
+    this.onManageTags,
     super.key,
   });
 
@@ -17,6 +18,7 @@ class RecordCard extends StatelessWidget {
   final VoidCallback? onEmail;
   final VoidCallback? onAddNote;
   final VoidCallback? onMoveStage;
+  final VoidCallback? onManageTags;
 
   IconData _sourceIcon(RecordSource source) => switch (source) {
         RecordSource.email => Icons.email_outlined,
@@ -38,6 +40,21 @@ class RecordCard extends StatelessWidget {
     if (days < 1) return Colors.green;
     if (days <= 3) return Colors.orange;
     return Colors.red;
+  }
+
+  static const _tagColors = [
+    Color(0xFFEF4444), Color(0xFFF97316), Color(0xFFEAB308),
+    Color(0xFF22C55E), Color(0xFF14B8A6), Color(0xFF3B82F6),
+    Color(0xFF6366F1), Color(0xFF8B5CF6), Color(0xFFEC4899),
+    Color(0xFF64748B), Color(0xFF78716C), Color(0xFF0EA5E9),
+  ];
+
+  static Color _colorForTag(String name) {
+    var hash = 0;
+    for (var i = 0; i < name.length; i++) {
+      hash = name.codeUnitAt(i) + ((hash << 5) - hash);
+    }
+    return _tagColors[hash.abs() % _tagColors.length];
   }
 
   @override
@@ -75,21 +92,7 @@ class RecordCard extends StatelessWidget {
                   ),
                   if (record.ownerId != null) ...[
                     const SizedBox(width: 8),
-                    Tooltip(
-                      message: record.ownerId ?? '',
-                      child: CircleAvatar(
-                        radius: 14,
-                        backgroundColor: colorScheme.primaryContainer,
-                        child: Text(
-                          record.ownerId!.isNotEmpty
-                              ? record.ownerId![0].toUpperCase()
-                              : '?',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: colorScheme.onPrimaryContainer,
-                          ),
-                        ),
-                      ),
-                    ),
+                    _OwnerAvatar(ownerId: record.ownerId!),
                   ],
                 ],
               ),
@@ -111,7 +114,6 @@ class RecordCard extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  // Stage age indicator
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 6,
@@ -184,7 +186,7 @@ class RecordCard extends StatelessWidget {
                 ),
               ],
 
-              // ── Tags ──
+              // ── Tags (color-coded) ──
               if (record.tags.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Wrap(
@@ -192,17 +194,24 @@ class RecordCard extends StatelessWidget {
                   runSpacing: 4,
                   children: record.tags
                       .map(
-                        (tag) => Chip(
-                          label: Text(tag),
-                          labelStyle: theme.textTheme.labelSmall,
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
-                          visualDensity: VisualDensity.compact,
-                          padding: EdgeInsets.zero,
-                          side: BorderSide(
-                            color: colorScheme.outlineVariant,
-                          ),
-                        ),
+                        (tag) {
+                          final tagColor = _colorForTag(tag);
+                          return Chip(
+                            label: Text(tag),
+                            labelStyle: theme.textTheme.labelSmall?.copyWith(
+                              color: tagColor,
+                            ),
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            side: BorderSide(
+                              color: tagColor.withValues(alpha: 0.4),
+                            ),
+                            backgroundColor:
+                                tagColor.withValues(alpha: 0.08),
+                          );
+                        },
                       )
                       .toList(),
                 ),
@@ -229,6 +238,11 @@ class RecordCard extends StatelessWidget {
                     onTap: onAddNote,
                   ),
                   _QuickAction(
+                    icon: Icons.label_outline,
+                    tooltip: 'Manage tags',
+                    onTap: onManageTags,
+                  ),
+                  _QuickAction(
                     icon: Icons.drive_file_move_outlined,
                     tooltip: 'Move stage',
                     onTap: onMoveStage,
@@ -246,6 +260,66 @@ class RecordCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OwnerAvatar extends StatefulWidget {
+  const _OwnerAvatar({required this.ownerId});
+
+  final String ownerId;
+
+  @override
+  State<_OwnerAvatar> createState() => _OwnerAvatarState();
+}
+
+class _OwnerAvatarState extends State<_OwnerAvatar> {
+  String? _name;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
+
+  Future<void> _resolve() async {
+    await NameResolver.instance.loadUsers();
+    if (mounted) {
+      setState(() {
+        _name = NameResolver.instance.userName(widget.ownerId);
+      });
+    }
+  }
+
+  String get _initials {
+    final name = _name;
+    if (name == null || name.isEmpty) {
+      return widget.ownerId.isNotEmpty
+          ? widget.ownerId[0].toUpperCase()
+          : '?';
+    }
+    final parts = name.split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name[0].toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: _name ?? widget.ownerId,
+      child: CircleAvatar(
+        radius: 14,
+        backgroundColor: colorScheme.primaryContainer,
+        child: Text(
+          _initials,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: colorScheme.onPrimaryContainer,
           ),
         ),
       ),

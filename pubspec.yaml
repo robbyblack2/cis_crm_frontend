@@ -28,6 +28,7 @@ dependencies:
   logger: ^2.4.0
   path_provider: ^2.1.4
   shared_preferences: ^2.3.0
+  flutter_widget_from_html_core: ^0.15.2
   url_launcher: ^6.2.0
   web_socket_channel: ^3.0.3
   table_calendar: ^3.2.0

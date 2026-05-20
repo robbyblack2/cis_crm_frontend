@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/features/settings/domain/entities/google_connection.dart';
 import 'package:cis_crm/features/settings/domain/repositories/google_repository.dart';
@@ -10,6 +12,7 @@ class GoogleIntegrationCubit extends Cubit<GoogleIntegrationState> {
         super(const GoogleIntegrationInitial());
 
   final GoogleRepository _repository;
+  Timer? _pollTimer;
 
   Future<void> loadStatus() async {
     emit(const GoogleIntegrationLoading());
@@ -23,7 +26,7 @@ class GoogleIntegrationCubit extends Cubit<GoogleIntegrationState> {
   }
 
   Future<String?> connectGoogle() async {
-    emit(const GoogleIntegrationLoading());
+    // Don't emit loading — keep current state so UI doesn't blank out
     final result = await _repository.getAuthUrl();
     switch (result) {
       case Success(:final data):
@@ -32,6 +35,45 @@ class GoogleIntegrationCubit extends Cubit<GoogleIntegrationState> {
         emit(GoogleIntegrationError(error));
         return null;
     }
+  }
+
+  /// Polls the status endpoint every [interval] until connected or [timeout].
+  Future<void> pollUntilConnected({
+    Duration interval = const Duration(seconds: 3),
+    Duration timeout = const Duration(minutes: 2),
+  }) async {
+    _pollTimer?.cancel();
+    emit(const GoogleIntegrationLoading());
+
+    final deadline = DateTime.now().add(timeout);
+    final completer = Completer<void>();
+
+    _pollTimer = Timer.periodic(interval, (timer) async {
+      if (DateTime.now().isAfter(deadline)) {
+        timer.cancel();
+        _pollTimer = null;
+        // Timeout — load final status
+        await loadStatus();
+        if (!completer.isCompleted) completer.complete();
+        return;
+      }
+
+      final result = await _repository.getStatus();
+      switch (result) {
+        case Success(:final data):
+          if (data.connected) {
+            timer.cancel();
+            _pollTimer = null;
+            emit(GoogleIntegrationLoaded(data));
+            if (!completer.isCompleted) completer.complete();
+          }
+        case Failure():
+          // Keep polling on transient errors
+          break;
+      }
+    });
+
+    return completer.future;
   }
 
   Future<void> disconnectGoogle() async {
@@ -43,5 +85,11 @@ class GoogleIntegrationCubit extends Cubit<GoogleIntegrationState> {
       case Failure(:final error):
         emit(GoogleIntegrationError(error));
     }
+  }
+
+  @override
+  Future<void> close() {
+    _pollTimer?.cancel();
+    return super.close();
   }
 }

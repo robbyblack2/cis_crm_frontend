@@ -26,6 +26,9 @@ abstract class RecordRepository {
     required String id,
     required String title,
     List<String>? tags,
+    String? contactId,
+    String? companyId,
+    String? ownerId,
   });
 
   Future<Result<void, AppFailure>> deleteRecord(String id);

@@ -89,12 +89,18 @@ class RecordRepositoryImpl implements RecordRepository {
     required String id,
     required String title,
     List<String>? tags,
+    String? contactId,
+    String? companyId,
+    String? ownerId,
   }) async {
     try {
       final record = await _remoteDataSource.updateRecord(
         id: id,
         title: title,
         tags: tags,
+        contactId: contactId,
+        companyId: companyId,
+        ownerId: ownerId,
       );
       return Success(record);
     } on NetworkException {

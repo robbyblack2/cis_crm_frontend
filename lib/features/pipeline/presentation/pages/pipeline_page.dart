@@ -12,6 +12,8 @@ import 'package:cis_crm/features/pipeline/domain/entities/stage.dart';
 import 'package:cis_crm/features/pipeline/presentation/bloc/pipeline_bloc.dart';
 import 'package:cis_crm/features/pipeline/presentation/bloc/record_bloc.dart';
 import 'package:cis_crm/features/pipeline/presentation/pages/pipeline_management_page.dart';
+import 'package:cis_crm/core/utils/name_resolver.dart';
+import 'package:cis_crm/core/widgets/search_or_create_field.dart';
 import 'package:cis_crm/features/contacts/data/datasources/company_remote_data_source.dart';
 import 'package:cis_crm/features/contacts/data/datasources/contact_remote_data_source.dart';
 import 'package:cis_crm/features/contacts/data/models/company_model.dart';
@@ -316,19 +318,12 @@ class _CreateRecordSheet extends StatefulWidget {
 class _CreateRecordSheetState extends State<_CreateRecordSheet> {
   final _titleCtrl = TextEditingController();
   final _tagsCtrl = TextEditingController();
-  final _contactSearchCtrl = TextEditingController();
-  final _companySearchCtrl = TextEditingController();
   late String _selectedStageId;
 
   String? _selectedContactId;
-  String? _selectedContactName;
+  Map<String, dynamic>? _selectedContact;
   String? _selectedCompanyId;
-  String? _selectedCompanyName;
-
-  List<Map<String, dynamic>> _contactResults = [];
-  List<Map<String, dynamic>> _companyResults = [];
-  bool _searchingContacts = false;
-  bool _searchingCompanies = false;
+  Map<String, dynamic>? _selectedCompany;
 
   @override
   void initState() {
@@ -340,250 +335,242 @@ class _CreateRecordSheetState extends State<_CreateRecordSheet> {
   void dispose() {
     _titleCtrl.dispose();
     _tagsCtrl.dispose();
-    _contactSearchCtrl.dispose();
-    _companySearchCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _searchContacts(String query) async {
-    if (query.length < 2) {
-      setState(() => _contactResults = []);
-      return;
-    }
-    setState(() => _searchingContacts = true);
-    try {
-      final response = await getIt<ContactRemoteDataSource>()
-          .getContacts(page: 1, perPage: 10);
-      final filtered = response.items
-          .where((c) {
-            final name = '${c.firstName} ${c.lastName}'.toLowerCase();
-            final email = c.email.toLowerCase();
-            final q = query.toLowerCase();
-            return name.contains(q) || email.contains(q);
-          })
-          .map((c) => {
-                'id': c.id,
-                'name': '${c.firstName} ${c.lastName}'.trim(),
-                'email': c.email,
-              })
-          .toList();
-      if (mounted) {
-        setState(() {
-          _contactResults = filtered;
-          _searchingContacts = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _contactResults = [];
-          _searchingContacts = false;
-        });
-      }
-    }
+  Future<List<Map<String, dynamic>>> _searchContacts(String query) async {
+    final response = await getIt<ContactRemoteDataSource>()
+        .getContacts(page: 1, perPage: 10);
+    final q = query.toLowerCase();
+    return response.items
+        .where((c) {
+          final name = '${c.firstName} ${c.lastName}'.toLowerCase();
+          return name.contains(q) || c.email.toLowerCase().contains(q);
+        })
+        .map((c) => {
+              'id': c.id,
+              'name': '${c.firstName} ${c.lastName}'.trim(),
+              'email': c.email,
+            })
+        .toList();
   }
 
-  Future<void> _searchCompanies(String query) async {
-    if (query.length < 2) {
-      setState(() => _companyResults = []);
-      return;
-    }
-    setState(() => _searchingCompanies = true);
-    try {
-      final companies =
-          await getIt<CompanyRemoteDataSource>().getCompanies();
-      final filtered = companies
-          .where(
-            (c) => c.name.toLowerCase().contains(query.toLowerCase()),
-          )
-          .map((c) => {'id': c.id, 'name': c.name})
-          .toList();
-      if (mounted) {
-        setState(() {
-          _companyResults = filtered;
-          _searchingCompanies = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _companyResults = [];
-          _searchingCompanies = false;
-        });
-      }
-    }
+  Future<List<Map<String, dynamic>>> _searchCompanies(String query) async {
+    final companies =
+        await getIt<CompanyRemoteDataSource>().getCompanies();
+    return companies
+        .where((c) => c.name.toLowerCase().contains(query.toLowerCase()))
+        .map((c) => {'id': c.id, 'name': c.name})
+        .toList();
   }
 
-  void _quickAddContact() {
-    final firstCtrl = TextEditingController();
-    final lastCtrl = TextEditingController();
-    final emailCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
+  Future<Map<String, dynamic>?> _createContact(String query) async {
+    final hints = QueryParser.parseContactQuery(query);
+    final firstCtrl =
+        TextEditingController(text: hints.firstName ?? '');
+    final lastCtrl =
+        TextEditingController(text: hints.lastName ?? '');
+    final emailCtrl =
+        TextEditingController(text: hints.email ?? '');
+    final phoneCtrl =
+        TextEditingController(text: hints.phone ?? '');
 
-    showDialog<void>(
+    return showModalBottomSheet<Map<String, dynamic>>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Quick Add Contact'),
-        content: SingleChildScrollView(
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 24,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Text(
+                'Quick Add Contact',
+                style: Theme.of(ctx).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 20),
               TextField(
                 controller: firstCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'First name'),
+                decoration: const InputDecoration(
+                  labelText: 'First name',
+                  border: OutlineInputBorder(),
+                ),
                 autofocus: true,
                 textCapitalization: TextCapitalization.words,
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: lastCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'Last name'),
+                decoration: const InputDecoration(
+                  labelText: 'Last name',
+                  border: OutlineInputBorder(),
+                ),
                 textCapitalization: TextCapitalization.words,
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: emailCtrl,
-                decoration: const InputDecoration(labelText: 'Email'),
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                ),
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: phoneCtrl,
-                decoration: const InputDecoration(labelText: 'Phone'),
+                decoration: const InputDecoration(
+                  labelText: 'Phone',
+                  border: OutlineInputBorder(),
+                ),
                 keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: () async {
+                  final first = firstCtrl.text.trim();
+                  if (first.isEmpty) return;
+                  try {
+                    final contact = ContactModel(
+                      id: '',
+                      firstName: first,
+                      lastName: lastCtrl.text.trim(),
+                      email: emailCtrl.text.trim(),
+                      phone: phoneCtrl.text.trim().isNotEmpty
+                          ? phoneCtrl.text.trim()
+                          : null,
+                      status: 'lead',
+                      tags: const [],
+                      createdAt: DateTime.now(),
+                      updatedAt: DateTime.now(),
+                    );
+                    final created = await getIt<ContactRemoteDataSource>()
+                        .createContact(contact);
+                    if (ctx.mounted) {
+                      Navigator.pop(ctx, {
+                        'id': created.id,
+                        'name':
+                            '${created.firstName} ${created.lastName}'.trim(),
+                        'email': created.email,
+                      });
+                    }
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(content: Text('Failed: $e')),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Create Contact'),
               ),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final first = firstCtrl.text.trim();
-              final last = lastCtrl.text.trim();
-              if (first.isEmpty) return;
-              Navigator.pop(ctx);
-              try {
-                final contact = ContactModel(
-                  id: '',
-                  firstName: first,
-                  lastName: last,
-                  email: emailCtrl.text.trim(),
-                  phone: phoneCtrl.text.trim().isNotEmpty
-                      ? phoneCtrl.text.trim()
-                      : null,
-                  status: 'lead',
-                  tags: const [],
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
-                );
-                final created = await getIt<ContactRemoteDataSource>()
-                    .createContact(contact);
-                setState(() {
-                  _selectedContactId = created.id;
-                  _selectedContactName =
-                      '${created.firstName} ${created.lastName}'.trim();
-                  _contactSearchCtrl.text = _selectedContactName!;
-                  _contactResults = [];
-                });
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed: $e')),
-                  );
-                }
-              }
-            },
-            child: const Text('Create'),
-          ),
-        ],
       ),
     );
   }
 
-  void _quickAddCompany() {
-    final nameCtrl = TextEditingController();
-    final websiteCtrl = TextEditingController();
+  Future<Map<String, dynamic>?> _createCompany(String query) async {
+    final hints = QueryParser.parseCompanyQuery(query);
+    final nameCtrl = TextEditingController(text: hints.name ?? '');
+    final websiteCtrl = TextEditingController(text: hints.domain ?? '');
     final industryCtrl = TextEditingController();
 
-    showDialog<void>(
+    return showModalBottomSheet<Map<String, dynamic>>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Quick Add Company'),
-        content: SingleChildScrollView(
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 24,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Text(
+                'Quick Add Company',
+                style: Theme.of(ctx).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 20),
               TextField(
                 controller: nameCtrl,
-                decoration: const InputDecoration(labelText: 'Name'),
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  border: OutlineInputBorder(),
+                ),
                 autofocus: true,
                 textCapitalization: TextCapitalization.words,
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: websiteCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'Website'),
+                decoration: const InputDecoration(
+                  labelText: 'Website',
+                  border: OutlineInputBorder(),
+                ),
                 keyboardType: TextInputType.url,
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: industryCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'Industry'),
+                decoration: const InputDecoration(
+                  labelText: 'Industry',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: () async {
+                  final name = nameCtrl.text.trim();
+                  if (name.isEmpty) return;
+                  try {
+                    final company = CompanyModel(
+                      id: '',
+                      name: name,
+                      domain: websiteCtrl.text.trim().isNotEmpty
+                          ? websiteCtrl.text.trim()
+                          : null,
+                      industry: industryCtrl.text.trim().isNotEmpty
+                          ? industryCtrl.text.trim()
+                          : null,
+                      tags: const [],
+                      createdAt: DateTime.now(),
+                      updatedAt: DateTime.now(),
+                    );
+                    final created = await getIt<CompanyRemoteDataSource>()
+                        .createCompany(company);
+                    if (ctx.mounted) {
+                      Navigator.pop(ctx, {
+                        'id': created.id,
+                        'name': created.name,
+                      });
+                    }
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(content: Text('Failed: $e')),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Create Company'),
               ),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final name = nameCtrl.text.trim();
-              if (name.isEmpty) return;
-              Navigator.pop(ctx);
-              try {
-                final company = CompanyModel(
-                  id: '',
-                  name: name,
-                  domain: websiteCtrl.text.trim().isNotEmpty
-                      ? websiteCtrl.text.trim()
-                      : null,
-                  industry: industryCtrl.text.trim().isNotEmpty
-                      ? industryCtrl.text.trim()
-                      : null,
-                  tags: const [],
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
-                );
-                final created = await getIt<CompanyRemoteDataSource>()
-                    .createCompany(company);
-                setState(() {
-                  _selectedCompanyId = created.id;
-                  _selectedCompanyName = created.name;
-                  _companySearchCtrl.text = created.name;
-                  _companyResults = [];
-                });
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed: $e')),
-                  );
-                }
-              }
-            },
-            child: const Text('Create'),
-          ),
-        ],
       ),
     );
   }
@@ -688,95 +675,23 @@ class _CreateRecordSheetState extends State<_CreateRecordSheet> {
                     ?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
-              if (_selectedContactId != null)
-                Card(
-                  color: theme.colorScheme.primaryContainer,
-                  child: ListTile(
-                    leading: const Icon(Icons.person),
-                    title: Text(_selectedContactName ?? ''),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => setState(() {
-                        _selectedContactId = null;
-                        _selectedContactName = null;
-                        _contactSearchCtrl.clear();
-                      }),
-                    ),
-                  ),
-                )
-              else ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _contactSearchCtrl,
-                        decoration: const InputDecoration(
-                          hintText: 'Search contacts...',
-                          prefixIcon: Icon(Icons.search),
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                        onChanged: _searchContacts,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton.tonalIcon(
-                      onPressed: _quickAddContact,
-                      icon: const Icon(Icons.person_add, size: 18),
-                      label: const Text('New'),
-                    ),
-                  ],
-                ),
-                if (_searchingContacts)
-                  const Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Center(
-                      child: SizedBox(
-                        width: 16,
-                        height: 16,
-                        child:
-                            CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                  ),
-                if (_contactResults.isNotEmpty)
-                  Card(
-                    child: Column(
-                      children: _contactResults
-                          .take(5)
-                          .map(
-                            (c) => ListTile(
-                              dense: true,
-                              leading: CircleAvatar(
-                                radius: 16,
-                                child: Text(
-                                  (c['name'] as String? ?? '?')[0]
-                                      .toUpperCase(),
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ),
-                              title: Text(
-                                c['name'] as String? ?? '',
-                              ),
-                              subtitle: Text(
-                                c['email'] as String? ?? '',
-                                style: theme.textTheme.bodySmall,
-                              ),
-                              onTap: () => setState(() {
-                                _selectedContactId =
-                                    c['id'] as String?;
-                                _selectedContactName =
-                                    c['name'] as String?;
-                                _contactSearchCtrl.text =
-                                    _selectedContactName ?? '';
-                                _contactResults = [];
-                              }),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ),
-              ],
+              SearchOrCreateField<Map<String, dynamic>>(
+                label: 'Search contacts...',
+                onSearch: _searchContacts,
+                itemLabel: (c) => c['name'] as String? ?? '',
+                itemSubtitle: (c) => c['email'] as String? ?? '',
+                createEntityLabel: 'contact',
+                selectedItem: _selectedContact,
+                onSelected: (c) => setState(() {
+                  _selectedContactId = c['id'] as String?;
+                  _selectedContact = c;
+                }),
+                onCleared: () => setState(() {
+                  _selectedContactId = null;
+                  _selectedContact = null;
+                }),
+                onCreateTapped: _createContact,
+              ),
               const SizedBox(height: 16),
 
               // ── Company search ──
@@ -786,83 +701,22 @@ class _CreateRecordSheetState extends State<_CreateRecordSheet> {
                     ?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
-              if (_selectedCompanyId != null)
-                Card(
-                  color: theme.colorScheme.primaryContainer,
-                  child: ListTile(
-                    leading: const Icon(Icons.business),
-                    title: Text(_selectedCompanyName ?? ''),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => setState(() {
-                        _selectedCompanyId = null;
-                        _selectedCompanyName = null;
-                        _companySearchCtrl.clear();
-                      }),
-                    ),
-                  ),
-                )
-              else ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _companySearchCtrl,
-                        decoration: const InputDecoration(
-                          hintText: 'Search companies...',
-                          prefixIcon: Icon(Icons.search),
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                        onChanged: _searchCompanies,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton.tonalIcon(
-                      onPressed: _quickAddCompany,
-                      icon: const Icon(Icons.add_business, size: 18),
-                      label: const Text('New'),
-                    ),
-                  ],
-                ),
-                if (_searchingCompanies)
-                  const Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Center(
-                      child: SizedBox(
-                        width: 16,
-                        height: 16,
-                        child:
-                            CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                  ),
-                if (_companyResults.isNotEmpty)
-                  Card(
-                    child: Column(
-                      children: _companyResults
-                          .take(5)
-                          .map(
-                            (c) => ListTile(
-                              dense: true,
-                              leading: const Icon(Icons.business),
-                              title:
-                                  Text(c['name'] as String? ?? ''),
-                              onTap: () => setState(() {
-                                _selectedCompanyId =
-                                    c['id'] as String?;
-                                _selectedCompanyName =
-                                    c['name'] as String?;
-                                _companySearchCtrl.text =
-                                    _selectedCompanyName ?? '';
-                                _companyResults = [];
-                              }),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ),
-              ],
+              SearchOrCreateField<Map<String, dynamic>>(
+                label: 'Search companies...',
+                onSearch: _searchCompanies,
+                itemLabel: (c) => c['name'] as String? ?? '',
+                createEntityLabel: 'company',
+                selectedItem: _selectedCompany,
+                onSelected: (c) => setState(() {
+                  _selectedCompanyId = c['id'] as String?;
+                  _selectedCompany = c;
+                }),
+                onCleared: () => setState(() {
+                  _selectedCompanyId = null;
+                  _selectedCompany = null;
+                }),
+                onCreateTapped: _createCompany,
+              ),
               const SizedBox(height: 16),
 
               // ── Tags ──
@@ -893,7 +747,7 @@ class _CreateRecordSheetState extends State<_CreateRecordSheet> {
   }
 }
 
-class _RecordListView extends StatelessWidget {
+class _RecordListView extends StatefulWidget {
   const _RecordListView({
     required this.stages,
     required this.records,
@@ -902,8 +756,16 @@ class _RecordListView extends StatelessWidget {
   final List<Stage> stages;
   final List<PipelineRecord> records;
 
+  @override
+  State<_RecordListView> createState() => _RecordListViewState();
+}
+
+class _RecordListViewState extends State<_RecordListView> {
+  String _sortColumn = 'stage';
+  bool _sortAsc = true;
+
   Stage? _stageForRecord(PipelineRecord record) {
-    return stages.cast<Stage?>().firstWhere(
+    return widget.stages.cast<Stage?>().firstWhere(
           (s) => s!.id == record.stageId,
           orElse: () => null,
         );
@@ -925,74 +787,247 @@ class _RecordListView extends StatelessWidget {
     return 'Just now';
   }
 
+  List<PipelineRecord> get _sortedRecords {
+    final sorted = List<PipelineRecord>.from(widget.records);
+    sorted.sort((a, b) {
+      int cmp;
+      switch (_sortColumn) {
+        case 'title':
+          cmp = a.title.toLowerCase().compareTo(b.title.toLowerCase());
+        case 'stage':
+          final sa = _stageForRecord(a)?.position ?? 999;
+          final sb = _stageForRecord(b)?.position ?? 999;
+          cmp = sa.compareTo(sb);
+        case 'created':
+          cmp = a.createdAt.compareTo(b.createdAt);
+        case 'updated':
+          cmp = a.updatedAt.compareTo(b.updatedAt);
+        default:
+          cmp = 0;
+      }
+      return _sortAsc ? cmp : -cmp;
+    });
+    return sorted;
+  }
+
+  void _toggleSort(String column) {
+    setState(() {
+      if (_sortColumn == column) {
+        _sortAsc = !_sortAsc;
+      } else {
+        _sortColumn = column;
+        _sortAsc = true;
+      }
+    });
+  }
+
+  Widget _headerCell(String label, String column, {int flex = 2}) {
+    final isActive = _sortColumn == column;
+    return Expanded(
+      flex: flex,
+      child: InkWell(
+        onTap: () => _toggleSort(column),
+        child: Row(
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: isActive
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            if (isActive)
+              Icon(
+                _sortAsc ? Icons.arrow_upward : Icons.arrow_downward,
+                size: 12,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final sorted = _sortedRecords;
 
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: records.length,
-      separatorBuilder: (_, __) => const Divider(height: 1, indent: 16),
-      itemBuilder: (context, index) {
-        final record = records[index];
-        final stage = _stageForRecord(record);
-        final stageColor =
-            stage != null ? _parseColor(stage.color) : Colors.grey;
-
-        return ListTile(
-          onTap: () {
-            final pipelineBloc = context.read<PipelineBloc>();
-            final recordBloc = context.read<RecordBloc>();
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => MultiBlocProvider(
-                  providers: [
-                    BlocProvider<PipelineBloc>.value(value: pipelineBloc),
-                    BlocProvider<RecordBloc>.value(value: recordBloc),
-                  ],
-                  child: RecordDetailPage(recordId: record.id),
-                ),
-              ),
-            );
-          },
-          leading: Container(
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(
-              color: stageColor,
-              shape: BoxShape.circle,
+    return Column(
+      children: [
+        // Column headers
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: colorScheme.outlineVariant),
             ),
           ),
-          title: Text(
-            record.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          child: Row(
+            children: [
+              const SizedBox(width: 20), // stage dot space
+              const SizedBox(width: 8),
+              _headerCell('Title', 'title', flex: 3),
+              _headerCell('Stage', 'stage'),
+              _headerCell('Contact', 'contact'),
+              _headerCell('Owner', 'owner'),
+              _headerCell('Tags', 'tags'),
+              _headerCell('Created', 'created'),
+            ],
           ),
-          subtitle: Text(
-            [
-              if (stage != null) stage.name,
-              record.source.name,
-              _timeAgo(record.createdAt),
-            ].join(' · '),
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-          trailing: record.ownerId != null
-              ? CircleAvatar(
-                  radius: 14,
-                  backgroundColor: colorScheme.primaryContainer,
-                  child: Text(
-                    record.ownerId![0].toUpperCase(),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onPrimaryContainer,
+        ),
+        // Rows
+        Expanded(
+          child: ListView.separated(
+            itemCount: sorted.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final record = sorted[index];
+              final stage = _stageForRecord(record);
+              final stageColor =
+                  stage != null ? _parseColor(stage.color) : Colors.grey;
+
+              return InkWell(
+                onTap: () {
+                  final pipelineBloc = context.read<PipelineBloc>();
+                  final recordBloc = context.read<RecordBloc>();
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => MultiBlocProvider(
+                        providers: [
+                          BlocProvider<PipelineBloc>.value(
+                              value: pipelineBloc),
+                          BlocProvider<RecordBloc>.value(
+                              value: recordBloc),
+                        ],
+                        child: RecordDetailPage(recordId: record.id),
+                      ),
                     ),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
                   ),
-                )
-              : null,
-        );
-      },
+                  child: Row(
+                    children: [
+                      // Stage color dot
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: stageColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Title
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          record.title,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      // Stage name
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          stage?.name ?? '—',
+                          style: theme.textTheme.bodySmall,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      // Contact
+                      Expanded(
+                        flex: 2,
+                        child: record.contactId != null
+                            ? ResolvedName(
+                                id: record.contactId,
+                                type: 'contact',
+                                style: theme.textTheme.bodySmall,
+                              )
+                            : Text(
+                                '—',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                      ),
+                      // Owner
+                      Expanded(
+                        flex: 2,
+                        child: record.ownerId != null
+                            ? ResolvedName(
+                                id: record.ownerId,
+                                type: 'user',
+                                style: theme.textTheme.bodySmall,
+                              )
+                            : Text(
+                                '—',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                      ),
+                      // Tags
+                      Expanded(
+                        flex: 2,
+                        child: record.tags.isNotEmpty
+                            ? Wrap(
+                                spacing: 4,
+                                children: record.tags.take(2).map((tag) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 1,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.primary
+                                          .withValues(alpha: 0.08),
+                                      borderRadius:
+                                          BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      tag,
+                                      style: theme.textTheme.labelSmall
+                                          ?.copyWith(fontSize: 10),
+                                    ),
+                                  );
+                                }).toList(),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                      // Created
+                      Expanded(
+                        flex: 2,
+                        child: Tooltip(
+                          message: record.createdAt.toIso8601String(),
+                          child: Text(
+                            _timeAgo(record.createdAt),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

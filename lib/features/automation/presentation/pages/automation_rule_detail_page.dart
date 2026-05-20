@@ -3,6 +3,7 @@ import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/features/automation/domain/entities/automation_rule.dart';
 import 'package:cis_crm/features/automation/domain/repositories/automation_repository.dart';
 import 'package:cis_crm/features/automation/presentation/bloc/automation_bloc.dart';
+import 'package:cis_crm/features/automation/presentation/pages/automation_builder_page.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -34,8 +35,6 @@ class _AutomationRuleDetailPageState extends State<AutomationRuleDetailPage> {
       _loading = true;
       _error = null;
     });
-    // Backend doesn't support GET /api/automation/rules/:id (405)
-    // Fetch all rules and find by ID
     final result = await getIt<AutomationRepository>().getRules();
     if (!mounted) return;
     setState(() {
@@ -80,9 +79,14 @@ class _AutomationRuleDetailPageState extends State<AutomationRuleDetailPage> {
         title: Text(rule.name),
         actions: [
           IconButton(
+            icon: const Icon(Icons.copy_outlined),
+            tooltip: 'Duplicate rule',
+            onPressed: () => _duplicateRule(context, rule),
+          ),
+          IconButton(
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'Edit',
-            onPressed: () => _showEditSheet(context, rule),
+            onPressed: () => _openEditor(context, rule),
           ),
           IconButton(
             icon: const Icon(Icons.delete_outlined),
@@ -149,20 +153,7 @@ class _AutomationRuleDetailPageState extends State<AutomationRuleDetailPage> {
                   ?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: rule.triggerConditions != null &&
-                        rule.triggerConditions!.isNotEmpty
-                    ? _buildConditions(rule.triggerConditions!)
-                    : Text(
-                        'No conditions — triggers on all events',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-              ),
-            ),
+            _buildConditionsCards(rule, theme),
             const SizedBox(height: 16),
 
             // ── Actions ──
@@ -185,16 +176,8 @@ class _AutomationRuleDetailPageState extends State<AutomationRuleDetailPage> {
                 ),
               )
             else
-              ...rule.actions.map(
-                (action) => Card(
-                  child: ListTile(
-                    leading: Icon(_actionIcon(
-                      action['type'] as String? ?? '',
-                    )),
-                    title: Text(action['type'] as String? ?? 'Unknown'),
-                    subtitle: Text(_actionSummary(action)),
-                  ),
-                ),
+              ...rule.actions.asMap().entries.map(
+                (entry) => _buildActionCard(entry.key, entry.value, theme),
               ),
             const SizedBox(height: 16),
 
@@ -220,8 +203,22 @@ class _AutomationRuleDetailPageState extends State<AutomationRuleDetailPage> {
     );
   }
 
-  Widget _buildConditions(Map<String, dynamic> conditions) {
-    // Support both All/Any and AND/OR formats
+  Widget _buildConditionsCards(AutomationRule rule, ThemeData theme) {
+    if (rule.triggerConditions == null || rule.triggerConditions!.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            'No conditions — triggers on all events',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      );
+    }
+
+    final conditions = rule.triggerConditions!;
     final allConds = conditions['All'] as List<dynamic>?;
     final anyConds = conditions['Any'] as List<dynamic>?;
     final legacyConds = conditions['conditions'] as List<dynamic>?;
@@ -235,44 +232,118 @@ class _AutomationRuleDetailPageState extends State<AutomationRuleDetailPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Match: $operator'),
+        Chip(
+          avatar: const Icon(Icons.filter_list, size: 16),
+          label: Text('Match: $operator'),
+        ),
         const SizedBox(height: 8),
-        for (final cond in condList)
-          if (cond is Map<String, dynamic>)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                '${cond['field']} ${cond['operator'] ?? cond['op']} ${cond['value']}',
-                style: const TextStyle(fontFamily: 'monospace'),
+        ...condList.whereType<Map<String, dynamic>>().map(
+              (cond) => Card(
+                margin: const EdgeInsets.only(bottom: 6),
+                child: ListTile(
+                  dense: true,
+                  leading: Icon(
+                    Icons.rule_outlined,
+                    color: theme.colorScheme.tertiary,
+                  ),
+                  title: Text(
+                    '${cond['field']}',
+                    style: const TextStyle(fontFamily: 'monospace'),
+                  ),
+                  subtitle: Text(
+                    '${cond['operator'] ?? cond['op']} ${cond['value']}',
+                  ),
+                ),
               ),
             ),
       ],
     );
   }
 
-  String _actionSummary(Map<String, dynamic> action) {
-    final type = action['type'] as String?;
-    // Config may be nested or top-level
+  Widget _buildActionCard(int index, Map<String, dynamic> action, ThemeData theme) {
+    final type = action['type'] as String? ?? 'Unknown';
     final cfg = action['config'] as Map<String, dynamic>? ?? action;
+    final configEntries = cfg.entries
+        .where((e) => e.key != 'type')
+        .toList();
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  child: Text(
+                    '${index + 1}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(_actionIcon(type), color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _actionLabel(type),
+                    style: theme.textTheme.titleSmall,
+                  ),
+                ),
+              ],
+            ),
+            if (configEntries.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+              ...configEntries.map(
+                (e) => Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 100,
+                        child: Text(
+                          e.key,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          '${e.value}',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _actionLabel(String type) {
     return switch (type) {
-      'create_task' => () {
-          final parts = <String>['Title: ${cfg['title'] ?? '—'}'];
-          if (cfg['priority'] != null) parts.add('Priority: ${cfg['priority']}');
-          if (cfg['due_date_days'] != null) {
-            parts.add('Due in ${cfg['due_date_days']}d');
-          }
-          return parts.join(', ');
-        }(),
-      'create_record' =>
-        'Title: ${cfg['title'] ?? '—'}, Pipeline: ${cfg['pipeline_id'] ?? '—'}, Source: ${cfg['source'] ?? '—'}',
-      'send_notification' =>
-        'Message: ${cfg['message'] ?? cfg['template_id'] ?? '—'}',
-      'move_stage' => 'Stage: ${cfg['stage_id'] ?? '—'}',
-      'assign_owner' => 'Owner: ${cfg['owner_id'] ?? cfg['user_id'] ?? '—'}',
-      'add_tag' => 'Tag: ${cfg['tag'] ?? '—'}',
-      'update_field' =>
-        '${cfg['field'] ?? cfg['field_key'] ?? '—'} = ${cfg['value'] ?? '—'}',
-      _ => action.toString(),
+      'create_task' => 'Create Task',
+      'create_record' => 'Create Record',
+      'send_notification' => 'Send Notification',
+      'move_stage' => 'Move Stage',
+      'assign_owner' => 'Assign Owner',
+      'add_tag' => 'Add Tag',
+      'update_field' => 'Update Field',
+      _ => type,
     };
   }
 
@@ -287,6 +358,42 @@ class _AutomationRuleDetailPageState extends State<AutomationRuleDetailPage> {
       'update_field' => Icons.edit_outlined,
       _ => Icons.bolt_outlined,
     };
+  }
+
+  void _openEditor(BuildContext context, AutomationRule rule) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => BlocProvider.value(
+          value: context.read<AutomationBloc>(),
+          child: AutomationBuilderPage(existingRule: rule),
+        ),
+      ),
+    ).then((_) => _loadRule());
+  }
+
+  void _duplicateRule(BuildContext context, AutomationRule rule) {
+    final now = DateTime.now();
+    final copy = AutomationRule(
+      id: '',
+      name: '${rule.name} (copy)',
+      description: rule.description,
+      isActive: false,
+      triggerType: rule.triggerType,
+      triggerConditions: rule.triggerConditions,
+      actions: rule.actions,
+      priority: rule.priority,
+      createdBy: '',
+      createdAt: now,
+      updatedAt: now,
+    );
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => BlocProvider.value(
+          value: context.read<AutomationBloc>(),
+          child: AutomationBuilderPage(existingRule: copy),
+        ),
+      ),
+    ).then((_) => _loadRule());
   }
 
   void _confirmDelete(BuildContext context, AutomationRule rule) {
@@ -324,111 +431,6 @@ class _AutomationRuleDetailPageState extends State<AutomationRuleDetailPage> {
           );
       }
     });
-  }
-
-  void _showEditSheet(BuildContext context, AutomationRule rule) {
-    final nameCtrl = TextEditingController(text: rule.name);
-    final descCtrl = TextEditingController(text: rule.description ?? '');
-    var priority = rule.priority;
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Padding(
-          padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Edit Rule',
-                  style: Theme.of(ctx).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: nameCtrl,
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Rule Name',
-                    border: OutlineInputBorder(),
-                  ),
-                  textCapitalization: TextCapitalization.sentences,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                  minLines: 2,
-                  textCapitalization: TextCapitalization.sentences,
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<int>(
-                  value: priority,
-                  decoration: const InputDecoration(
-                    labelText: 'Priority',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: [1, 2, 3, 4, 5]
-                      .map(
-                        (p) => DropdownMenuItem(
-                          value: p,
-                          child: Text('Priority $p'),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) {
-                    if (v != null) {
-                      setSheetState(() => priority = v);
-                    }
-                  },
-                ),
-                const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: () {
-                    final name = nameCtrl.text.trim();
-                    if (name.isEmpty) return;
-                    final updated = AutomationRule(
-                      id: rule.id,
-                      name: name,
-                      description: descCtrl.text.trim().isNotEmpty
-                          ? descCtrl.text.trim()
-                          : null,
-                      isActive: rule.isActive,
-                      triggerType: rule.triggerType,
-                      triggerConditions: rule.triggerConditions,
-                      actions: rule.actions,
-                      priority: priority,
-                      createdBy: rule.createdBy,
-                      createdAt: rule.createdAt,
-                      updatedAt: DateTime.now(),
-                    );
-                    context
-                        .read<AutomationBloc>()
-                        .add(AutomationRuleUpdateRequested(rule: updated));
-                    Navigator.pop(ctx);
-                    // Reload the detail
-                    _loadRule();
-                  },
-                  child: const Text('Save Changes'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   Future<void> _dryRun(BuildContext context, String ruleId) async {
@@ -483,7 +485,6 @@ class _ExecutionLogSectionState extends State<_ExecutionLogSection> {
       );
       final list = response.data?['data'] as List<dynamic>?;
       if (mounted) {
-        // Filter logs for this rule
         final all = list?.cast<Map<String, dynamic>>() ?? [];
         final filtered = all
             .where((l) => l['rule_id'] == widget.ruleId)
@@ -510,6 +511,7 @@ class _ExecutionLogSectionState extends State<_ExecutionLogSection> {
       children: _logs!.take(10).map((log) {
         final status = log['status'] as String? ?? '';
         final ts = log['created_at'] as String? ?? '';
+        final errorDetail = log['error_detail'] as String?;
         final icon = switch (status) {
           'success' => Icons.check_circle,
           'dry_run' => Icons.science_outlined,
@@ -524,12 +526,25 @@ class _ExecutionLogSectionState extends State<_ExecutionLogSection> {
           'failed' => Colors.red,
           _ => Colors.grey,
         };
-        return ListTile(
-          contentPadding: EdgeInsets.zero,
+        return ExpansionTile(
           leading: Icon(icon, color: color),
           title: Text(status),
           subtitle: Text(ts),
           dense: true,
+          tilePadding: EdgeInsets.zero,
+          children: [
+            if (errorDetail != null && errorDetail.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 16, bottom: 8),
+                child: Text(
+                  errorDetail,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+          ],
         );
       }).toList(),
     );

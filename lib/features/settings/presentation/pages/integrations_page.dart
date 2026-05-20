@@ -7,6 +7,7 @@ import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class IntegrationsPage extends StatelessWidget {
   const IntegrationsPage({super.key});
@@ -26,7 +27,9 @@ class _IntegrationsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context)!.integrationsTitle)),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context)!.integrationsTitle),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: const [
@@ -72,7 +75,8 @@ class _GoogleIntegrationCard extends StatelessWidget {
                             style: theme.textTheme.titleMedium,
                           ),
                           Text(
-                            AppLocalizations.of(context)!.googleWorkspaceDescription,
+                            AppLocalizations.of(context)!
+                                .googleWorkspaceDescription,
                             style: theme.textTheme.bodySmall,
                           ),
                         ],
@@ -83,7 +87,18 @@ class _GoogleIntegrationCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 if (state is GoogleIntegrationLoading)
-                  const Center(child: CircularProgressIndicator())
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 8),
+                          Text('Waiting for authorization...'),
+                        ],
+                      ),
+                    ),
+                  )
                 else if (state is GoogleIntegrationLoaded &&
                     state.connection.connected) ...[
                   _buildConnectedInfo(context, state),
@@ -92,13 +107,16 @@ class _GoogleIntegrationCard extends StatelessWidget {
                     onPressed: () => context
                         .read<GoogleIntegrationCubit>()
                         .disconnectGoogle(),
-                    child: Text(AppLocalizations.of(context)!.disconnect),
+                    child: Text(
+                        AppLocalizations.of(context)!.disconnect),
                   ),
                 ] else ...[
                   FilledButton.icon(
                     onPressed: () => _handleConnect(context),
                     icon: const Icon(Icons.link),
-                    label: Text(AppLocalizations.of(context)!.connectGoogleAccount),
+                    label: Text(
+                      AppLocalizations.of(context)!.connectGoogleAccount,
+                    ),
                   ),
                 ],
               ],
@@ -109,7 +127,8 @@ class _GoogleIntegrationCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusChip(BuildContext context, GoogleIntegrationState state) {
+  Widget _buildStatusChip(
+      BuildContext context, GoogleIntegrationState state) {
     if (state is GoogleIntegrationLoaded && state.connection.connected) {
       return Chip(
         label: Text(AppLocalizations.of(context)!.connected),
@@ -136,7 +155,8 @@ class _GoogleIntegrationCard extends StatelessWidget {
             children: [
               const Icon(Icons.email_outlined, size: 16),
               const SizedBox(width: 8),
-              Text(state.connection.email!, style: theme.textTheme.bodyMedium),
+              Text(state.connection.email!,
+                  style: theme.textTheme.bodyMedium),
             ],
           ),
         if (state.connection.lastSync != null) ...[
@@ -146,7 +166,8 @@ class _GoogleIntegrationCard extends StatelessWidget {
               const Icon(Icons.sync, size: 16),
               const SizedBox(width: 8),
               Text(
-                AppLocalizations.of(context)!.lastSynced(_formatDateTime(state.connection.lastSync!)),
+                AppLocalizations.of(context)!.lastSynced(
+                    _formatDateTime(state.connection.lastSync!)),
                 style: theme.textTheme.bodySmall,
               ),
             ],
@@ -168,48 +189,72 @@ class _GoogleIntegrationCard extends StatelessWidget {
     final authUrl = await cubit.connectGoogle();
     if (authUrl == null || !context.mounted) return;
 
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(AppLocalizations.of(dialogContext)!.connectGoogleAccount),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              AppLocalizations.of(dialogContext)!.connectGoogleInstructions,
-            ),
-            const SizedBox(height: 12),
-            SelectableText(
-              authUrl,
-              style: Theme.of(dialogContext).textTheme.bodySmall,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(AppLocalizations.of(dialogContext)!.cancel),
-          ),
-          FilledButton.icon(
-            onPressed: () {
-              unawaited(
-                Clipboard.setData(ClipboardData(text: authUrl)).then((_) {
-                  if (dialogContext.mounted) {
-                    ScaffoldMessenger.of(dialogContext).showSnackBar(
-                      SnackBar(content: Text(AppLocalizations.of(dialogContext)!.linkCopied)),
-                    );
-                  }
-                }),
-              );
-            },
-            icon: const Icon(Icons.copy),
-            label: Text(AppLocalizations.of(dialogContext)!.copyLink),
-          ),
-        ],
-      ),
-    );
+    // Try to open URL directly in browser
+    final uri = Uri.parse(authUrl);
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
 
-    // Reload status after dialog closes (user may have completed OAuth).
-    unawaited(cubit.loadStatus());
+    if (!launched && context.mounted) {
+      // Fallback: show URL to copy
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (ctx) => Padding(
+          padding: EdgeInsets.only(
+            left: 24, right: 24, top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                AppLocalizations.of(ctx)!.connectGoogleAccount,
+                style: Theme.of(ctx).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 12),
+              Text(AppLocalizations.of(ctx)!.connectGoogleInstructions),
+              const SizedBox(height: 12),
+              SelectableText(
+                authUrl,
+                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                      fontFamily: 'monospace',
+                    ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () {
+                  unawaited(
+                    Clipboard.setData(ClipboardData(text: authUrl))
+                        .then((_) {
+                      if (ctx.mounted) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                AppLocalizations.of(ctx)!.linkCopied),
+                          ),
+                        );
+                      }
+                    }),
+                  );
+                },
+                icon: const Icon(Icons.copy),
+                label: Text(AppLocalizations.of(ctx)!.copyLink),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Done — I completed the authorization'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Poll for connection status after OAuth
+    if (context.mounted) {
+      unawaited(cubit.pollUntilConnected());
+    }
   }
 }

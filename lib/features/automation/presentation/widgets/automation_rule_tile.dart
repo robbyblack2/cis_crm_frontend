@@ -16,12 +16,21 @@ class AutomationRuleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
     return ListTile(
-      leading: Icon(
-        Icons.bolt_outlined,
-        color: rule.isActive
-            ? Theme.of(context).colorScheme.primary
-            : Theme.of(context).colorScheme.onSurfaceVariant,
+      leading: CircleAvatar(
+        backgroundColor: rule.isActive
+            ? theme.colorScheme.primaryContainer
+            : theme.colorScheme.surfaceContainerHighest,
+        child: Icon(
+          _triggerIcon(rule.triggerType),
+          color: rule.isActive
+              ? theme.colorScheme.onPrimaryContainer
+              : theme.colorScheme.onSurfaceVariant,
+          size: 20,
+        ),
       ),
       title: Text(
         rule.name,
@@ -34,7 +43,7 @@ class AutomationRuleTile extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
       ),
       trailing: Tooltip(
-        message: rule.isActive ? AppLocalizations.of(context)!.deactivateRule : AppLocalizations.of(context)!.activateRule,
+        message: rule.isActive ? l10n.deactivateRule : l10n.activateRule,
         child: Switch(
           value: rule.isActive,
           onChanged: onToggle,
@@ -42,6 +51,20 @@ class AutomationRuleTile extends StatelessWidget {
       ),
       onTap: onTap,
     );
+  }
+
+  static IconData _triggerIcon(String triggerType) {
+    return switch (triggerType) {
+      'record.stage_changed' => Icons.swap_horiz,
+      'record.created' => Icons.add_box_outlined,
+      'record.updated' => Icons.edit_outlined,
+      'contact.created' => Icons.person_add_outlined,
+      'contact.updated' => Icons.person_outline,
+      'task.created' => Icons.task_alt,
+      'task.completed' => Icons.check_circle_outline,
+      'email.received' => Icons.email_outlined,
+      _ => Icons.bolt_outlined,
+    };
   }
 
   static String _displayTriggerType(String triggerType) {

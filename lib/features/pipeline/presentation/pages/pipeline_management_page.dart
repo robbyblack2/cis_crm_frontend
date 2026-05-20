@@ -122,40 +122,61 @@ class PipelineManagementPage extends StatelessWidget {
   void _showRenameDialog(BuildContext context, Pipeline pipeline) {
     final nameCtrl = TextEditingController(text: pipeline.name);
 
-    showDialog<void>(
+    showModalBottomSheet<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Rename Pipeline'),
-        content: TextField(
-          controller: nameCtrl,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Pipeline name',
-            border: OutlineInputBorder(),
-          ),
-          textCapitalization: TextCapitalization.words,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 24, right: 24, top: 24,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(AppLocalizations.of(ctx)!.cancel),
-          ),
-          FilledButton(
-            onPressed: () {
-              final name = nameCtrl.text.trim();
-              if (name.isEmpty) return;
-              context.read<PipelineBloc>().add(
-                    PipelineUpdateRequested(
-                      id: pipeline.id,
-                      name: name,
-                      isActive: pipeline.isActive,
-                    ),
-                  );
-              Navigator.pop(ctx);
-            },
-            child: Text(AppLocalizations.of(ctx)!.save),
-          ),
-        ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Rename Pipeline',
+                style: Theme.of(ctx).textTheme.headlineSmall),
+            const SizedBox(height: 20),
+            TextField(
+              controller: nameCtrl,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Pipeline name',
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.words,
+              onSubmitted: (_) {
+                final name = nameCtrl.text.trim();
+                if (name.isEmpty) return;
+                context.read<PipelineBloc>().add(
+                      PipelineUpdateRequested(
+                        id: pipeline.id,
+                        name: name,
+                        isActive: pipeline.isActive,
+                      ),
+                    );
+                Navigator.pop(ctx);
+              },
+            ),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: () {
+                final name = nameCtrl.text.trim();
+                if (name.isEmpty) return;
+                context.read<PipelineBloc>().add(
+                      PipelineUpdateRequested(
+                        id: pipeline.id,
+                        name: name,
+                        isActive: pipeline.isActive,
+                      ),
+                    );
+                Navigator.pop(ctx);
+              },
+              child: Text(AppLocalizations.of(ctx)!.save),
+            ),
+          ],
+        ),
       ),
     );
   }

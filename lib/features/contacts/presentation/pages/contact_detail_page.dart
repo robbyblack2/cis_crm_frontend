@@ -1,5 +1,6 @@
 import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/core/utils/html_utils.dart';
+import 'package:cis_crm/core/widgets/html_email_view.dart';
 import 'package:cis_crm/core/widgets/activities_section.dart';
 import 'package:cis_crm/core/error/failures.dart';
 import 'package:cis_crm/core/error/result.dart';
@@ -48,10 +49,12 @@ class ContactDetailPage extends StatefulWidget {
   State<ContactDetailPage> createState() => _ContactDetailPageState();
 }
 
-class _ContactDetailPageState extends State<ContactDetailPage> {
+class _ContactDetailPageState extends State<ContactDetailPage>
+    with TickerProviderStateMixin {
   late Contact _contact;
   bool _editing = false;
   bool _saving = false;
+  late final TabController _tabController;
 
   late final TextEditingController _firstNameCtrl;
   late final TextEditingController _lastNameCtrl;
@@ -64,6 +67,7 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
   void initState() {
     super.initState();
     _contact = widget.contact;
+    _tabController = TabController(length: 4, vsync: this);
     _firstNameCtrl = TextEditingController(text: _contact.firstName);
     _lastNameCtrl = TextEditingController(text: _contact.lastName);
     _emailCtrl = TextEditingController(text: _contact.email);
@@ -74,6 +78,7 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
 
   @override
   void dispose() {
+    _tabController.dispose();
     _firstNameCtrl.dispose();
     _lastNameCtrl.dispose();
     _emailCtrl.dispose();
@@ -178,40 +183,72 @@ class _ContactDetailPageState extends State<ContactDetailPage> {
           ],
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _ContactHeader(contact: _contact),
-            const SizedBox(height: 16),
-            _editing
-                ? _buildEditForm(context)
-                : _ContactInfoCard(
-                    contact: _contact,
-                    onFieldSaved: (updated) {
-                      setState(() => _contact = updated);
-                    },
-                  ),
-            if (_contact.tags.isNotEmpty && !_editing) ...[
-              const SizedBox(height: 16),
-              _TagsCard(tags: _contact.tags),
+      body: Column(
+        children: [
+          TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            tabs: const [
+              Tab(icon: Icon(Icons.info_outline, size: 18), text: 'Overview'),
+              Tab(icon: Icon(Icons.email_outlined, size: 18), text: 'Email'),
+              Tab(icon: Icon(Icons.history_outlined, size: 18), text: 'Activity'),
+              Tab(icon: Icon(Icons.link_outlined, size: 18), text: 'Related'),
             ],
-            const SizedBox(height: 16),
-            _FilesSection(contactId: _contact.id),
-            const SizedBox(height: 16),
-            _ContactEmailsSection(contactId: _contact.id),
-            const SizedBox(height: 16),
-            _ContactNotesSection(contactId: _contact.id),
-            const SizedBox(height: 16),
-            _ContactRecordsSection(contactId: _contact.id),
-            const SizedBox(height: 16),
-            ActivitiesSection(
-              entityType: 'contacts',
-              entityId: _contact.id,
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // ── Overview tab ──
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _ContactHeader(contact: _contact),
+                      const SizedBox(height: 16),
+                      _editing
+                          ? _buildEditForm(context)
+                          : _ContactInfoCard(
+                              contact: _contact,
+                              onFieldSaved: (updated) {
+                                setState(() => _contact = updated);
+                              },
+                            ),
+                      if (_contact.tags.isNotEmpty && !_editing) ...[
+                        const SizedBox(height: 16),
+                        _TagsCard(tags: _contact.tags),
+                      ],
+                      const SizedBox(height: 16),
+                      _FilesSection(contactId: _contact.id),
+                    ],
+                  ),
+                ),
+                // ── Email tab ──
+                _ContactEmailsSection(contactId: _contact.id),
+                // ── Activity tab ──
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      _ContactNotesSection(contactId: _contact.id),
+                      const SizedBox(height: 16),
+                      ActivitiesSection(
+                        entityType: 'contacts',
+                        entityId: _contact.id,
+                      ),
+                    ],
+                  ),
+                ),
+                // ── Related tab ──
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: _ContactRecordsSection(contactId: _contact.id),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -861,6 +898,8 @@ class _ContactEmailsSection extends StatefulWidget {
 class _ContactEmailsSectionState extends State<_ContactEmailsSection> {
   List<Map<String, dynamic>>? _emails;
   bool _loading = true;
+  int _visibleCount = 20;
+  Map<String, dynamic>? _selectedEmail;
 
   @override
   void initState() {
@@ -883,88 +922,238 @@ class _ContactEmailsSectionState extends State<_ContactEmailsSection> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_emails == null || _emails!.isEmpty) {
+      return Center(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Row(
-              children: [
-                Icon(Icons.email_outlined, color: colorScheme.primary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Email History',
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w600),
+            Icon(Icons.email_outlined, size: 48,
+                color: colorScheme.onSurfaceVariant),
+            const SizedBox(height: 8),
+            Text('No emails yet',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                )),
+          ],
+        ),
+      );
+    }
+
+    // If an email is selected, show reading pane
+    if (_selectedEmail != null) {
+      return _buildReadingPane(context, _selectedEmail!);
+    }
+
+    // Gmail-style email list
+    return Column(
+      children: [
+        // Header bar
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              Text(
+                '${_emails!.length} email${_emails!.length == 1 ? '' : 's'}',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.refresh, size: 20),
+                tooltip: 'Refresh',
+                onPressed: () {
+                  setState(() => _loading = true);
+                  _load();
+                },
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        // Email rows
+        Expanded(
+          child: ListView.separated(
+            itemCount: _emails!.take(_visibleCount).length +
+                (_emails!.length > _visibleCount ? 1 : 0),
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              if (index >= _emails!.take(_visibleCount).length) {
+                return Center(
+                  child: TextButton(
+                    onPressed: () =>
+                        setState(() => _visibleCount += 20),
+                    child: Text(
+                      'Show more (${_emails!.length - _visibleCount} remaining)',
+                    ),
+                  ),
+                );
+              }
+              final email = _emails![index];
+              final subject =
+                  email['subject'] as String? ?? '(no subject)';
+              final body = email['text_body'] as String? ??
+                  email['body'] as String? ??
+                  email['body_html'] as String? ??
+                  '';
+              final from = email['from_address'] as String? ??
+                  email['sender_email'] as String? ??
+                  '';
+              final timestamp = email['created_at'] as String? ??
+                  email['sent_at'] as String? ??
+                  '';
+              final direction =
+                  (email['direction'] as String? ?? '').toLowerCase();
+              final isOutbound = direction == 'outbound' ||
+                  direction == 'out' ||
+                  direction == 'sent';
+
+              return InkWell(
+                onTap: () => setState(() => _selectedEmail = email),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isOutbound
+                            ? Icons.arrow_upward_rounded
+                            : Icons.arrow_downward_rounded,
+                        size: 16,
+                        color: isOutbound
+                            ? colorScheme.primary
+                            : colorScheme.tertiary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          from.isNotEmpty ? from : 'You',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight:
+                                isOutbound ? null : FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          subject,
+                          style: theme.textTheme.bodySmall,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          renderEmailBody(body),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _formatTimestamp(timestamp),
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.refresh, size: 20),
-                  tooltip: 'Refresh',
-                  onPressed: () {
-                    setState(() => _loading = true);
-                    _load();
-                  },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReadingPane(
+      BuildContext context, Map<String, dynamic> email) {
+    final theme = Theme.of(context);
+    final subject = email['subject'] as String? ?? '(no subject)';
+    final body = email['text_body'] as String? ??
+        email['body'] as String? ??
+        email['body_html'] as String? ??
+        '';
+    final from = email['from_address'] as String? ??
+        email['sender_email'] as String? ??
+        '';
+    final to = email['to_address'] as String? ??
+        email['to'] as String? ??
+        '';
+    final cc = email['cc'] as String? ?? '';
+    final timestamp = email['created_at'] as String? ??
+        email['sent_at'] as String? ??
+        '';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Back button
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: TextButton.icon(
+            icon: const Icon(Icons.arrow_back, size: 18),
+            label: const Text('Back to list'),
+            onPressed: () => setState(() => _selectedEmail = null),
+          ),
+        ),
+        const Divider(height: 1),
+        // Email content
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  subject,
+                  style: theme.textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 12),
+                if (from.isNotEmpty)
+                  Text('From: $from',
+                      style: theme.textTheme.bodyMedium),
+                if (to.isNotEmpty)
+                  Text('To: $to', style: theme.textTheme.bodySmall),
+                if (cc.isNotEmpty)
+                  Text('CC: $cc', style: theme.textTheme.bodySmall),
+                if (timestamp.isNotEmpty)
+                  Text(
+                    _formatTimestamp(timestamp),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 16),
+                HtmlEmailView(
+                  body: body,
+                  showToggle: true,
+                  textStyle: theme.textTheme.bodyMedium,
                 ),
               ],
             ),
-            const Divider(height: 24),
-            if (_loading)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: CircularProgressIndicator(),
-                ),
-              )
-            else if (_emails == null || _emails!.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Center(
-                  child: Text(
-                    'No emails yet',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              )
-            else
-              ...(_emails!).map((email) {
-                final subject =
-                    email['subject'] as String? ?? '(no subject)';
-                final body = email['body'] as String? ??
-                    email['text_body'] as String? ??
-                    email['body_html'] as String? ??
-                    '';
-                final from = email['from_address'] as String? ??
-                    email['sender_email'] as String? ??
-                    '';
-                final to = email['to_address'] as String? ??
-                    email['to'] as String? ??
-                    '';
-                final timestamp = email['created_at'] as String? ??
-                    email['sent_at'] as String? ??
-                    '';
-                final direction =
-                    (email['direction'] as String? ?? '').toLowerCase();
-                final isOutbound = direction == 'outbound' ||
-                    direction == 'out' ||
-                    direction == 'sent';
-
-                return _EmailBubble(
-                  subject: subject,
-                  body: body,
-                  from: from,
-                  to: to,
-                  timestamp: _formatTimestamp(timestamp),
-                  isOutbound: isOutbound,
-                );
-              }),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -1019,7 +1208,7 @@ class _EmailBubbleState extends State<_EmailBubble> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
+                // Subject + timestamp
                 Row(
                   children: [
                     Icon(
@@ -1034,12 +1223,11 @@ class _EmailBubbleState extends State<_EmailBubble> {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        widget.isOutbound
-                            ? 'To: ${widget.to}'
-                            : 'From: ${widget.from}',
-                        style: theme.textTheme.labelMedium?.copyWith(
+                        widget.subject,
+                        style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -1050,36 +1238,54 @@ class _EmailBubbleState extends State<_EmailBubble> {
                           color: colorScheme.onSurfaceVariant,
                         ),
                       ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      _expanded ? Icons.expand_less : Icons.expand_more,
+                      size: 16,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
-                // Subject
-                Text(
-                  widget.subject,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
+                // From / To
+                if (widget.from.isNotEmpty)
+                  Text(
+                    'From: ${widget.from}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                // Body (expandable)
+                if (widget.to.isNotEmpty)
+                  Text(
+                    'To: ${widget.to}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                // Body preview (collapsed) or full (expanded)
+                if (!_expanded && widget.body.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    renderEmailBody(widget.body),
+                    style: theme.textTheme.bodySmall,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
                 if (_expanded && widget.body.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   const Divider(height: 1),
                   const SizedBox(height: 8),
-                  SelectableText(
-                    renderEmailBody(widget.body),
-                    style: theme.textTheme.bodyMedium,
+                  HtmlEmailView(
+                    body: widget.body,
+                    showToggle: true,
+                    textStyle: theme.textTheme.bodyMedium,
                   ),
                 ],
-                if (widget.body.isNotEmpty && !_expanded)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      'Tap to expand',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),

@@ -1,9 +1,13 @@
 import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/core/utils/html_utils.dart';
+import 'package:cis_crm/core/widgets/html_email_view.dart';
 import 'package:cis_crm/core/utils/name_resolver.dart';
 import 'package:cis_crm/core/widgets/activities_section.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:cis_crm/core/widgets/search_or_create_field.dart';
+import 'package:cis_crm/features/contacts/data/datasources/company_remote_data_source.dart';
 import 'package:cis_crm/features/contacts/data/datasources/contact_remote_data_source.dart';
+import 'package:cis_crm/features/contacts/data/models/contact_model.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:cis_crm/features/activity/domain/repositories/timeline_repository.dart';
 import 'package:cis_crm/features/pipeline/data/datasources/record_remote_data_source.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/pipeline.dart';
@@ -215,222 +219,12 @@ class _RecordDetailScaffoldState extends State<_RecordDetailScaffold>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          AppLocalizations.of(context)!.details,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const Divider(height: 24),
-                        _DetailRow(
-                          icon: Icons.title,
-                          label: AppLocalizations.of(context)!.title,
-                          value: record.title,
-                        ),
-                        _DetailRow(
-                          icon: Icons.view_kanban_outlined,
-                          label: AppLocalizations.of(context)!.pipeline,
-                          value: pipelineName ?? '—',
-                        ),
-                        _DetailRow(
-                          icon: Icons.flag_outlined,
-                          label: AppLocalizations.of(context)!.stage,
-                          value: stage?.name ?? '—',
-                        ),
-                        InkWell(
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Use the Linked Contacts tab to manage contacts',
-                                ),
-                              ),
-                            );
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Row(
-                              children: [
-                                Icon(Icons.person_outline, size: 20, color: colorScheme.onSurfaceVariant),
-                                const SizedBox(width: 12),
-                                SizedBox(width: 80, child: Text(AppLocalizations.of(context)!.contact, style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant))),
-                                Expanded(
-                                  child: record.contactId != null
-                                      ? ResolvedName(id: record.contactId, type: 'contact', style: theme.textTheme.bodyMedium)
-                                      : Text('+ Add contact', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.primary, fontStyle: FontStyle.italic)),
-                                ),
-                                Icon(Icons.chevron_right, size: 16, color: colorScheme.onSurfaceVariant),
-                              ],
-                            ),
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Company linking available via record edit',
-                                ),
-                              ),
-                            );
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Row(
-                              children: [
-                                Icon(Icons.business_outlined, size: 20, color: colorScheme.onSurfaceVariant),
-                                const SizedBox(width: 12),
-                                SizedBox(width: 80, child: Text('Company', style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant))),
-                                Expanded(
-                                  child: record.companyId != null
-                                      ? ResolvedName(id: record.companyId, type: 'company', style: theme.textTheme.bodyMedium)
-                                      : Text('+ Add company', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.primary, fontStyle: FontStyle.italic)),
-                                ),
-                                Icon(Icons.chevron_right, size: 16, color: colorScheme.onSurfaceVariant),
-                              ],
-                            ),
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () async {
-                            try {
-                              await GetIt.instance<RecordRemoteDataSource>()
-                                  .claimRecord(record.id);
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Record claimed')),
-                                );
-                                context.read<RecordBloc>().add(const RecordLoadRequested());
-                              }
-                            } catch (_) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Failed to claim')),
-                                );
-                              }
-                            }
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Row(
-                              children: [
-                                Icon(Icons.assignment_ind_outlined, size: 20, color: colorScheme.onSurfaceVariant),
-                                const SizedBox(width: 12),
-                                SizedBox(width: 80, child: Text(AppLocalizations.of(context)!.owner, style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant))),
-                                Expanded(
-                                  child: record.ownerId != null
-                                      ? ResolvedName(id: record.ownerId, type: 'user', style: theme.textTheme.bodyMedium)
-                                      : Text('+ Assign owner', style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.primary, fontStyle: FontStyle.italic)),
-                                ),
-                                Icon(Icons.chevron_right, size: 16, color: colorScheme.onSurfaceVariant),
-                              ],
-                            ),
-                          ),
-                        ),
-                        _DetailRow(
-                          icon: Icons.source_outlined,
-                          label: AppLocalizations.of(context)!.source,
-                          value: record.source.name,
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              Icons.label_outline,
-                              size: 20,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                children: [
-                                  ...record.tags.map(
-                                    (tag) => Chip(
-                                      label: Text(tag),
-                                      labelStyle:
-                                          theme.textTheme.labelSmall,
-                                      materialTapTargetSize:
-                                          MaterialTapTargetSize.shrinkWrap,
-                                      visualDensity: VisualDensity.compact,
-                                      padding: EdgeInsets.zero,
-                                      side: BorderSide(
-                                        color: colorScheme.outlineVariant,
-                                      ),
-                                      deleteIcon: Icon(
-                                        Icons.close,
-                                        size: 14,
-                                        color:
-                                            colorScheme.onSurfaceVariant,
-                                      ),
-                                      onDeleted: () {
-                                        final updatedTags =
-                                            List<String>.from(record.tags)
-                                              ..remove(tag);
-                                        context.read<RecordBloc>().add(
-                                              RecordUpdateRequested(
-                                                id: record.id,
-                                                title: record.title,
-                                                tags: updatedTags,
-                                              ),
-                                            );
-                                      },
-                                    ),
-                                  ),
-                                  ActionChip(
-                                    avatar: Icon(
-                                      Icons.add,
-                                      size: 16,
-                                      color: colorScheme.primary,
-                                    ),
-                                    label: Text(
-                                      'Add tag',
-                                      style: theme.textTheme.labelSmall
-                                          ?.copyWith(
-                                        color: colorScheme.primary,
-                                      ),
-                                    ),
-                                    materialTapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                    visualDensity: VisualDensity.compact,
-                                    padding: EdgeInsets.zero,
-                                    side: BorderSide(
-                                      color: colorScheme.primary
-                                          .withValues(alpha: 0.3),
-                                    ),
-                                    onPressed: () =>
-                                        _showAddTagDialog(
-                                      context,
-                                      record,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        _DetailRow(
-                          icon: Icons.calendar_today_outlined,
-                          label: AppLocalizations.of(context)!.created,
-                          value: _formatDate(record.createdAt),
-                        ),
-                        _DetailRow(
-                          icon: Icons.update_outlined,
-                          label: AppLocalizations.of(context)!.updated,
-                          value: _formatDate(record.updatedAt),
-                        ),
-                      ],
-                    ),
-                  ),
+                _RecordDetailsCard(
+                  record: record,
+                  stage: stage,
+                  pipelineName: pipelineName,
+                  onShowAddTagDialog: () =>
+                      _showAddTagDialog(context, record),
                 ),
               ],
             ),
@@ -820,17 +614,21 @@ class _NotesSection extends StatefulWidget {
 class _NotesSectionState extends State<_NotesSection> {
   List<Map<String, dynamic>>? _notes;
   bool _loading = true;
+  bool _posting = false;
   final _noteController = TextEditingController();
+  final _noteFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _loadNotes();
+    NameResolver.instance.loadUsers();
   }
 
   @override
   void dispose() {
     _noteController.dispose();
+    _noteFocusNode.dispose();
     super.dispose();
   }
 
@@ -847,6 +645,7 @@ class _NotesSectionState extends State<_NotesSection> {
   Future<void> _addNote() async {
     final body = _noteController.text.trim();
     if (body.isEmpty) return;
+    setState(() => _posting = true);
     _noteController.clear();
     try {
       await GetIt.instance<RecordRemoteDataSource>()
@@ -858,6 +657,8 @@ class _NotesSectionState extends State<_NotesSection> {
           const SnackBar(content: Text('Failed to add note')),
         );
       }
+    } finally {
+      if (mounted) setState(() => _posting = false);
     }
   }
 
@@ -913,31 +714,55 @@ class _NotesSectionState extends State<_NotesSection> {
               ],
             ),
             const Divider(height: 24),
-            // Add note field
+            // Add note field with Ctrl+Enter support
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _noteController,
-                    decoration: const InputDecoration(
-                      hintText: 'Add a note...',
-                      isDense: true,
-                      border: OutlineInputBorder(),
+                  child: KeyboardListener(
+                    focusNode: FocusNode(),
+                    onKeyEvent: (event) {
+                      // Ctrl+Enter handled via onSubmitted
+                    },
+                    child: TextField(
+                      controller: _noteController,
+                      focusNode: _noteFocusNode,
+                      decoration: InputDecoration(
+                        hintText: 'Add a note... (Enter to send)',
+                        isDense: true,
+                        border: const OutlineInputBorder(),
+                        suffixIcon: _posting
+                            ? const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              )
+                            : null,
+                      ),
+                      maxLines: 6,
+                      minLines: 1,
+                      textCapitalization: TextCapitalization.sentences,
+                      onSubmitted: (_) => _addNote(),
                     ),
-                    maxLines: 4,
-                    minLines: 1,
-                    textCapitalization: TextCapitalization.sentences,
-                    onSubmitted: (_) => _addNote(),
                   ),
                 ),
                 const SizedBox(width: 8),
                 IconButton.filled(
-                  onPressed: _addNote,
+                  onPressed: _posting ? null : _addNote,
                   icon: const Icon(Icons.send),
                 ),
               ],
             ),
+            if (_posting)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Text('Posting...'),
+              ),
             const SizedBox(height: 16),
             if (_loading)
               const Center(child: CircularProgressIndicator())
@@ -955,11 +780,18 @@ class _NotesSectionState extends State<_NotesSection> {
               )
             else
               ...sortedNotes.map(
-                (note) => _NoteItem(
-                  body: note['body'] as String? ?? '',
-                  timestamp: _relativeTime(note['created_at'] as String?),
-                  author: note['created_by'] as String?,
-                ),
+                (note) {
+                  final authorId = note['created_by'] as String?;
+                  final authorName =
+                      NameResolver.instance.userName(authorId);
+                  return _NoteItem(
+                    body: note['body'] as String? ?? '',
+                    timestamp:
+                        _relativeTime(note['created_at'] as String?),
+                    authorId: authorId,
+                    authorName: authorName,
+                  );
+                },
               ),
           ],
         ),
@@ -972,12 +804,14 @@ class _NoteItem extends StatefulWidget {
   const _NoteItem({
     required this.body,
     required this.timestamp,
-    this.author,
+    this.authorId,
+    this.authorName,
   });
 
   final String body;
   final String timestamp;
-  final String? author;
+  final String? authorId;
+  final String? authorName;
 
   @override
   State<_NoteItem> createState() => _NoteItemState();
@@ -985,6 +819,26 @@ class _NoteItem extends StatefulWidget {
 
 class _NoteItemState extends State<_NoteItem> {
   bool _expanded = false;
+
+  String get _displayName {
+    if (widget.authorName != null && widget.authorName!.isNotEmpty) {
+      return widget.authorName!;
+    }
+    if (widget.authorId != null && widget.authorId!.isNotEmpty) {
+      return widget.authorId!;
+    }
+    return 'Unknown';
+  }
+
+  String get _initials {
+    final name = _displayName;
+    if (name.isEmpty) return '?';
+    final parts = name.split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name[0].toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1006,16 +860,14 @@ class _NoteItemState extends State<_NoteItem> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: avatar + author + timestamp
+            // Header: avatar + author + timestamp + overflow
             Row(
               children: [
                 CircleAvatar(
                   radius: 12,
                   backgroundColor: colorScheme.primaryContainer,
                   child: Text(
-                    widget.author != null && widget.author!.isNotEmpty
-                        ? widget.author![0].toUpperCase()
-                        : '?',
+                    _initials,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: colorScheme.onPrimaryContainer,
                       fontSize: 10,
@@ -1023,13 +875,48 @@ class _NoteItemState extends State<_NoteItem> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    widget.timestamp,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                Text(
+                  _displayName,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  widget.timestamp,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const Spacer(),
+                PopupMenuButton<String>(
+                  iconSize: 18,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size(28, 28),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(
+                      value: 'copy',
+                      child: Row(
+                        children: [
+                          Icon(Icons.copy, size: 16),
+                          SizedBox(width: 8),
+                          Text('Copy text'),
+                        ],
+                      ),
+                    ),
+                  ],
+                  onSelected: (action) {
+                    if (action == 'copy') {
+                      // Copy to clipboard
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Note copied')),
+                      );
+                    }
+                  },
                 ),
               ],
             ),
@@ -1115,13 +1002,145 @@ class _LinkedContactsSectionState extends State<_LinkedContactsSection> {
     'budget_holder': 'Budget Holder',
   };
 
+  Future<List<Map<String, dynamic>>> _searchContacts(String query) async {
+    final response = await GetIt.instance<ContactRemoteDataSource>()
+        .getContacts(page: 1, perPage: 10);
+    final q = query.toLowerCase();
+    return response.items
+        .where((c) {
+          final name = '${c.firstName} ${c.lastName}'.toLowerCase();
+          return name.contains(q) || c.email.toLowerCase().contains(q);
+        })
+        .map((c) => {
+              'id': c.id,
+              'name': '${c.firstName} ${c.lastName}'.trim(),
+              'email': c.email,
+            })
+        .toList();
+  }
+
+  Future<Map<String, dynamic>?> _createContactFromQuery(
+    String query,
+  ) async {
+    final hints = QueryParser.parseContactQuery(query);
+    final firstCtrl =
+        TextEditingController(text: hints.firstName ?? '');
+    final lastCtrl =
+        TextEditingController(text: hints.lastName ?? '');
+    final emailCtrl =
+        TextEditingController(text: hints.email ?? '');
+    final phoneCtrl =
+        TextEditingController(text: hints.phone ?? '');
+
+    return showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 24,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Quick Add Contact',
+                style: Theme.of(ctx).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: firstCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'First name',
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: lastCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Last name',
+                  border: OutlineInputBorder(),
+                ),
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: emailCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: phoneCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Phone',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: () async {
+                  final first = firstCtrl.text.trim();
+                  if (first.isEmpty) return;
+                  try {
+                    final contact = ContactModel(
+                      id: '',
+                      firstName: first,
+                      lastName: lastCtrl.text.trim(),
+                      email: emailCtrl.text.trim(),
+                      phone: phoneCtrl.text.trim().isNotEmpty
+                          ? phoneCtrl.text.trim()
+                          : null,
+                      status: 'lead',
+                      tags: const [],
+                      createdAt: DateTime.now(),
+                      updatedAt: DateTime.now(),
+                    );
+                    final created =
+                        await GetIt.instance<ContactRemoteDataSource>()
+                            .createContact(contact);
+                    if (ctx.mounted) {
+                      Navigator.pop(ctx, {
+                        'id': created.id,
+                        'name':
+                            '${created.firstName} ${created.lastName}'
+                                .trim(),
+                        'email': created.email,
+                      });
+                    }
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(content: Text('Failed: $e')),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Create Contact'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showLinkDialog() {
     String? selectedContactId;
-    String? selectedContactName;
+    Map<String, dynamic>? selectedContact;
     var role = 'user';
-    final searchCtrl = TextEditingController();
-    List<Map<String, dynamic>> searchResults = [];
-    bool searching = false;
 
     showModalBottomSheet<void>(
       context: context,
@@ -1146,134 +1165,29 @@ class _LinkedContactsSectionState extends State<_LinkedContactsSection> {
                 ),
                 const SizedBox(height: 20),
 
-                // Selected contact chip
-                if (selectedContactId != null) ...[
-                  Chip(
-                    avatar: CircleAvatar(
-                      child: Text(
-                        selectedContactName != null &&
-                                selectedContactName!.isNotEmpty
-                            ? selectedContactName![0].toUpperCase()
-                            : '?',
-                      ),
-                    ),
-                    label: Text(selectedContactName ?? selectedContactId!),
-                    onDeleted: () => setSheetState(() {
-                      selectedContactId = null;
-                      selectedContactName = null;
-                    }),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-
-                // Search field
-                TextField(
-                  controller: searchCtrl,
-                  autofocus: true,
-                  decoration: InputDecoration(
-                    labelText: 'Search contacts by name or email',
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    suffixIcon: searching
-                        ? const Padding(
-                            padding: EdgeInsets.all(12),
-                            child: SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            ),
-                          )
-                        : null,
-                  ),
-                  onChanged: (query) async {
-                    if (query.length < 2) {
-                      setSheetState(() => searchResults = []);
-                      return;
-                    }
-                    setSheetState(() => searching = true);
-                    try {
-                      final response =
-                          await GetIt.instance<ContactRemoteDataSource>()
-                              .getContacts(page: 1, perPage: 10);
-                      final q = query.toLowerCase();
-                      final filtered = response.items
-                          .where((c) {
-                            final name =
-                                '${c.firstName} ${c.lastName}'.toLowerCase();
-                            return name.contains(q) ||
-                                c.email.toLowerCase().contains(q);
-                          })
-                          .map((c) => {
-                                'id': c.id,
-                                'name':
-                                    '${c.firstName} ${c.lastName}'.trim(),
-                                'email': c.email,
-                              })
-                          .toList();
-                      setSheetState(() {
-                        searchResults = filtered;
-                        searching = false;
-                      });
-                    } catch (_) {
-                      setSheetState(() {
-                        searchResults = [];
-                        searching = false;
-                      });
-                    }
-                  },
+                SearchOrCreateField<Map<String, dynamic>>(
+                  label: 'Search contacts by name or email',
+                  onSearch: _searchContacts,
+                  itemLabel: (c) => c['name'] as String? ?? '',
+                  itemSubtitle: (c) => c['email'] as String? ?? '',
+                  createEntityLabel: 'contact',
+                  selectedItem: selectedContact,
+                  onSelected: (c) => setSheetState(() {
+                    selectedContactId = c['id'] as String?;
+                    selectedContact = c;
+                  }),
+                  onCleared: () => setSheetState(() {
+                    selectedContactId = null;
+                    selectedContact = null;
+                  }),
+                  onCreateTapped: _createContactFromQuery,
                 ),
-
-                // Search results
-                if (searchCtrl.text.length >= 2) ...[
-                  const SizedBox(height: 8),
-                  if (searchResults.isNotEmpty)
-                    ...searchResults.map(
-                      (r) => ListTile(
-                        dense: true,
-                        leading: CircleAvatar(
-                          radius: 16,
-                          child: Text(
-                            (r['name'] as String).isNotEmpty
-                                ? (r['name'] as String)[0].toUpperCase()
-                                : '?',
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ),
-                        title: Text(r['name'] as String),
-                        subtitle: Text(
-                          r['email'] as String,
-                          style: Theme.of(ctx).textTheme.bodySmall,
-                        ),
-                        onTap: () => setSheetState(() {
-                          selectedContactId = r['id'] as String;
-                          selectedContactName = r['name'] as String;
-                          searchCtrl.clear();
-                          searchResults = [];
-                        }),
-                      ),
-                    )
-                  else if (!searching)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        'No contacts found for "${searchCtrl.text}"',
-                        style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(ctx)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                ],
 
                 const SizedBox(height: 12),
 
                 // Role selector
                 DropdownButtonFormField<String>(
-                  value: role,
+                  initialValue: role,
                   decoration: const InputDecoration(
                     labelText: 'Role',
                     border: OutlineInputBorder(),
@@ -1445,6 +1359,8 @@ class _ConversationSectionState extends State<_ConversationSection> {
   bool _loading = true;
   final _replyCtrl = TextEditingController();
   _SendStatus _sendStatus = _SendStatus.idle;
+  int _visibleThreads = 20;
+  final Set<String> _expandedThreads = {};
 
   @override
   void initState() {
@@ -1468,6 +1384,42 @@ class _ConversationSectionState extends State<_ConversationSection> {
     }
   }
 
+  /// Group messages into threads by normalized subject.
+  List<_EmailThread> _buildThreads() {
+    if (_messages == null || _messages!.isEmpty) return [];
+
+    final threadMap = <String, List<Map<String, dynamic>>>{};
+    for (final msg in _messages!) {
+      final subject = (msg['subject'] as String? ?? '(no subject)')
+          .replaceAll(RegExp(r'^(Re|Fwd|Fw):\s*', caseSensitive: false), '')
+          .trim();
+      final key = subject.toLowerCase();
+      threadMap.putIfAbsent(key, () => []).add(msg);
+    }
+
+    final threads = threadMap.entries.map((e) {
+      // Sort messages within thread oldest first
+      e.value.sort((a, b) {
+        final aTs = a['created_at'] as String? ?? '';
+        final bTs = b['created_at'] as String? ?? '';
+        return aTs.compareTo(bTs);
+      });
+      final latest = e.value.last;
+      final subject = latest['subject'] as String? ?? '(no subject)';
+      final latestTs = latest['created_at'] as String? ?? '';
+      return _EmailThread(
+        key: e.key,
+        subject: subject,
+        messages: e.value,
+        latestTimestamp: latestTs,
+      );
+    }).toList();
+
+    // Sort threads newest first
+    threads.sort((a, b) => b.latestTimestamp.compareTo(a.latestTimestamp));
+    return threads;
+  }
+
   Future<void> _sendReply() async {
     final body = _replyCtrl.text.trim();
     if (body.isEmpty) return;
@@ -1479,7 +1431,6 @@ class _ConversationSectionState extends State<_ConversationSection> {
       _replyCtrl.clear();
       if (mounted) setState(() => _sendStatus = _SendStatus.sent);
       await _load();
-      // Reset status after a brief delay so the user sees "Sent".
       await Future<void>.delayed(const Duration(seconds: 2));
       if (mounted) setState(() => _sendStatus = _SendStatus.idle);
     } catch (_) {
@@ -1496,6 +1447,9 @@ class _ConversationSectionState extends State<_ConversationSection> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final threads = _buildThreads();
+    final totalCount = _messages?.length ?? 0;
+    final visibleThreads = threads.take(_visibleThreads).toList();
 
     return Card(
       child: Padding(
@@ -1509,7 +1463,7 @@ class _ConversationSectionState extends State<_ConversationSection> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Conversation',
+                    'Conversation${totalCount > 0 ? ' ($totalCount messages, ${threads.length} threads)' : ''}',
                     style: theme.textTheme.titleMedium
                         ?.copyWith(fontWeight: FontWeight.w600),
                   ),
@@ -1526,23 +1480,20 @@ class _ConversationSectionState extends State<_ConversationSection> {
             ),
             const Divider(height: 24),
 
-            // ── Message thread ──
+            // ── Threaded messages ──
             if (_loading)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),
                 child: Center(child: CircularProgressIndicator()),
               )
-            else if (_messages == null || _messages!.isEmpty)
+            else if (threads.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Center(
                   child: Column(
                     children: [
-                      Icon(
-                        Icons.email_outlined,
-                        size: 40,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                      Icon(Icons.email_outlined, size: 40,
+                          color: colorScheme.onSurfaceVariant),
                       const SizedBox(height: 8),
                       Text(
                         'No conversation yet',
@@ -1554,10 +1505,148 @@ class _ConversationSectionState extends State<_ConversationSection> {
                   ),
                 ),
               )
-            else
-              ...(_messages!).map(
-                (msg) => _MessageBubble(message: msg),
-              ),
+            else ...[
+              ...visibleThreads.map((thread) {
+                final isExpanded = _expandedThreads.contains(thread.key);
+                final latest = thread.messages.last;
+                final latestBody = renderEmailBody(
+                  latest['text_body'] as String? ??
+                      latest['body'] as String? ??
+                      latest['html_body'] as String? ??
+                      '',
+                );
+                final participants = thread.messages
+                    .map((m) =>
+                        m['from_address'] as String? ??
+                        m['sender_email'] as String? ??
+                        '')
+                    .where((s) => s.isNotEmpty)
+                    .toSet()
+                    .join(', ');
+
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Thread header
+                      InkWell(
+                        onTap: () => setState(() {
+                          if (isExpanded) {
+                            _expandedThreads.remove(thread.key);
+                          } else {
+                            _expandedThreads.add(thread.key);
+                          }
+                        }),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.email_outlined,
+                                    size: 16,
+                                    color: colorScheme.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      thread.subject,
+                                      style: theme.textTheme.titleSmall
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.w600),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (thread.messages.length > 1)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.primaryContainer,
+                                        borderRadius:
+                                            BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        '${thread.messages.length}',
+                                        style: theme.textTheme.labelSmall
+                                            ?.copyWith(
+                                          color: colorScheme
+                                              .onPrimaryContainer,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _fmtTs(thread.latestTimestamp),
+                                    style: theme.textTheme.labelSmall
+                                        ?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  Icon(
+                                    isExpanded
+                                        ? Icons.expand_less
+                                        : Icons.expand_more,
+                                    size: 18,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ],
+                              ),
+                              if (participants.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  participants,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                              if (!isExpanded && latestBody.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  latestBody,
+                                  style: theme.textTheme.bodySmall,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Expanded: all messages
+                      if (isExpanded) ...[
+                        const Divider(height: 1),
+                        ...thread.messages.map(
+                          (msg) => Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            child: _MessageBubble(message: msg),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }),
+              // Load more
+              if (threads.length > _visibleThreads)
+                Center(
+                  child: TextButton(
+                    onPressed: () =>
+                        setState(() => _visibleThreads += 20),
+                    child: Text(
+                        'Show more (${threads.length - _visibleThreads} remaining)'),
+                  ),
+                ),
+            ],
 
             const SizedBox(height: 16),
 
@@ -1595,7 +1684,6 @@ class _ConversationSectionState extends State<_ConversationSection> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      // Status indicator
                       if (_sendStatus == _SendStatus.sending)
                         Padding(
                           padding: const EdgeInsets.only(right: 12),
@@ -1603,20 +1691,16 @@ class _ConversationSectionState extends State<_ConversationSection> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               SizedBox(
-                                width: 14,
-                                height: 14,
+                                width: 14, height: 14,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                   color: colorScheme.primary,
                                 ),
                               ),
                               const SizedBox(width: 6),
-                              Text(
-                                'Sending...',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: colorScheme.primary,
-                                ),
-                              ),
+                              Text('Sending...',
+                                  style: theme.textTheme.labelSmall
+                                      ?.copyWith(color: colorScheme.primary)),
                             ],
                           ),
                         )
@@ -1626,18 +1710,12 @@ class _ConversationSectionState extends State<_ConversationSection> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                Icons.check_circle,
-                                size: 14,
-                                color: colorScheme.primary,
-                              ),
+                              Icon(Icons.check_circle, size: 14,
+                                  color: colorScheme.primary),
                               const SizedBox(width: 4),
-                              Text(
-                                'Sent',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: colorScheme.primary,
-                                ),
-                              ),
+                              Text('Sent',
+                                  style: theme.textTheme.labelSmall
+                                      ?.copyWith(color: colorScheme.primary)),
                             ],
                           ),
                         )
@@ -1647,18 +1725,12 @@ class _ConversationSectionState extends State<_ConversationSection> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                Icons.error_outline,
-                                size: 14,
-                                color: colorScheme.error,
-                              ),
+                              Icon(Icons.error_outline, size: 14,
+                                  color: colorScheme.error),
                               const SizedBox(width: 4),
-                              Text(
-                                'Failed to send',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: colorScheme.error,
-                                ),
-                              ),
+                              Text('Failed to send',
+                                  style: theme.textTheme.labelSmall
+                                      ?.copyWith(color: colorScheme.error)),
                             ],
                           ),
                         ),
@@ -1682,6 +1754,20 @@ class _ConversationSectionState extends State<_ConversationSection> {
   }
 }
 
+class _EmailThread {
+  const _EmailThread({
+    required this.key,
+    required this.subject,
+    required this.messages,
+    required this.latestTimestamp,
+  });
+
+  final String key;
+  final String subject;
+  final List<Map<String, dynamic>> messages;
+  final String latestTimestamp;
+}
+
 /// A single message bubble in the conversation thread.
 /// Inbound messages (from customer) align left, outbound (replies) align right.
 class _MessageBubble extends StatelessWidget {
@@ -1699,8 +1785,8 @@ class _MessageBubble extends StatelessWidget {
         direction == 'sent' || direction == 'reply';
 
     final subject = message['subject'] as String?;
-    final body = message['body'] as String? ??
-        message['text_body'] as String? ??
+    final body = message['text_body'] as String? ??
+        message['body'] as String? ??
         message['html_body'] as String? ??
         message['content'] as String? ??
         '';
@@ -1764,7 +1850,7 @@ class _MessageBubble extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header: direction icon + from/to + timestamp
+                  // Subject + timestamp
                   Row(
                     children: [
                       Icon(
@@ -1779,19 +1865,14 @@ class _MessageBubble extends StatelessWidget {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          isOutbound
-                              ? (toAddress.isNotEmpty
-                                  ? 'To: $toAddress'
-                                  : 'Outbound reply')
-                              : (fromAddress.isNotEmpty
-                                  ? 'From: $fromAddress'
-                                  : 'Inbound'),
-                          style: theme.textTheme.labelMedium?.copyWith(
+                          subject ?? '(no subject)',
+                          style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: isOutbound
                                 ? colorScheme.onPrimaryContainer
                                 : colorScheme.onSurface,
                           ),
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -1804,35 +1885,76 @@ class _MessageBubble extends StatelessWidget {
                         ),
                     ],
                   ),
+                  const SizedBox(height: 4),
+                  // From + To
+                  if (fromAddress.isNotEmpty)
+                    Text(
+                      'From: $fromAddress',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  if (toAddress.isNotEmpty)
+                    Text(
+                      'To: $toAddress',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  if (cc.isNotEmpty)
+                    Text(
+                      'CC: $cc',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
 
-                  // Subject line
-                  if (subject != null && subject.isNotEmpty) ...[
+                  // Body preview (plain text, truncated — no HTML rendering for perf)
+                  if (body.isNotEmpty) ...[
                     const SizedBox(height: 6),
                     Text(
-                      subject,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: isOutbound
-                            ? colorScheme.onPrimaryContainer
-                            : colorScheme.onSurface,
-                      ),
-                    ),
-                  ],
-
-                  // Email body
-                  if (body.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    const Divider(height: 1),
-                    const SizedBox(height: 8),
-                    SelectableText(
                       renderEmailBody(body),
-                      style: theme.textTheme.bodyMedium?.copyWith(
+                      style: theme.textTheme.bodySmall?.copyWith(
                         color: isOutbound
                             ? colorScheme.onPrimaryContainer
                             : colorScheme.onSurface,
                       ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
+                  // Attachment indicator
+                  if (attachments.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.attach_file, size: 14,
+                            color: colorScheme.onSurfaceVariant),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${attachments.length} attachment${attachments.length == 1 ? '' : 's'}',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  // Tap to view hint
+                  const SizedBox(height: 4),
+                  Text(
+                    'Tap for full email',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colorScheme.primary.withValues(alpha: 0.6),
+                      fontSize: 10,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1877,101 +1999,192 @@ class _MessageBubble extends StatelessWidget {
                 onPressed: () => Navigator.pop(ctx),
               ),
             ),
-            body: ListView(
-              controller: scrollCtrl,
-              padding: const EdgeInsets.all(16),
-              children: [
-                // Headers card
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Email Headers',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const Divider(height: 24),
-                        if (fromAddress.isNotEmpty)
-                          _headerRow(theme, 'From', fromAddress),
-                        if (toAddress.isNotEmpty)
-                          _headerRow(theme, 'To', toAddress),
-                        if (cc.isNotEmpty) _headerRow(theme, 'CC', cc),
-                        if (bcc.isNotEmpty) _headerRow(theme, 'BCC', bcc),
-                        if (replyTo.isNotEmpty)
-                          _headerRow(theme, 'Reply-To', replyTo),
-                        if (subject != null && subject.isNotEmpty)
-                          _headerRow(theme, 'Subject', subject),
-                        if (timestamp.isNotEmpty)
-                          _headerRow(theme, 'Date', _fmtTs(timestamp)),
-                        if (messageId.isNotEmpty)
-                          _headerRow(theme, 'Message-ID', messageId),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Body
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Body',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const Divider(height: 24),
-                        SelectableText(
-                          renderEmailBody(body),
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                // Attachments
-                if (attachments.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Attachments (${attachments.length})',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const Divider(height: 24),
-                          ...attachments.map((a) {
-                            final name = a is Map
-                                ? (a['filename'] as String? ?? 'File')
-                                : a.toString();
-                            return ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: const Icon(Icons.attach_file),
-                              title: Text(name),
-                            );
-                          }),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ],
+            body: _EmailDetailBody(
+              scrollCtrl: scrollCtrl,
+              subject: subject,
+              body: body,
+              fromAddress: fromAddress,
+              toAddress: toAddress,
+              cc: cc,
+              bcc: bcc,
+              replyTo: replyTo,
+              messageId: messageId,
+              timestamp: timestamp,
+              attachments: attachments,
             ),
           );
         },
       ),
+    );
+  }
+}
+
+class _EmailDetailBody extends StatefulWidget {
+  const _EmailDetailBody({
+    required this.scrollCtrl,
+    this.subject,
+    required this.body,
+    required this.fromAddress,
+    required this.toAddress,
+    required this.cc,
+    required this.bcc,
+    required this.replyTo,
+    required this.messageId,
+    required this.timestamp,
+    required this.attachments,
+  });
+
+  final ScrollController scrollCtrl;
+  final String? subject;
+  final String body;
+  final String fromAddress;
+  final String toAddress;
+  final String cc;
+  final String bcc;
+  final String replyTo;
+  final String messageId;
+  final String timestamp;
+  final List<dynamic> attachments;
+
+  @override
+  State<_EmailDetailBody> createState() => _EmailDetailBodyState();
+}
+
+class _EmailDetailBodyState extends State<_EmailDetailBody> {
+  bool _showRawSource = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return ListView(
+      controller: widget.scrollCtrl,
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Headers card
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Email Headers',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Divider(height: 24),
+                if (widget.fromAddress.isNotEmpty)
+                  _headerRow(theme, 'From', widget.fromAddress),
+                if (widget.toAddress.isNotEmpty)
+                  _headerRow(theme, 'To', widget.toAddress),
+                if (widget.cc.isNotEmpty)
+                  _headerRow(theme, 'CC', widget.cc),
+                if (widget.bcc.isNotEmpty)
+                  _headerRow(theme, 'BCC', widget.bcc),
+                if (widget.replyTo.isNotEmpty)
+                  _headerRow(theme, 'Reply-To', widget.replyTo),
+                if (widget.subject != null && widget.subject!.isNotEmpty)
+                  _headerRow(theme, 'Subject', widget.subject!),
+                if (widget.timestamp.isNotEmpty)
+                  _headerRow(theme, 'Date', _fmtTs(widget.timestamp)),
+                if (widget.messageId.isNotEmpty)
+                  _headerRow(theme, 'Message-ID', widget.messageId),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Body with view mode toggle
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _showRawSource ? 'Raw Source' : 'Body',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    if (containsHtml(widget.body))
+                      TextButton.icon(
+                        icon: Icon(
+                          _showRawSource ? Icons.article : Icons.code,
+                          size: 16,
+                        ),
+                        label: Text(
+                          _showRawSource ? 'Styled view' : 'Raw source',
+                        ),
+                        onPressed: () =>
+                            setState(() => _showRawSource = !_showRawSource),
+                      ),
+                  ],
+                ),
+                const Divider(height: 16),
+                if (_showRawSource)
+                  SelectableText(
+                    widget.body,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontFamily: 'monospace',
+                    ),
+                  )
+                else
+                  HtmlEmailView(
+                    body: widget.body,
+                    showToggle: true,
+                    textStyle: theme.textTheme.bodyMedium,
+                  ),
+              ],
+            ),
+          ),
+        ),
+
+        // Attachments
+        if (widget.attachments.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Attachments (${widget.attachments.length})',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Divider(height: 24),
+                  ...widget.attachments.map((a) {
+                    final name = a is Map
+                        ? (a['filename'] as String? ?? 'File')
+                        : a.toString();
+                    final size = a is Map ? (a['size'] as int?) : null;
+                    final sizeStr = size != null
+                        ? '${(size / 1024).toStringAsFixed(1)} KB'
+                        : '';
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.attach_file),
+                      title: Text(name),
+                      subtitle:
+                          sizeStr.isNotEmpty ? Text(sizeStr) : null,
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -2069,7 +2282,7 @@ class _RecordFilesSectionState extends State<_RecordFilesSection> {
       });
 
       await GetIt.instance<Dio>().post<void>(
-        '/api/files',
+        '/api/files/upload',
         data: formData,
       );
 
@@ -2285,6 +2498,746 @@ class _TimelineSection extends StatelessWidget {
     final hour = date.hour.toString().padLeft(2, '0');
     final minute = date.minute.toString().padLeft(2, '0');
     return '$day/$month/${date.year} $hour:$minute';
+  }
+}
+
+class _RecordDetailsCard extends StatefulWidget {
+  const _RecordDetailsCard({
+    required this.record,
+    required this.stage,
+    required this.pipelineName,
+    required this.onShowAddTagDialog,
+  });
+
+  final PipelineRecord record;
+  final Stage? stage;
+  final String? pipelineName;
+  final VoidCallback onShowAddTagDialog;
+
+  @override
+  State<_RecordDetailsCard> createState() => _RecordDetailsCardState();
+}
+
+class _RecordDetailsCardState extends State<_RecordDetailsCard> {
+  bool _editingTitle = false;
+  bool _editingContact = false;
+  bool _editingCompany = false;
+  bool _editingOwner = false;
+  bool _editingStage = false;
+  late final TextEditingController _titleCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleCtrl = TextEditingController(text: widget.record.title);
+  }
+
+  @override
+  void didUpdateWidget(covariant _RecordDetailsCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.record.title != widget.record.title && !_editingTitle) {
+      _titleCtrl.text = widget.record.title;
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    super.dispose();
+  }
+
+  void _saveTitle() {
+    final newTitle = _titleCtrl.text.trim();
+    if (newTitle.isEmpty || newTitle == widget.record.title) {
+      setState(() => _editingTitle = false);
+      return;
+    }
+    context.read<RecordBloc>().add(
+          RecordUpdateRequested(
+            id: widget.record.id,
+            title: newTitle,
+          ),
+        );
+    setState(() => _editingTitle = false);
+  }
+
+  void _updateField({
+    String? contactId,
+    String? companyId,
+    String? ownerId,
+  }) {
+    context.read<RecordBloc>().add(
+          RecordUpdateRequested(
+            id: widget.record.id,
+            title: widget.record.title,
+            contactId: contactId,
+            companyId: companyId,
+            ownerId: ownerId,
+          ),
+        );
+  }
+
+  Future<List<Map<String, dynamic>>> _searchContacts(String query) async {
+    final response = await GetIt.instance<ContactRemoteDataSource>()
+        .getContacts(page: 1, perPage: 10);
+    final q = query.toLowerCase();
+    return response.items
+        .where((c) {
+          final name = '${c.firstName} ${c.lastName}'.toLowerCase();
+          return name.contains(q) || c.email.toLowerCase().contains(q);
+        })
+        .map((c) => {
+              'id': c.id,
+              'name': '${c.firstName} ${c.lastName}'.trim(),
+              'email': c.email,
+            })
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> _searchCompanies(String query) async {
+    final companies =
+        await GetIt.instance<CompanyRemoteDataSource>().getCompanies();
+    return companies
+        .where((c) => c.name.toLowerCase().contains(query.toLowerCase()))
+        .map((c) => {'id': c.id, 'name': c.name})
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> _searchUsers(String query) async {
+    final dio = GetIt.instance<Dio>();
+    final response =
+        await dio.get<Map<String, dynamic>>('/api/users');
+    final list = response.data?['data'] as List<dynamic>? ?? [];
+    final q = query.toLowerCase();
+    return list
+        .cast<Map<String, dynamic>>()
+        .where((u) {
+          final name = '${u['name'] ?? ''}'.toLowerCase();
+          final email = '${u['email'] ?? ''}'.toLowerCase();
+          return name.contains(q) || email.contains(q);
+        })
+        .map((u) => {
+              'id': u['id'] as String? ?? '',
+              'name': u['name'] as String? ?? u['email'] as String? ?? '',
+              'email': u['email'] as String? ?? '',
+            })
+        .toList();
+  }
+
+  Widget _inlineSearchField({
+    required IconData icon,
+    required String label,
+    required Future<List<Map<String, dynamic>>> Function(String) searchFn,
+    required void Function(Map<String, dynamic>) onSelected,
+    required VoidCallback onCancel,
+    String Function(Map<String, dynamic>)? itemSubtitle,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Icon(icon, size: 20,
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: SearchOrCreateField<Map<String, dynamic>>(
+              label: 'Search $label...',
+              onSearch: searchFn,
+              itemLabel: (c) => c['name'] as String? ?? '',
+              itemSubtitle: itemSubtitle,
+              onSelected: onSelected,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18),
+            onPressed: onCancel,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _inlineStageDropdown(
+    BuildContext context,
+    PipelineRecord record,
+    ColorScheme colorScheme,
+    ThemeData theme,
+    AppLocalizations l10n,
+  ) {
+    final pipelineState = context.read<PipelineBloc>().state;
+    final stages = pipelineState is PipelineLoaded
+        ? (pipelineState.kanbanStages ?? <Stage>[])
+        : <Stage>[];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(Icons.flag_outlined, size: 20,
+              color: colorScheme.onSurfaceVariant),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonFormField<String>(
+              initialValue: record.stageId,
+              decoration: InputDecoration(
+                labelText: l10n.stage,
+                isDense: true,
+                border: const OutlineInputBorder(),
+              ),
+              items: stages
+                  .map((s) => DropdownMenuItem(
+                        value: s.id,
+                        child: Text(s.name),
+                      ))
+                  .toList(),
+              onChanged: (id) {
+                if (id != null && id != record.stageId) {
+                  context.read<RecordBloc>().add(
+                        RecordMoveRequested(
+                          recordId: record.id,
+                          toStageId: id,
+                        ),
+                      );
+                }
+                setState(() => _editingStage = false);
+              },
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18),
+            onPressed: () => setState(() => _editingStage = false),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showContactPicker() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 24,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Select Contact',
+              style: Theme.of(ctx).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 16),
+            SearchOrCreateField<Map<String, dynamic>>(
+              label: 'Search contacts...',
+              onSearch: _searchContacts,
+              itemLabel: (c) => c['name'] as String? ?? '',
+              itemSubtitle: (c) => c['email'] as String? ?? '',
+              createEntityLabel: 'contact',
+              onSelected: (c) {
+                Navigator.pop(ctx);
+                _updateField(contactId: c['id'] as String?);
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCompanyPicker() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 24,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Select Company',
+              style: Theme.of(ctx).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 16),
+            SearchOrCreateField<Map<String, dynamic>>(
+              label: 'Search companies...',
+              onSearch: _searchCompanies,
+              itemLabel: (c) => c['name'] as String? ?? '',
+              createEntityLabel: 'company',
+              onSelected: (c) {
+                Navigator.pop(ctx);
+                _updateField(companyId: c['id'] as String?);
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showOwnerPicker() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 24,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Assign Owner',
+              style: Theme.of(ctx).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 16),
+            SearchOrCreateField<Map<String, dynamic>>(
+              label: 'Search team members...',
+              onSearch: _searchUsers,
+              itemLabel: (u) => u['name'] as String? ?? '',
+              itemSubtitle: (u) => u['email'] as String? ?? '',
+              onSelected: (u) {
+                Navigator.pop(ctx);
+                _updateField(ownerId: u['id'] as String?);
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showStagePicker() {
+    final pipelineState = context.read<PipelineBloc>().state;
+    if (pipelineState is! PipelineLoaded) return;
+    final stages = pipelineState.kanbanStages;
+    if (stages == null || stages.isEmpty) return;
+
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => ListView(
+        shrinkWrap: true,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'Move to Stage',
+              style: Theme.of(ctx).textTheme.headlineSmall,
+            ),
+          ),
+          ...stages.map(
+            (s) => ListTile(
+              leading: Icon(
+                Icons.flag_outlined,
+                color: s.id == widget.record.stageId
+                    ? Theme.of(ctx).colorScheme.primary
+                    : null,
+              ),
+              title: Text(s.name),
+              selected: s.id == widget.record.stageId,
+              onTap: () {
+                Navigator.pop(ctx);
+                if (s.id != widget.record.stageId) {
+                  context.read<RecordBloc>().add(
+                        RecordMoveRequested(
+                          recordId: widget.record.id,
+                          toStageId: s.id,
+                        ),
+                      );
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final record = widget.record;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.details,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const Divider(height: 24),
+
+            // ── Title (inline editable) ──
+            if (_editingTitle)
+              Row(
+                children: [
+                  Icon(Icons.title, size: 20,
+                      color: colorScheme.onSurfaceVariant),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _titleCtrl,
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      onSubmitted: (_) => _saveTitle(),
+                      onTapOutside: (_) => _saveTitle(),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.check, size: 18),
+                    onPressed: _saveTitle,
+                  ),
+                ],
+              )
+            else
+              GestureDetector(
+                onDoubleTap: () => setState(() => _editingTitle = true),
+                child: _DetailRow(
+                  icon: Icons.title,
+                  label: l10n.title,
+                  value: record.title,
+                ),
+              ),
+
+            // ── Pipeline (read-only) ──
+            _DetailRow(
+              icon: Icons.view_kanban_outlined,
+              label: l10n.pipeline,
+              value: widget.pipelineName ?? '—',
+            ),
+
+            // ── Stage (inline dropdown on double-tap) ──
+            if (_editingStage)
+              _inlineStageDropdown(context, record, colorScheme, theme, l10n)
+            else
+              GestureDetector(
+                onDoubleTap: () => setState(() => _editingStage = true),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Icon(Icons.flag_outlined, size: 20,
+                          color: colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: 80,
+                        child: Text(
+                          l10n.stage,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          widget.stage?.name ?? '—',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ),
+                      Icon(Icons.edit_outlined, size: 14,
+                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                    ],
+                  ),
+                ),
+              ),
+
+            // ── Contact (inline search on double-tap) ──
+            if (_editingContact)
+              _inlineSearchField(
+                icon: Icons.person_outline,
+                label: l10n.contact,
+                searchFn: _searchContacts,
+                onSelected: (c) {
+                  _updateField(contactId: c['id'] as String?);
+                  setState(() => _editingContact = false);
+                },
+                onCancel: () => setState(() => _editingContact = false),
+                itemSubtitle: (c) => c['email'] as String? ?? '',
+              )
+            else
+              GestureDetector(
+                onDoubleTap: () => setState(() => _editingContact = true),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Icon(Icons.person_outline, size: 20,
+                          color: colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: 80,
+                        child: Text(
+                          l10n.contact,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: record.contactId != null
+                            ? ResolvedName(
+                                id: record.contactId,
+                                type: 'contact',
+                                style: theme.textTheme.bodyMedium,
+                              )
+                            : Text(
+                                '+ Add contact',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: colorScheme.primary,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                      ),
+                      Icon(Icons.edit_outlined, size: 14,
+                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                    ],
+                  ),
+                ),
+              ),
+
+            // ── Company (inline search on double-tap) ──
+            if (_editingCompany)
+              _inlineSearchField(
+                icon: Icons.business_outlined,
+                label: 'Company',
+                searchFn: _searchCompanies,
+                onSelected: (c) {
+                  _updateField(companyId: c['id'] as String?);
+                  setState(() => _editingCompany = false);
+                },
+                onCancel: () => setState(() => _editingCompany = false),
+              )
+            else
+              GestureDetector(
+                onDoubleTap: () => setState(() => _editingCompany = true),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Icon(Icons.business_outlined, size: 20,
+                          color: colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: 80,
+                        child: Text(
+                          'Company',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: record.companyId != null
+                            ? ResolvedName(
+                                id: record.companyId,
+                                type: 'company',
+                                style: theme.textTheme.bodyMedium,
+                              )
+                            : Text(
+                                '+ Add company',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: colorScheme.primary,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                      ),
+                      Icon(Icons.edit_outlined, size: 14,
+                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                    ],
+                  ),
+                ),
+              ),
+
+            // ── Owner (inline search on double-tap) ──
+            if (_editingOwner)
+              _inlineSearchField(
+                icon: Icons.assignment_ind_outlined,
+                label: l10n.owner,
+                searchFn: _searchUsers,
+                onSelected: (u) {
+                  _updateField(ownerId: u['id'] as String?);
+                  setState(() => _editingOwner = false);
+                },
+                onCancel: () => setState(() => _editingOwner = false),
+                itemSubtitle: (u) => u['email'] as String? ?? '',
+              )
+            else
+              GestureDetector(
+                onDoubleTap: () => setState(() => _editingOwner = true),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Icon(Icons.assignment_ind_outlined, size: 20,
+                          color: colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: 80,
+                        child: Text(
+                          l10n.owner,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: record.ownerId != null
+                            ? ResolvedName(
+                                id: record.ownerId,
+                                type: 'user',
+                                style: theme.textTheme.bodyMedium,
+                              )
+                            : Text(
+                                '+ Assign owner',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: colorScheme.primary,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                      ),
+                      Icon(Icons.edit_outlined, size: 14,
+                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                    ],
+                  ),
+                ),
+              ),
+
+            // ── Source (read-only) ──
+            _DetailRow(
+              icon: Icons.source_outlined,
+              label: l10n.source,
+              value: record.source.name,
+            ),
+
+            // ── Tags (interactive) ──
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.label_outline,
+                  size: 20,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      ...record.tags.map(
+                        (tag) => Chip(
+                          label: Text(tag),
+                          labelStyle: theme.textTheme.labelSmall,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          side: BorderSide(
+                            color: colorScheme.outlineVariant,
+                          ),
+                          deleteIcon: Icon(
+                            Icons.close,
+                            size: 14,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          onDeleted: () {
+                            final updatedTags =
+                                List<String>.from(record.tags)..remove(tag);
+                            context.read<RecordBloc>().add(
+                                  RecordUpdateRequested(
+                                    id: record.id,
+                                    title: record.title,
+                                    tags: updatedTags,
+                                  ),
+                                );
+                          },
+                        ),
+                      ),
+                      ActionChip(
+                        avatar: Icon(
+                          Icons.add,
+                          size: 16,
+                          color: colorScheme.primary,
+                        ),
+                        label: Text(
+                          'Add tag',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                        materialTapTargetSize:
+                            MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        side: BorderSide(
+                          color:
+                              colorScheme.primary.withValues(alpha: 0.3),
+                        ),
+                        onPressed: widget.onShowAddTagDialog,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // ── Created/Updated (read-only) ──
+            _DetailRow(
+              icon: Icons.calendar_today_outlined,
+              label: l10n.created,
+              value: _formatDate(record.createdAt),
+            ),
+            _DetailRow(
+              icon: Icons.update_outlined,
+              label: l10n.updated,
+              value: _formatDate(record.updatedAt),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
   }
 }
 

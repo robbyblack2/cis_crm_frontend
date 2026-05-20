@@ -1,4 +1,5 @@
 import 'package:cis_crm/app/injection.dart';
+import 'package:cis_crm/core/widgets/search_or_create_field.dart';
 import 'package:cis_crm/core/widgets/state/empty_state.dart';
 import 'package:cis_crm/core/widgets/state/page_error.dart';
 import 'package:cis_crm/features/contacts/data/datasources/company_remote_data_source.dart';
@@ -166,75 +167,84 @@ class _ContactsView extends StatelessWidget {
     final sourceCtrl = TextEditingController();
     final targetCtrl = TextEditingController();
 
-    showDialog<void>(
+    showModalBottomSheet<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Merge Contacts'),
-        content: Column(
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 24, right: 24, top: 24,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
+            Text('Merge Contacts',
+                style: Theme.of(ctx).textTheme.headlineSmall),
+            const SizedBox(height: 8),
+            Text(
               'Merge source into target. Source contact will be removed.',
+              style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                  ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: sourceCtrl,
               decoration: const InputDecoration(
                 labelText: 'Source Contact ID (will be removed)',
+                border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             TextField(
               controller: targetCtrl,
               decoration: const InputDecoration(
                 labelText: 'Target Contact ID (will be kept)',
+                border: OutlineInputBorder(),
               ),
+            ),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: () async {
+                final source = sourceCtrl.text.trim();
+                final target = targetCtrl.text.trim();
+                if (source.isEmpty || target.isEmpty) return;
+                Navigator.pop(ctx);
+                try {
+                  await getIt<Dio>().post<void>(
+                    '/api/contacts/merge',
+                    data: {
+                      'source_id': source,
+                      'target_id': target,
+                    },
+                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Contacts merged'),
+                      ),
+                    );
+                    context
+                        .read<ContactsBloc>()
+                        .add(const ContactsLoadRequested());
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Merge failed: $e')),
+                    );
+                  }
+                }
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(ctx).colorScheme.error,
+              ),
+              child: const Text('Merge'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final source = sourceCtrl.text.trim();
-              final target = targetCtrl.text.trim();
-              if (source.isEmpty || target.isEmpty) return;
-              Navigator.pop(ctx);
-              try {
-                await getIt<Dio>().post<void>(
-                  '/api/contacts/merge',
-                  data: {
-                    'source_id': source,
-                    'target_id': target,
-                  },
-                );
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Contacts merged'),
-                    ),
-                  );
-                  context
-                      .read<ContactsBloc>()
-                      .add(const ContactsLoadRequested());
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Merge failed: $e')),
-                  );
-                }
-              }
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
-            ),
-            child: const Text('Merge'),
-          ),
-        ],
       ),
     );
   }
@@ -266,32 +276,110 @@ class _ContactFormSheet extends StatefulWidget {
 }
 
 class _ContactFormSheetState extends State<_ContactFormSheet> {
-  final _companySearchCtrl = TextEditingController();
-  List<Map<String, dynamic>> _companyResults = [];
-
-  @override
-  void dispose() {
-    _companySearchCtrl.dispose();
-    super.dispose();
+  Future<List<Map<String, dynamic>>> _searchCompanies(String q) async {
+    final companies =
+        await getIt<CompanyRemoteDataSource>().getCompanies();
+    return companies
+        .where((c) => c.name.toLowerCase().contains(q.toLowerCase()))
+        .map((c) => {'id': c.id, 'name': c.name})
+        .toList();
   }
 
-  Future<void> _searchCompanies(String q) async {
-    if (q.length < 2) {
-      setState(() => _companyResults = []);
-      return;
-    }
-    try {
-      final companies =
-          await getIt<CompanyRemoteDataSource>().getCompanies();
-      setState(() {
-        _companyResults = companies
-            .where((c) => c.name.toLowerCase().contains(q.toLowerCase()))
-            .map((c) => {'id': c.id, 'name': c.name})
-            .toList();
-      });
-    } catch (_) {
-      setState(() => _companyResults = []);
-    }
+  Future<Map<String, dynamic>?> _createCompany(String query) async {
+    final hints = QueryParser.parseCompanyQuery(query);
+    final nameCtrl = TextEditingController(text: hints.name ?? '');
+    final websiteCtrl = TextEditingController(text: hints.domain ?? '');
+    final industryCtrl = TextEditingController();
+
+    return showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 24,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Quick Add Company',
+                style: Theme.of(ctx).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: websiteCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Website',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.url,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: industryCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Industry',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: () async {
+                  final name = nameCtrl.text.trim();
+                  if (name.isEmpty) return;
+                  try {
+                    final company = CompanyModel(
+                      id: '',
+                      name: name,
+                      domain: websiteCtrl.text.trim().isNotEmpty
+                          ? websiteCtrl.text.trim()
+                          : null,
+                      industry: industryCtrl.text.trim().isNotEmpty
+                          ? industryCtrl.text.trim()
+                          : null,
+                      tags: const [],
+                      createdAt: DateTime.now(),
+                      updatedAt: DateTime.now(),
+                    );
+                    final created = await getIt<CompanyRemoteDataSource>()
+                        .createCompany(company);
+                    if (ctx.mounted) {
+                      Navigator.pop(ctx, {
+                        'id': created.id,
+                        'name': created.name,
+                      });
+                    }
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(content: Text('Failed: $e')),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Create Company'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -393,51 +481,24 @@ class _ContactFormSheetState extends State<_ContactFormSheet> {
                         ?.copyWith(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 8),
-                  if (state.companyId != null)
-                    Card(
-                      color: theme.colorScheme.primaryContainer,
-                      child: ListTile(
-                        leading: const Icon(Icons.business),
-                        title: Text(state.companyName ?? state.companyId!),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () =>
-                              cubit.companyChanged(null, null),
-                        ),
-                      ),
-                    )
-                  else ...[
-                    TextField(
-                      controller: _companySearchCtrl,
-                      decoration: const InputDecoration(
-                        hintText: 'Search companies...',
-                        prefixIcon: Icon(Icons.search),
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                      onChanged: _searchCompanies,
+                  SearchOrCreateField<Map<String, dynamic>>(
+                    label: 'Search companies...',
+                    onSearch: _searchCompanies,
+                    itemLabel: (c) => c['name'] as String? ?? '',
+                    createEntityLabel: 'company',
+                    selectedItem: state.companyId != null
+                        ? {
+                            'id': state.companyId,
+                            'name': state.companyName ?? state.companyId,
+                          }
+                        : null,
+                    onSelected: (c) => cubit.companyChanged(
+                      c['id'] as String?,
+                      c['name'] as String?,
                     ),
-                    if (_companyResults.isNotEmpty)
-                      Card(
-                        child: Column(
-                          children: _companyResults.take(5).map(
-                            (c) => ListTile(
-                              dense: true,
-                              leading: const Icon(Icons.business),
-                              title: Text(c['name'] as String? ?? ''),
-                              onTap: () {
-                                cubit.companyChanged(
-                                  c['id'] as String?,
-                                  c['name'] as String?,
-                                );
-                                _companySearchCtrl.clear();
-                                setState(() => _companyResults = []);
-                              },
-                            ),
-                          ).toList(),
-                        ),
-                      ),
-                  ],
+                    onCleared: () => cubit.companyChanged(null, null),
+                    onCreateTapped: _createCompany,
+                  ),
 
                   if (state.errorMessage != null) ...[
                     const SizedBox(height: 12),
@@ -488,6 +549,9 @@ class _ContactsList extends StatefulWidget {
 
 class _ContactsListState extends State<_ContactsList> {
   final _scrollController = ScrollController();
+  String _search = '';
+  String? _statusFilter;
+  String? _tagFilter;
 
   @override
   void initState() {
@@ -518,30 +582,132 @@ class _ContactsListState extends State<_ContactsList> {
 
   @override
   Widget build(BuildContext context) {
-    final contacts = widget.state.contacts;
+    final theme = Theme.of(context);
+    var contacts = widget.state.contacts;
     final hasMore = widget.state.hasMore;
 
-    return ListView.separated(
-      controller: _scrollController,
-      itemCount: contacts.length + (hasMore ? 1 : 0),
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        if (index >= contacts.length) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-        final contact = contacts[index];
-        return ContactTile(
-          contact: contact,
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => ContactDetailPage(contact: contact),
+    // Collect unique statuses and tags for filter chips
+    final allStatuses = contacts.map((c) => c.status).toSet().toList()..sort();
+    final allTags = contacts.expand((c) => c.tags).toSet().toList()..sort();
+
+    // Apply local filters
+    if (_search.isNotEmpty) {
+      final q = _search.toLowerCase();
+      contacts = contacts.where((c) {
+        final name = '${c.firstName} ${c.lastName}'.toLowerCase();
+        return name.contains(q) ||
+            c.email.toLowerCase().contains(q) ||
+            (c.phone ?? '').contains(q) ||
+            (c.jobTitle ?? '').toLowerCase().contains(q);
+      }).toList();
+    }
+    if (_statusFilter != null) {
+      contacts = contacts.where((c) => c.status == _statusFilter).toList();
+    }
+    if (_tagFilter != null) {
+      contacts = contacts.where((c) => c.tags.contains(_tagFilter)).toList();
+    }
+
+    return Column(
+      children: [
+        // Persistent search bar
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: TextField(
+            decoration: InputDecoration(
+              hintText: 'Search by name, email, phone...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              isDense: true,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+              suffixIcon: _search.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () => setState(() => _search = ''),
+                    )
+                  : null,
             ),
+            onChanged: (v) => setState(() => _search = v),
           ),
-        );
-      },
+        ),
+        // Filter chips
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Row(
+            children: [
+              // Status filters
+              ...allStatuses.map((s) => Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: FilterChip(
+                      label: Text(s),
+                      selected: _statusFilter == s,
+                      onSelected: (_) => setState(() =>
+                          _statusFilter = _statusFilter == s ? null : s),
+                    ),
+                  )),
+              if (allStatuses.isNotEmpty && allTags.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: SizedBox(
+                    height: 24,
+                    child: VerticalDivider(
+                      color: theme.colorScheme.outlineVariant,
+                    ),
+                  ),
+                ),
+              // Tag filters
+              ...allTags.take(8).map((t) => Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: FilterChip(
+                      label: Text(t),
+                      selected: _tagFilter == t,
+                      onSelected: (_) => setState(() =>
+                          _tagFilter = _tagFilter == t ? null : t),
+                    ),
+                  )),
+              if (_statusFilter != null || _tagFilter != null)
+                TextButton(
+                  onPressed: () => setState(() {
+                    _statusFilter = null;
+                    _tagFilter = null;
+                  }),
+                  child: const Text('Clear'),
+                ),
+            ],
+          ),
+        ),
+        // List
+        Expanded(
+          child: ListView.separated(
+            controller: _scrollController,
+            itemCount: contacts.length + (hasMore ? 1 : 0),
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              if (index >= contacts.length) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              final contact = contacts[index];
+              return ContactTile(
+                contact: contact,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => ContactDetailPage(contact: contact),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

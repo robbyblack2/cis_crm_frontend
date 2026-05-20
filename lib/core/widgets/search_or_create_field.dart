@@ -15,6 +15,7 @@ class SearchOrCreateField<T> extends StatefulWidget {
     this.createEntityLabel = 'item',
     this.selectedItem,
     this.itemSubtitle,
+    this.onCleared,
     super.key,
   });
 
@@ -43,8 +44,12 @@ class SearchOrCreateField<T> extends StatefulWidget {
   /// Currently selected item (to show as a chip).
   final T? selectedItem;
 
+  /// Called when the user clears the selection.
+  final VoidCallback? onCleared;
+
   @override
-  State<SearchOrCreateField<T>> createState() => _SearchOrCreateFieldState<T>();
+  State<SearchOrCreateField<T>> createState() =>
+      _SearchOrCreateFieldState<T>();
 }
 
 class _SearchOrCreateFieldState<T> extends State<SearchOrCreateField<T>> {
@@ -125,9 +130,9 @@ class _SearchOrCreateFieldState<T> extends State<SearchOrCreateField<T>> {
             child: Chip(
               label: Text(widget.itemLabel(widget.selectedItem as T)),
               onDeleted: () {
-                // Clear by re-selecting with a "null-like" approach
                 _controller.clear();
                 setState(() => _results = []);
+                widget.onCleared?.call();
               },
             ),
           ),
@@ -169,8 +174,10 @@ class _SearchOrCreateFieldState<T> extends State<SearchOrCreateField<T>> {
                     shrinkWrap: true,
                     padding: EdgeInsets.zero,
                     itemCount: _results.length,
-                    separatorBuilder: (_, __) =>
-                        Divider(height: 1, color: colorScheme.outlineVariant),
+                    separatorBuilder: (_, __) => Divider(
+                      height: 1,
+                      color: colorScheme.outlineVariant,
+                    ),
                     itemBuilder: (context, index) {
                       final item = _results[index];
                       return ListTile(
@@ -235,4 +242,69 @@ class _SearchOrCreateFieldState<T> extends State<SearchOrCreateField<T>> {
       ],
     );
   }
+}
+
+/// Smart query parsing for pre-filling create forms.
+class QueryParser {
+  QueryParser._();
+
+  /// Parse a query into contact field hints.
+  static ContactHints parseContactQuery(String query) {
+    final q = query.trim();
+
+    // Email-like
+    if (q.contains('@')) {
+      return ContactHints(email: q);
+    }
+
+    // Phone-like: starts with + or is mostly digits
+    if (q.startsWith('+') ||
+        RegExp(r'^\d[\d\s\-().]{5,}$').hasMatch(q)) {
+      return ContactHints(phone: q);
+    }
+
+    // Name-like: split into first/last
+    final parts = q.split(RegExp(r'\s+'));
+    if (parts.length >= 2) {
+      return ContactHints(
+        firstName: parts.first,
+        lastName: parts.sublist(1).join(' '),
+      );
+    }
+
+    return ContactHints(firstName: q);
+  }
+
+  /// Parse a query into company field hints.
+  static CompanyHints parseCompanyQuery(String query) {
+    final q = query.trim();
+
+    // Domain-like
+    if (q.contains('.') && !q.contains(' ')) {
+      return CompanyHints(name: q, domain: q);
+    }
+
+    return CompanyHints(name: q);
+  }
+}
+
+class ContactHints {
+  const ContactHints({
+    this.firstName,
+    this.lastName,
+    this.email,
+    this.phone,
+  });
+
+  final String? firstName;
+  final String? lastName;
+  final String? email;
+  final String? phone;
+}
+
+class CompanyHints {
+  const CompanyHints({this.name, this.domain});
+
+  final String? name;
+  final String? domain;
 }

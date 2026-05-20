@@ -1,4 +1,7 @@
+import 'package:cis_crm/core/utils/name_resolver.dart';
+import 'package:dio/dio.dart';
 import 'package:cis_crm/features/pipeline/data/datasources/pipeline_remote_data_source.dart';
+import 'package:cis_crm/features/pipeline/data/datasources/record_remote_data_source.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/record.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/stage.dart';
 import 'package:cis_crm/features/pipeline/presentation/bloc/pipeline_bloc.dart';
@@ -235,6 +238,15 @@ class _StagePromptSheet extends StatefulWidget {
 class _StagePromptSheetState extends State<_StagePromptSheet> {
   final _values = <String, String>{};
 
+  @override
+  void initState() {
+    super.initState();
+    // Preload name caches for ID resolution in dropdowns
+    NameResolver.instance.loadUsers();
+    NameResolver.instance.loadContacts();
+    NameResolver.instance.loadCompanies();
+  }
+
   Color _parseColor(String colorStr) {
     if (colorStr.startsWith('#')) {
       final hex = colorStr.replaceFirst('#', '');
@@ -360,6 +372,35 @@ class _StagePromptSheetState extends State<_StagePromptSheet> {
     );
   }
 
+  static final _uuidPattern = RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+    caseSensitive: false,
+  );
+
+  /// Resolve a plain-string option that looks like a UUID to a display name.
+  String _resolveOption(String value, String fieldKey) {
+    if (!_uuidPattern.hasMatch(value)) return _humanizeKey(value);
+    final resolver = NameResolver.instance;
+    final lowerKey = fieldKey.toLowerCase();
+    // Guess entity type from field key
+    if (lowerKey.contains('contact')) {
+      return resolver.contactName(value) ?? value;
+    }
+    if (lowerKey.contains('company')) {
+      return resolver.companyName(value) ?? value;
+    }
+    if (lowerKey.contains('owner') ||
+        lowerKey.contains('user') ||
+        lowerKey.contains('assignee')) {
+      return resolver.userName(value) ?? value;
+    }
+    // Try all resolvers
+    return resolver.userName(value) ??
+        resolver.contactName(value) ??
+        resolver.companyName(value) ??
+        value;
+  }
+
   Widget _buildPromptField(Map<String, dynamic> prompt) {
     final fieldDef =
         prompt['field_definition'] as Map<String, dynamic>? ?? prompt;
@@ -388,13 +429,13 @@ class _StagePromptSheetState extends State<_StagePromptSheet> {
             final optLabel = o['label'] as String? ??
                 o['display_name'] as String? ??
                 o['name'] as String? ??
-                value;
+                _resolveOption(value, key);
             return DropdownMenuItem(value: value, child: Text(optLabel));
           }
           final str = o.toString();
           return DropdownMenuItem(
             value: str,
-            child: Text(_humanizeKey(str)),
+            child: Text(_resolveOption(str, key)),
           );
         }).toList(),
         onChanged: (v) {
@@ -452,6 +493,227 @@ class _DraggableRecordCard extends StatelessWidget {
   final PipelineRecord record;
   final VoidCallback onTap;
   final String currentStageId;
+
+  void _showAddNote(BuildContext context) {
+    final noteCtrl = TextEditingController();
+    var posting = false;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Add Note',
+                style: Theme.of(ctx).textTheme.headlineSmall,
+              ),
+              Text(
+                record.title,
+                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                    ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: noteCtrl,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: 'Write a note...',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 5,
+                minLines: 2,
+                textCapitalization: TextCapitalization.sentences,
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: posting
+                    ? null
+                    : () async {
+                        final body = noteCtrl.text.trim();
+                        if (body.isEmpty) return;
+                        setSheetState(() => posting = true);
+                        try {
+                          await GetIt.instance<RecordRemoteDataSource>()
+                              .addNote(record.id, body);
+                          if (ctx.mounted) {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Note added'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        } catch (_) {
+                          setSheetState(() => posting = false);
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              const SnackBar(
+                                content: Text('Failed to add note'),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                icon: posting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.send),
+                label: const Text('Post Note'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showTagManager(BuildContext context) {
+    final tagCtrl = TextEditingController();
+    var currentTags = List<String>.from(record.tags);
+    List<String> serverTags = [];
+    bool loadingTags = true;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          if (loadingTags) {
+            GetIt.instance<Dio>()
+                .get<Map<String, dynamic>>('/api/tags')
+                .then((response) {
+              final list =
+                  response.data?['data'] as List<dynamic>? ?? [];
+              final names = list
+                  .cast<Map<String, dynamic>>()
+                  .map((t) => t['name'] as String? ?? '')
+                  .where((n) => n.isNotEmpty)
+                  .toList();
+              setSheetState(() {
+                serverTags = names;
+                loadingTags = false;
+              });
+            }).catchError((_) {
+              setSheetState(() => loadingTags = false);
+            });
+          }
+
+          final query = tagCtrl.text.trim().toLowerCase();
+          final existingSet =
+              currentTags.map((t) => t.toLowerCase()).toSet();
+          final suggestions = serverTags
+              .where((t) => !existingSet.contains(t.toLowerCase()))
+              .where(
+                (t) => query.isEmpty || t.toLowerCase().contains(query),
+              )
+              .toList();
+
+          void addTag(String tag) {
+            if (tag.isEmpty || currentTags.contains(tag)) return;
+            setSheetState(() => currentTags.add(tag));
+            tagCtrl.clear();
+            context.read<RecordBloc>().add(
+                  RecordUpdateRequested(
+                    id: record.id,
+                    title: record.title,
+                    tags: List<String>.from(currentTags),
+                  ),
+                );
+          }
+
+          void removeTag(String tag) {
+            setSheetState(() => currentTags.remove(tag));
+            context.read<RecordBloc>().add(
+                  RecordUpdateRequested(
+                    id: record.id,
+                    title: record.title,
+                    tags: List<String>.from(currentTags),
+                  ),
+                );
+          }
+
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 24,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Manage Tags',
+                  style: Theme.of(ctx).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 16),
+                if (currentTags.isNotEmpty)
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: currentTags
+                        .map(
+                          (tag) => Chip(
+                            label: Text(tag),
+                            onDeleted: () => removeTag(tag),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: tagCtrl,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    hintText: 'Type to add a tag...',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                    prefixIcon: Icon(Icons.label_outline, size: 20),
+                  ),
+                  onChanged: (_) => setSheetState(() {}),
+                  onSubmitted: addTag,
+                ),
+                if (suggestions.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: suggestions.take(10).map(
+                      (tag) => ActionChip(
+                        label: Text(tag),
+                        onPressed: () => addTag(tag),
+                      ),
+                    ).toList(),
+                  ),
+                ],
+                const SizedBox(height: 8),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
 
   void _showMoveMenu(BuildContext context) {
     final pipelineState =
@@ -528,6 +790,8 @@ class _DraggableRecordCard extends StatelessWidget {
       child: RecordCard(
         record: record,
         onTap: onTap,
+        onAddNote: () => _showAddNote(context),
+        onManageTags: () => _showTagManager(context),
         onMoveStage: () => _showMoveMenu(context),
       ),
     );

@@ -63,7 +63,7 @@ void main() {
 
   group('connectGoogle', () {
     blocTest<GoogleIntegrationCubit, GoogleIntegrationState>(
-      'emits [Loading] and returns auth URL on success',
+      'returns auth URL on success without emitting Loading',
       build: () {
         when(() => mockRepository.getAuthUrl()).thenAnswer(
           (_) async => const Success('https://accounts.google.com/auth'),
@@ -74,13 +74,11 @@ void main() {
         final url = await c.connectGoogle();
         expect(url, 'https://accounts.google.com/auth');
       },
-      expect: () => [
-        const GoogleIntegrationLoading(),
-      ],
+      expect: () => <GoogleIntegrationState>[],
     );
 
     blocTest<GoogleIntegrationCubit, GoogleIntegrationState>(
-      'emits [Loading, Error] and returns null on failure',
+      'emits [Error] and returns null on failure',
       build: () {
         when(() => mockRepository.getAuthUrl()).thenAnswer(
           (_) async => const Failure(NetworkFailure()),
@@ -92,7 +90,6 @@ void main() {
         expect(url, isNull);
       },
       expect: () => [
-        const GoogleIntegrationLoading(),
         const GoogleIntegrationError(NetworkFailure()),
       ],
     );

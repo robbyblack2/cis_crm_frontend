@@ -115,19 +115,20 @@ class ImportExportPage extends StatelessWidget {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['csv'],
+      withData: true,
     );
     if (result == null || result.files.isEmpty) return;
     final file = result.files.first;
-    if (file.path == null) return;
 
     if (!context.mounted) return;
 
     try {
+      // Use bytes on web, path on native
+      final multipartFile = file.path != null
+          ? await MultipartFile.fromFile(file.path!, filename: file.name)
+          : MultipartFile.fromBytes(file.bytes!, filename: file.name);
       final formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(
-          file.path!,
-          filename: file.name,
-        ),
+        'file': multipartFile,
       });
       await getIt<Dio>().post<void>(
         '/api/import/$entityType',

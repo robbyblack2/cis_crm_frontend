@@ -436,14 +436,9 @@ Future<void> configureDependencies(FlavorConfig config) async {
               label: 'Contacts',
             ),
             AdaptiveDestination(
-              icon: Icon(Icons.task_alt_outlined),
-              selectedIcon: Icon(Icons.task_alt),
-              label: 'Tasks',
-            ),
-            AdaptiveDestination(
-              icon: Icon(Icons.calendar_month_outlined),
-              selectedIcon: Icon(Icons.calendar_month),
-              label: 'Calendar',
+              icon: Icon(Icons.checklist_outlined),
+              selectedIcon: Icon(Icons.checklist),
+              label: 'Activities',
             ),
             AdaptiveDestination(
               icon: Icon(Icons.inventory_2_outlined),
@@ -478,14 +473,6 @@ Future<void> configureDependencies(FlavorConfig config) async {
                 GoRoute(
                   path: Routes.tasks,
                   builder: (_, __) => const TasksPage(),
-                ),
-              ],
-            ),
-            StatefulShellBranch(
-              routes: [
-                GoRoute(
-                  path: Routes.calendar,
-                  builder: (_, __) => const CalendarPage(),
                 ),
               ],
             ),
