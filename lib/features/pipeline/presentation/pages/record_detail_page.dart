@@ -92,7 +92,7 @@ class _RecordDetailScaffoldState extends State<_RecordDetailScaffold>
   @override
   void initState() {
     super.initState();
-    // Default to Conversation tab (index 0) for support pipelines
+    // Default to Overview tab (index 0)
     _tabController = TabController(length: 4, vsync: this);
   }
 
@@ -119,8 +119,8 @@ class _RecordDetailScaffoldState extends State<_RecordDetailScaffold>
           controller: _tabController,
           isScrollable: true,
           tabs: const [
+            Tab(icon: Icon(Icons.info_outline, size: 18), text: 'Overview'),
             Tab(icon: Icon(Icons.forum_outlined, size: 18), text: 'Conversation'),
-            Tab(icon: Icon(Icons.info_outline, size: 18), text: 'Details'),
             Tab(icon: Icon(Icons.history_outlined, size: 18), text: 'Activity'),
             Tab(icon: Icon(Icons.link_outlined, size: 18), text: 'Related'),
           ],
@@ -207,13 +207,7 @@ class _RecordDetailScaffoldState extends State<_RecordDetailScaffold>
       body: TabBarView(
         controller: _tabController,
         children: [
-          // ── Tab 1: Conversation ──
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: _ConversationSection(recordId: record.id),
-          ),
-
-          // ── Tab 2: Details ──
+          // ── Tab 1: Overview (Details + Notes) ──
           SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -226,17 +220,23 @@ class _RecordDetailScaffoldState extends State<_RecordDetailScaffold>
                   onShowAddTagDialog: () =>
                       _showAddTagDialog(context, record),
                 ),
+                const SizedBox(height: 16),
+                _NotesSection(recordId: record.id),
               ],
             ),
           ),
 
-          // ── Tab 3: Activity (Notes + Timeline) ──
+          // ── Tab 2: Conversation ──
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: _ConversationSection(recordId: record.id),
+          ),
+
+          // ── Tab 3: Activity (Timeline + Activities) ──
           SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                _NotesSection(recordId: record.id),
-                const SizedBox(height: 16),
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
