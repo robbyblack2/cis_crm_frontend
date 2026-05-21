@@ -211,10 +211,7 @@ class _Drawer extends StatelessWidget {
               onTap(index);
             },
             children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(28, 16, 16, 10),
-                child: Text('CIS CRM'),
-              ),
+              const SizedBox(height: 8),
               for (final d in destinations)
                 NavigationDrawerDestination(
                   icon: d.icon,

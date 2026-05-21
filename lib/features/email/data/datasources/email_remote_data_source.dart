@@ -37,15 +37,15 @@ abstract interface class EmailRemoteDataSource {
 
   Future<EmailTemplateModel> createTemplate({
     required String name,
-    required String subject,
-    required String body,
+    required String subjectTemplate,
+    required String bodyTemplate,
   });
 
   Future<EmailTemplateModel> updateTemplate({
     required String id,
     required String name,
-    required String subject,
-    required String body,
+    required String subjectTemplate,
+    required String bodyTemplate,
   });
 
   Future<void> deleteTemplate({required String id});
@@ -203,13 +203,17 @@ class EmailRemoteDataSourceImpl implements EmailRemoteDataSource {
   @override
   Future<EmailTemplateModel> createTemplate({
     required String name,
-    required String subject,
-    required String body,
+    required String subjectTemplate,
+    required String bodyTemplate,
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         '/api/email/templates',
-        data: {'name': name, 'subject': subject, 'body': body},
+        data: {
+          'name': name,
+          'subject_template': subjectTemplate,
+          'body_template': bodyTemplate,
+        },
       );
       return EmailTemplateModel.fromJson(
         response.data!['data'] as Map<String, dynamic>,
@@ -226,13 +230,17 @@ class EmailRemoteDataSourceImpl implements EmailRemoteDataSource {
   Future<EmailTemplateModel> updateTemplate({
     required String id,
     required String name,
-    required String subject,
-    required String body,
+    required String subjectTemplate,
+    required String bodyTemplate,
   }) async {
     try {
       final response = await _dio.put<Map<String, dynamic>>(
         '/api/email/templates/$id',
-        data: {'name': name, 'subject': subject, 'body': body},
+        data: {
+          'name': name,
+          'subject_template': subjectTemplate,
+          'body_template': bodyTemplate,
+        },
       );
       return EmailTemplateModel.fromJson(
         response.data!['data'] as Map<String, dynamic>,

@@ -24,6 +24,7 @@ import 'package:cis_crm/features/pipeline/presentation/widgets/stage_column.dart
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PipelinePage extends StatelessWidget {
   const PipelinePage({super.key});
@@ -151,6 +152,37 @@ class _LoadedPipelineViewState extends State<_LoadedPipelineView> {
   PipelineLoaded get state => widget.state;
 
   @override
+  void initState() {
+    super.initState();
+    _loadViewPref();
+  }
+
+  @override
+  void didUpdateWidget(_LoadedPipelineView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // When the active pipeline changes, restore its saved view preference.
+    if (oldWidget.state.kanbanPipeline?.id != state.kanbanPipeline?.id) {
+      _loadViewPref();
+    }
+  }
+
+  void _loadViewPref() {
+    final pid = state.kanbanPipeline?.id;
+    if (pid == null) return;
+    final isListView =
+        getIt<SharedPreferences>().getBool('pipeline_view_$pid') ?? false;
+    if (mounted) setState(() => _listView = isListView);
+  }
+
+  void _setViewPref(bool listView) {
+    setState(() => _listView = listView);
+    final pid = state.kanbanPipeline?.id;
+    if (pid != null) {
+      getIt<SharedPreferences>().setBool('pipeline_view_$pid', listView);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final stages = (state.kanbanStages ?? <Stage>[]).toList()
       ..sort((a, b) => a.position.compareTo(b.position));
@@ -186,12 +218,24 @@ class _LoadedPipelineViewState extends State<_LoadedPipelineView> {
               )
             : Text(currentName),
         actions: [
-          IconButton(
-            icon: Icon(
-              _listView ? Icons.view_kanban : Icons.view_list,
+          SegmentedButton<bool>(
+            segments: const [
+              ButtonSegment(
+                value: false,
+                icon: Icon(Icons.view_kanban, size: 18),
+                label: Text('Board'),
+              ),
+              ButtonSegment(
+                value: true,
+                icon: Icon(Icons.view_list, size: 18),
+                label: Text('List'),
+              ),
+            ],
+            selected: {_listView},
+            onSelectionChanged: (v) => _setViewPref(v.first),
+            style: const ButtonStyle(
+              visualDensity: VisualDensity.compact,
             ),
-            tooltip: _listView ? 'Board view' : 'List view',
-            onPressed: () => setState(() => _listView = !_listView),
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
@@ -787,6 +831,20 @@ class _RecordListViewState extends State<_RecordListView> {
     return 'Just now';
   }
 
+  IconData _sourceIcon(RecordSource source) => switch (source) {
+        RecordSource.email => Icons.email_outlined,
+        RecordSource.automation => Icons.smart_toy_outlined,
+        RecordSource.syncRule => Icons.sync_outlined,
+        RecordSource.manual => Icons.edit_outlined,
+      };
+
+  String _sourceLabel(RecordSource source) => switch (source) {
+        RecordSource.email => 'Email',
+        RecordSource.automation => 'Auto',
+        RecordSource.syncRule => 'Sync',
+        RecordSource.manual => 'Manual',
+      };
+
   List<PipelineRecord> get _sortedRecords {
     final sorted = List<PipelineRecord>.from(widget.records);
     sorted.sort((a, b) {
@@ -875,6 +933,7 @@ class _RecordListViewState extends State<_RecordListView> {
               _headerCell('Contact', 'contact'),
               _headerCell('Owner', 'owner'),
               _headerCell('Tags', 'tags'),
+              _headerCell('Source', 'source'),
               _headerCell('Created', 'created'),
             ],
           ),
@@ -937,14 +996,14 @@ class _RecordListViewState extends State<_RecordListView> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      // Stage name
+                      // Stage name (tappable for inline change)
                       Expanded(
                         flex: 2,
-                        child: Text(
-                          stage?.name ?? '—',
-                          style: theme.textTheme.bodySmall,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        child: _InlineStageChip(
+                          stage: stage,
+                          allStages: widget.stages,
+                          stageColor: stageColor,
+                          record: record,
                         ),
                       ),
                       // Contact
@@ -1007,6 +1066,26 @@ class _RecordListViewState extends State<_RecordListView> {
                               )
                             : const SizedBox.shrink(),
                       ),
+                      // Source
+                      Expanded(
+                        flex: 2,
+                        child: Row(
+                          children: [
+                            Icon(
+                              _sourceIcon(record.source),
+                              size: 14,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _sourceLabel(record.source),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       // Created
                       Expanded(
                         flex: 2,
@@ -1029,6 +1108,105 @@ class _RecordListViewState extends State<_RecordListView> {
         ),
       ],
     );
+  }
+}
+
+class _InlineStageChip extends StatelessWidget {
+  const _InlineStageChip({
+    required this.stage,
+    required this.allStages,
+    required this.stageColor,
+    required this.record,
+  });
+
+  final Stage? stage;
+  final List<Stage> allStages;
+  final Color stageColor;
+  final PipelineRecord record;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return PopupMenuButton<String>(
+      tooltip: 'Change stage',
+      offset: const Offset(0, 32),
+      onSelected: (stageId) {
+        context.read<RecordBloc>().add(
+              RecordMoveRequested(
+                recordId: record.id,
+                toStageId: stageId,
+              ),
+            );
+      },
+      itemBuilder: (_) => allStages.map((s) {
+        final color = _parseStageColor(s.color);
+        return PopupMenuItem(
+          value: s.id,
+          child: Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(s.name),
+              if (s.id == record.stageId) ...[
+                const Spacer(),
+                Icon(Icons.check, size: 16, color: color),
+              ],
+            ],
+          ),
+        );
+      }).toList(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: stageColor.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: stageColor.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: stageColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                stage?.name ?? '—',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: stageColor,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 2),
+            Icon(Icons.arrow_drop_down, size: 14, color: stageColor),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _parseStageColor(String colorStr) {
+    if (colorStr.startsWith('#')) {
+      final hex = colorStr.replaceFirst('#', '');
+      return Color(int.parse('FF$hex', radix: 16));
+    }
+    return Color(int.tryParse(colorStr) ?? 0xFF9E9E9E);
   }
 }
 

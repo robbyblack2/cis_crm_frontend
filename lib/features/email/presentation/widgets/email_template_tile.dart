@@ -17,7 +17,7 @@ class EmailTemplateTile extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
       ),
       subtitle: Text(
-        template.subject,
+        template.subjectTemplate,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),

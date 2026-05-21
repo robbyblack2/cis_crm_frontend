@@ -37,15 +37,15 @@ abstract interface class EmailRepository {
 
   Future<Result<EmailTemplate, AppFailure>> createTemplate({
     required String name,
-    required String subject,
-    required String body,
+    required String subjectTemplate,
+    required String bodyTemplate,
   });
 
   Future<Result<EmailTemplate, AppFailure>> updateTemplate({
     required String id,
     required String name,
-    required String subject,
-    required String body,
+    required String subjectTemplate,
+    required String bodyTemplate,
   });
 
   Future<Result<void, AppFailure>> deleteTemplate({required String id});

@@ -89,7 +89,7 @@ class _EmailTemplatesViewState extends State<_EmailTemplatesView> {
         ? templates
         : templates.where((t) {
             final name = (t.name as String? ?? '').toLowerCase();
-            final subject = (t.subject as String? ?? '').toLowerCase();
+            final subject = (t.subjectTemplate as String? ?? '').toLowerCase();
             final q = _search.toLowerCase();
             return name.contains(q) || subject.contains(q);
           }).toList();

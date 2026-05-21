@@ -17,9 +17,11 @@ import 'package:cis_crm/core/theme/theme_cubit.dart';
 import 'package:cis_crm/core/widgets/adaptive_scaffold.dart';
 import 'package:cis_crm/features/activity/data/datasources/activity_remote_data_source.dart';
 import 'package:cis_crm/features/activity/data/datasources/activity_remote_data_source_impl.dart';
+import 'package:cis_crm/features/activity/data/repositories/calendar_activity_repository_impl.dart';
 import 'package:cis_crm/features/activity/data/repositories/call_log_repository_impl.dart';
 import 'package:cis_crm/features/activity/data/repositories/task_repository_impl.dart';
 import 'package:cis_crm/features/activity/data/repositories/timeline_repository_impl.dart';
+import 'package:cis_crm/features/activity/domain/repositories/calendar_activity_repository.dart';
 import 'package:cis_crm/features/activity/domain/repositories/call_log_repository.dart';
 import 'package:cis_crm/features/activity/domain/repositories/task_repository.dart';
 import 'package:cis_crm/features/activity/domain/repositories/timeline_repository.dart';
@@ -260,6 +262,11 @@ Future<void> configureDependencies(FlavorConfig config) async {
     ..registerLazySingleton<CalendarRepository>(
       () => CalendarRepositoryImpl(
         remoteDataSource: getIt<CalendarRemoteDataSource>(),
+      ),
+    )
+    ..registerLazySingleton<CalendarActivityRepository>(
+      () => CalendarActivityRepositoryImpl(
+        remoteDataSource: getIt<ActivityRemoteDataSource>(),
       ),
     )
     ..registerLazySingleton<TaskRepository>(

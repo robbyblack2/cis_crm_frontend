@@ -6,19 +6,32 @@ class EmailTemplate extends Equatable {
   const EmailTemplate({
     required this.id,
     required this.name,
-    required this.subject,
-    required this.body,
+    required this.subjectTemplate,
+    required this.bodyTemplate,
     required this.createdAt,
     required this.updatedAt,
+    this.variables,
+    this.createdBy,
   });
 
   final String id;
   final String name;
-  final String subject;
-  final String body;
+  final String subjectTemplate;
+  final String bodyTemplate;
+  final dynamic variables;
+  final String? createdBy;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   @override
-  List<Object?> get props => [id, name, subject, body, createdAt, updatedAt];
+  List<Object?> get props => [
+        id,
+        name,
+        subjectTemplate,
+        bodyTemplate,
+        variables,
+        createdBy,
+        createdAt,
+        updatedAt,
+      ];
 }

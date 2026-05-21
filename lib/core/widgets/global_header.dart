@@ -54,14 +54,10 @@ class GlobalHeader extends StatelessWidget {
           const SizedBox(width: 16),
 
           // Compose email
-          FilledButton.tonalIcon(
+          IconButton(
             onPressed: () => context.push(Routes.emailCompose),
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            label: const Text('Compose'),
-            style: FilledButton.styleFrom(
-              visualDensity: VisualDensity.compact,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-            ),
+            icon: const Icon(Icons.email_outlined),
+            tooltip: 'Compose email',
           ),
           const SizedBox(width: 8),
 
@@ -106,21 +102,6 @@ class _GlobalSearchBar extends StatelessWidget {
                   'Search...',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: colorScheme.outlineVariant),
-                ),
-                child: Text(
-                  'Ctrl+K',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontSize: 10,
                   ),
                 ),
               ),

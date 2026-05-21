@@ -12,6 +12,7 @@ import 'package:cis_crm/features/contacts/presentation/bloc/contact_form_cubit.d
 import 'package:cis_crm/features/contacts/presentation/bloc/contacts_bloc.dart';
 import 'package:cis_crm/features/contacts/presentation/pages/company_detail_page.dart';
 import 'package:cis_crm/features/contacts/presentation/pages/contact_detail_page.dart';
+import 'package:cis_crm/features/contacts/presentation/widgets/company_tile.dart';
 import 'package:cis_crm/features/contacts/presentation/widgets/contact_tile.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:dio/dio.dart';
@@ -948,35 +949,15 @@ class _CompaniesTabState extends State<_CompaniesTab> {
                       const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final company = _companies![index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor:
-                            theme.colorScheme.primaryContainer,
-                        child: Text(
-                          company.name.isNotEmpty
-                              ? company.name[0].toUpperCase()
-                              : '?',
-                          style: TextStyle(
-                            color:
-                                theme.colorScheme.onPrimaryContainer,
-                          ),
-                        ),
-                      ),
-                      title: Text(company.name),
-                      subtitle: Text(
-                        [
-                          if (company.industry != null)
-                            company.industry!,
-                          if (company.domain != null) company.domain!,
-                        ].join(' · '),
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
+                    return CompanyTile(
+                      company: company,
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
                           builder: (_) =>
                               CompanyDetailPage(company: company),
                         ),
                       ),
+                      onUpdated: _load,
                     );
                   },
                 ),

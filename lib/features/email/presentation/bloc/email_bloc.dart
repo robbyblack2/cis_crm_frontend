@@ -91,8 +91,8 @@ class EmailBloc extends Bloc<EmailEvent, EmailState> {
     emit(const EmailLoading());
     final result = await _repository.createTemplate(
       name: event.name,
-      subject: event.subject,
-      body: event.body,
+      subjectTemplate: event.subject,
+      bodyTemplate: event.body,
     );
     switch (result) {
       case Success():

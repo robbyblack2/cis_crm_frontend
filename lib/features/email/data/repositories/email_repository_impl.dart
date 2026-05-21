@@ -82,14 +82,14 @@ class EmailRepositoryImpl implements EmailRepository {
   @override
   Future<Result<EmailTemplate, AppFailure>> createTemplate({
     required String name,
-    required String subject,
-    required String body,
+    required String subjectTemplate,
+    required String bodyTemplate,
   }) =>
       _guard(
         () => _remoteDataSource.createTemplate(
           name: name,
-          subject: subject,
-          body: body,
+          subjectTemplate: subjectTemplate,
+          bodyTemplate: bodyTemplate,
         ),
       );
 
@@ -97,15 +97,15 @@ class EmailRepositoryImpl implements EmailRepository {
   Future<Result<EmailTemplate, AppFailure>> updateTemplate({
     required String id,
     required String name,
-    required String subject,
-    required String body,
+    required String subjectTemplate,
+    required String bodyTemplate,
   }) =>
       _guard(
         () => _remoteDataSource.updateTemplate(
           id: id,
           name: name,
-          subject: subject,
-          body: body,
+          subjectTemplate: subjectTemplate,
+          bodyTemplate: bodyTemplate,
         ),
       );
 

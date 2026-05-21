@@ -92,8 +92,12 @@ class _RecordDetailScaffoldState extends State<_RecordDetailScaffold>
   @override
   void initState() {
     super.initState();
-    // Default to Overview tab (index 0)
-    _tabController = TabController(length: 4, vsync: this);
+    // Email-sourced records default to Conversation tab (index 1).
+    _tabController = TabController(
+      length: 4,
+      vsync: this,
+      initialIndex: widget.record.source == RecordSource.email ? 1 : 0,
+    );
   }
 
   @override
@@ -220,6 +224,13 @@ class _RecordDetailScaffoldState extends State<_RecordDetailScaffold>
                   onShowAddTagDialog: () =>
                       _showAddTagDialog(context, record),
                 ),
+                if (record.source == RecordSource.email) ...[
+                  const SizedBox(height: 16),
+                  _OriginalEmailPreview(
+                    recordId: record.id,
+                    onViewFull: () => _tabController.animateTo(1),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 _NotesSection(recordId: record.id),
               ],
@@ -229,7 +240,10 @@ class _RecordDetailScaffoldState extends State<_RecordDetailScaffold>
           // ── Tab 2: Conversation ──
           SingleChildScrollView(
             padding: const EdgeInsets.all(16),
-            child: _ConversationSection(recordId: record.id),
+            child: _ConversationSection(
+              recordId: record.id,
+              isEmailSourced: record.source == RecordSource.email,
+            ),
           ),
 
           // ── Tab 3: Activity (Timeline + Activities) ──
@@ -728,7 +742,7 @@ class _NotesSectionState extends State<_NotesSection> {
                       controller: _noteController,
                       focusNode: _noteFocusNode,
                       decoration: InputDecoration(
-                        hintText: 'Add a note... (Enter to send)',
+                        hintText: 'Add a note...',
                         isDense: true,
                         border: const OutlineInputBorder(),
                         suffixIcon: _posting
@@ -1344,9 +1358,152 @@ class _LinkedContactsSectionState extends State<_LinkedContactsSection> {
   }
 }
 
-class _ConversationSection extends StatefulWidget {
-  const _ConversationSection({required this.recordId});
+/// Shows a brief email preview card on the Overview tab for email-sourced records.
+class _OriginalEmailPreview extends StatefulWidget {
+  const _OriginalEmailPreview({
+    required this.recordId,
+    required this.onViewFull,
+  });
+
   final String recordId;
+  final VoidCallback onViewFull;
+
+  @override
+  State<_OriginalEmailPreview> createState() => _OriginalEmailPreviewState();
+}
+
+class _OriginalEmailPreviewState extends State<_OriginalEmailPreview> {
+  Map<String, dynamic>? _firstMessage;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final messages = await GetIt.instance<RecordRemoteDataSource>()
+          .getConversation(widget.recordId);
+      if (mounted) {
+        setState(() {
+          _firstMessage = messages.isNotEmpty ? messages.first : null;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    if (_loading) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(Icons.email_outlined, color: cs.primary),
+              const SizedBox(width: 8),
+              Text('Loading email...', style: theme.textTheme.bodySmall),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_firstMessage == null) return const SizedBox.shrink();
+
+    final msg = _firstMessage!;
+    final from = msg['from_address'] as String? ??
+        msg['sender_email'] as String? ??
+        '';
+    final subject = msg['subject'] as String? ?? '(no subject)';
+    final body = renderEmailBody(
+      msg['text_body'] as String? ??
+          msg['body'] as String? ??
+          msg['html_body'] as String? ??
+          '',
+    );
+    final timestamp = msg['created_at'] as String? ??
+        msg['sent_at'] as String? ??
+        '';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.email_outlined, color: cs.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Original Email',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                if (timestamp.isNotEmpty)
+                  Text(
+                    _fmtTs(timestamp),
+                    style: theme.textTheme.labelSmall
+                        ?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+              ],
+            ),
+            const Divider(height: 16),
+            if (from.isNotEmpty)
+              Text(
+                'From: $from',
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: cs.onSurfaceVariant),
+              ),
+            const SizedBox(height: 4),
+            Text(
+              'Subject: $subject',
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            if (body.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                body,
+                style: theme.textTheme.bodySmall,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: widget.onViewFull,
+                icon: const Icon(Icons.open_in_new, size: 16),
+                label: const Text('View full email'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ConversationSection extends StatefulWidget {
+  const _ConversationSection({
+    required this.recordId,
+    this.isEmailSourced = false,
+  });
+  final String recordId;
+  final bool isEmailSourced;
 
   @override
   State<_ConversationSection> createState() => _ConversationSectionState();
@@ -1378,7 +1535,19 @@ class _ConversationSectionState extends State<_ConversationSection> {
     try {
       final messages = await GetIt.instance<RecordRemoteDataSource>()
           .getConversation(widget.recordId);
-      if (mounted) setState(() { _messages = messages; _loading = false; });
+      if (mounted) {
+        setState(() {
+          _messages = messages;
+          _loading = false;
+        });
+        // Auto-expand the first thread for email-sourced records.
+        if (widget.isEmailSourced && messages.isNotEmpty) {
+          final threads = _buildThreads();
+          if (threads.isNotEmpty) {
+            setState(() => _expandedThreads.add(threads.first.key));
+          }
+        }
+      }
     } catch (_) {
       if (mounted) setState(() { _messages = []; _loading = false; });
     }
@@ -2710,167 +2879,6 @@ class _RecordDetailsCardState extends State<_RecordDetailsCard> {
           IconButton(
             icon: const Icon(Icons.close, size: 18),
             onPressed: () => setState(() => _editingStage = false),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showContactPicker() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 24,
-          right: 24,
-          top: 24,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Select Contact',
-              style: Theme.of(ctx).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 16),
-            SearchOrCreateField<Map<String, dynamic>>(
-              label: 'Search contacts...',
-              onSearch: _searchContacts,
-              itemLabel: (c) => c['name'] as String? ?? '',
-              itemSubtitle: (c) => c['email'] as String? ?? '',
-              createEntityLabel: 'contact',
-              onSelected: (c) {
-                Navigator.pop(ctx);
-                _updateField(contactId: c['id'] as String?);
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showCompanyPicker() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 24,
-          right: 24,
-          top: 24,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Select Company',
-              style: Theme.of(ctx).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 16),
-            SearchOrCreateField<Map<String, dynamic>>(
-              label: 'Search companies...',
-              onSearch: _searchCompanies,
-              itemLabel: (c) => c['name'] as String? ?? '',
-              createEntityLabel: 'company',
-              onSelected: (c) {
-                Navigator.pop(ctx);
-                _updateField(companyId: c['id'] as String?);
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showOwnerPicker() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 24,
-          right: 24,
-          top: 24,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Assign Owner',
-              style: Theme.of(ctx).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 16),
-            SearchOrCreateField<Map<String, dynamic>>(
-              label: 'Search team members...',
-              onSearch: _searchUsers,
-              itemLabel: (u) => u['name'] as String? ?? '',
-              itemSubtitle: (u) => u['email'] as String? ?? '',
-              onSelected: (u) {
-                Navigator.pop(ctx);
-                _updateField(ownerId: u['id'] as String?);
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showStagePicker() {
-    final pipelineState = context.read<PipelineBloc>().state;
-    if (pipelineState is! PipelineLoaded) return;
-    final stages = pipelineState.kanbanStages;
-    if (stages == null || stages.isEmpty) return;
-
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (ctx) => ListView(
-        shrinkWrap: true,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              'Move to Stage',
-              style: Theme.of(ctx).textTheme.headlineSmall,
-            ),
-          ),
-          ...stages.map(
-            (s) => ListTile(
-              leading: Icon(
-                Icons.flag_outlined,
-                color: s.id == widget.record.stageId
-                    ? Theme.of(ctx).colorScheme.primary
-                    : null,
-              ),
-              title: Text(s.name),
-              selected: s.id == widget.record.stageId,
-              onTap: () {
-                Navigator.pop(ctx);
-                if (s.id != widget.record.stageId) {
-                  context.read<RecordBloc>().add(
-                        RecordMoveRequested(
-                          recordId: widget.record.id,
-                          toStageId: s.id,
-                        ),
-                      );
-                }
-              },
-            ),
           ),
         ],
       ),

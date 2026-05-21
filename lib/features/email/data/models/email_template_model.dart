@@ -8,10 +8,12 @@ class EmailTemplateModel extends EmailTemplate {
   const EmailTemplateModel({
     required super.id,
     required super.name,
-    required super.subject,
-    required super.body,
+    required super.subjectTemplate,
+    required super.bodyTemplate,
     required super.createdAt,
     required super.updatedAt,
+    super.variables,
+    super.createdBy,
   });
 
   factory EmailTemplateModel.fromJson(Map<String, dynamic> json) =>
