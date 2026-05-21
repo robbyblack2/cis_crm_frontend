@@ -14,13 +14,25 @@ class CalendarActivityRepositoryImpl implements CalendarActivityRepository {
 
   @override
   Future<Result<List<Activity>, AppFailure>> getActivities({
-    required String from,
-    required String to,
+    String? activityType,
+    String? statusId,
+    String? phase,
+    String? assigneeId,
+    String? from,
+    String? to,
+    int page = 1,
+    int perPage = 25,
   }) async {
     try {
       final activities = await _remoteDataSource.getActivities(
+        activityType: activityType,
+        statusId: statusId,
+        phase: phase,
+        assigneeId: assigneeId,
         from: from,
         to: to,
+        page: page,
+        perPage: perPage,
       );
       return Success(activities);
     } on NetworkException catch (e) {

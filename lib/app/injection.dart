@@ -104,6 +104,10 @@ import 'package:cis_crm/features/settings/domain/repositories/google_repository.
 import 'package:cis_crm/features/settings/presentation/bloc/google_integration_cubit.dart';
 import 'package:cis_crm/features/settings/presentation/pages/audit_log_page.dart';
 import 'package:cis_crm/features/settings/presentation/pages/integrations_page.dart';
+import 'package:cis_crm/features/activity/presentation/pages/activity_statuses_page.dart';
+import 'package:cis_crm/features/activity/presentation/pages/activity_subtypes_page.dart';
+import 'package:cis_crm/features/settings/presentation/pages/gdpr_page.dart';
+import 'package:cis_crm/features/settings/presentation/pages/roles_page.dart';
 import 'package:cis_crm/features/settings/presentation/pages/users_page.dart';
 import 'package:cis_crm/features/settings/presentation/pages/profile_page.dart';
 import 'package:cis_crm/features/settings/presentation/pages/settings_page.dart';
@@ -544,6 +548,22 @@ Future<void> configureDependencies(FlavorConfig config) async {
         GoRoute(
           path: Routes.users,
           builder: (_, __) => const UsersPage(),
+        ),
+        GoRoute(
+          path: Routes.roles,
+          builder: (_, __) => const RolesPage(),
+        ),
+        GoRoute(
+          path: Routes.activityStatuses,
+          builder: (_, __) => const ActivityStatusesPage(),
+        ),
+        GoRoute(
+          path: Routes.activitySubtypes,
+          builder: (_, __) => const ActivitySubtypesPage(),
+        ),
+        GoRoute(
+          path: Routes.gdpr,
+          builder: (_, __) => const GdprPage(),
         ),
         GoRoute(
           path: Routes.auditLog,

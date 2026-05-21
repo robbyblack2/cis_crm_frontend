@@ -12,6 +12,8 @@ class CalendarEvent extends Equatable {
     this.googleEventId,
     this.location,
     this.meetingLink,
+    this.conferenceProvider,
+    this.conferenceData,
     this.linkedRecordId,
   });
 
@@ -22,8 +24,12 @@ class CalendarEvent extends Equatable {
   final DateTime end;
   final String? location;
   final String? meetingLink;
+  final String? conferenceProvider;
+  final Map<String, dynamic>? conferenceData;
   final String? linkedRecordId;
   final DateTime createdAt;
+
+  bool get hasMeeting => meetingLink != null && meetingLink!.isNotEmpty;
 
   @override
   List<Object?> get props => [
@@ -34,6 +40,8 @@ class CalendarEvent extends Equatable {
         end,
         location,
         meetingLink,
+        conferenceProvider,
+        conferenceData,
         linkedRecordId,
         createdAt,
       ];

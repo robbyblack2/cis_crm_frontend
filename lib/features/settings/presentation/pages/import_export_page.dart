@@ -122,6 +122,19 @@ class ImportExportPage extends StatelessWidget {
 
     if (!context.mounted) return;
 
+    // 25 MB server limit.
+    const maxBytes = 25 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'File too large (${(file.size / 1024 / 1024).toStringAsFixed(1)} MB). Maximum is 25 MB.',
+          ),
+        ),
+      );
+      return;
+    }
+
     try {
       // Use bytes on web, path on native
       final multipartFile = file.path != null

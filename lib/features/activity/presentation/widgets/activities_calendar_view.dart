@@ -10,13 +10,11 @@ class ActivityColors {
   static const meeting = Color(0xFFA855F7);
   static const task = Color(0xFF3B82F6);
   static const call = Color(0xFF22C55E);
-  static const email = Color(0xFF64748B);
 
   static Color forType(ActivityType type) => switch (type) {
         ActivityType.meeting => meeting,
         ActivityType.task => task,
         ActivityType.call => call,
-        ActivityType.email => email,
       };
 }
 

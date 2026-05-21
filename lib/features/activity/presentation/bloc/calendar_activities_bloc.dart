@@ -174,7 +174,11 @@ class CalendarActivitiesBloc
     final lastDay = DateTime(month.year, month.month + 1, 0);
     final to = _dateFmt.format(lastDay);
 
-    final result = await _repository.getActivities(from: from, to: to);
+    final result = await _repository.getActivities(
+      from: from,
+      to: to,
+      perPage: 100,
+    );
 
     switch (result) {
       case Success(:final data):

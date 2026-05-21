@@ -1,5 +1,5 @@
 import 'package:cis_crm/core/error/result.dart';
-import 'package:cis_crm/features/activity/domain/entities/call_log.dart';
+import 'package:cis_crm/features/activity/domain/entities/activity.dart';
 import 'package:cis_crm/features/activity/domain/repositories/call_log_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
@@ -26,7 +26,7 @@ final class CallLogLoading extends CallLogState {
 final class CallLogLoaded extends CallLogState {
   const CallLogLoaded({required this.callLogs});
 
-  final List<CallLog> callLogs;
+  final List<Activity> callLogs;
 
   @override
   List<Object?> get props => [callLogs];
@@ -61,7 +61,7 @@ class CallLogCubit extends Cubit<CallLogState> {
     }
   }
 
-  Future<void> logCall(CallLog log) async {
+  Future<void> logCall(Activity log) async {
     emit(const CallLogLoading());
     final result = await _repository.logCall(log);
     switch (result) {

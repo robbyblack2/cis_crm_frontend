@@ -2430,6 +2430,22 @@ class _RecordFilesSectionState extends State<_RecordFilesSection> {
       final result = await FilePicker.platform.pickFiles(withData: true);
       if (result == null || result.files.isEmpty) return;
       final file = result.files.first;
+
+      // 25 MB server limit.
+      const maxBytes = 25 * 1024 * 1024;
+      if (file.size > maxBytes) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'File too large (${(file.size / 1024 / 1024).toStringAsFixed(1)} MB). Maximum is 25 MB.',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
       if (file.bytes == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

@@ -30,7 +30,7 @@ class _FilesView extends StatelessWidget {
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.filesTitle)),
       floatingActionButton: FloatingActionButton(
         heroTag: 'files_fab',
-        tooltip: AppLocalizations.of(context)!.uploadFile,
+        tooltip: '${AppLocalizations.of(context)!.uploadFile} (max 25 MB)',
         onPressed: () => _pickAndUploadFile(context),
         child: const Icon(Icons.upload_file),
       ),
@@ -90,6 +90,19 @@ class _FilesView extends StatelessWidget {
     if (result == null || result.files.isEmpty) return;
     final file = result.files.first;
     if (!context.mounted) return;
+
+    // 25 MB server limit — validate before uploading.
+    const maxBytes = 25 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'File too large (${(file.size / 1024 / 1024).toStringAsFixed(1)} MB). Maximum is 25 MB.',
+          ),
+        ),
+      );
+      return;
+    }
 
     // On web, path is null — use bytes. On native, use path.
     if (file.path != null) {

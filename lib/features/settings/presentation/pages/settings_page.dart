@@ -80,6 +80,20 @@ class SettingsPage extends StatelessWidget {
             onTap: () => context.push(Routes.pipelineManagement),
           ),
           ListTile(
+            leading: const Icon(Icons.checklist),
+            title: const Text('Activity Statuses'),
+            subtitle: const Text('Configure statuses per activity type'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.activityStatuses),
+          ),
+          ListTile(
+            leading: const Icon(Icons.category_outlined),
+            title: const Text('Activity Subtypes'),
+            subtitle: const Text('Categories for tasks, calls, meetings'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.activitySubtypes),
+          ),
+          ListTile(
             leading: const Icon(Icons.bolt_outlined),
             title: Text(l10n.automationTitle),
             subtitle: Text(l10n.automationSubtitle),
@@ -124,6 +138,20 @@ class SettingsPage extends StatelessWidget {
             subtitle: const Text('Manage team members'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(Routes.users),
+          ),
+          ListTile(
+            leading: const Icon(Icons.admin_panel_settings_outlined),
+            title: const Text('Roles & Permissions'),
+            subtitle: const Text('Manage access control'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.roles),
+          ),
+          ListTile(
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: const Text('Data Privacy (GDPR)'),
+            subtitle: const Text('Hard delete or export contact data'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.gdpr),
           ),
           ListTile(
             leading: const Icon(Icons.history),

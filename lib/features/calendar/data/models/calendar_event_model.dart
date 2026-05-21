@@ -10,6 +10,8 @@ class CalendarEventModel extends CalendarEvent {
     super.googleEventId,
     super.location,
     super.meetingLink,
+    super.conferenceProvider,
+    super.conferenceData,
     super.linkedRecordId,
   });
 
@@ -32,7 +34,10 @@ class CalendarEventModel extends CalendarEvent {
       ),
       googleEventId: json['google_event_id'] as String?,
       location: json['location'] as String?,
-      meetingLink: json['meeting_link'] as String?,
+      meetingLink: json['meeting_url'] as String? ??
+          json['meeting_link'] as String?,
+      conferenceProvider: json['conference_provider'] as String?,
+      conferenceData: json['conference_data'] as Map<String, dynamic>?,
       linkedRecordId: json['linked_record_id'] as String?,
     );
   }
@@ -47,6 +52,8 @@ class CalendarEventModel extends CalendarEvent {
         googleEventId: entity.googleEventId,
         location: entity.location,
         meetingLink: entity.meetingLink,
+        conferenceProvider: entity.conferenceProvider,
+        conferenceData: entity.conferenceData,
         linkedRecordId: entity.linkedRecordId,
       );
 
@@ -57,7 +64,7 @@ class CalendarEventModel extends CalendarEvent {
         'attendees': <Map<String, dynamic>>[],
         if (location != null && location!.isNotEmpty) 'location': location,
         if (meetingLink != null && meetingLink!.isNotEmpty)
-          'meeting_link': meetingLink,
+          'meeting_url': meetingLink,
         if (linkedRecordId != null) 'linked_record_id': linkedRecordId,
       };
 }

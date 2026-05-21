@@ -30,6 +30,10 @@ abstract final class Routes {
   static const importExport = '/import-export';
 
   static const users = '/users';
+  static const roles = '/roles';
+  static const activityStatuses = '/activity-statuses';
+  static const activitySubtypes = '/activity-subtypes';
+  static const gdpr = '/gdpr';
   static const auditLog = '/audit-log';
 
   static const debugFlags = '/debug/flags';

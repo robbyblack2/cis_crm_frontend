@@ -296,21 +296,8 @@ class _CompanyDetailPageState extends State<CompanyDetailPage>
             },
           ),
 
-          // ── Email tab (placeholder) ──
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.email_outlined, size: 48,
-                    color: colorScheme.onSurfaceVariant),
-                const SizedBox(height: 8),
-                Text('Email history for company contacts',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    )),
-              ],
-            ),
-          ),
+          // ── Email tab ──
+          _CompanyEmailsSection(companyId: _company.id),
 
           // ── Activity tab ──
           SingleChildScrollView(
@@ -577,5 +564,165 @@ class _RelatedListTab extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+/// Loads and displays emails linked to a company.
+class _CompanyEmailsSection extends StatefulWidget {
+  const _CompanyEmailsSection({required this.companyId});
+
+  final String companyId;
+
+  @override
+  State<_CompanyEmailsSection> createState() => _CompanyEmailsSectionState();
+}
+
+class _CompanyEmailsSectionState extends State<_CompanyEmailsSection> {
+  List<Map<String, dynamic>>? _emails;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final response = await getIt<Dio>().get<Map<String, dynamic>>(
+        '/api/companies/${widget.companyId}/emails',
+      );
+      final list = response.data?['data'] as List<dynamic>?;
+      if (mounted) {
+        setState(() {
+          _emails = list?.cast<Map<String, dynamic>>() ?? [];
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() { _emails = []; _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_emails == null || _emails!.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.email_outlined, size: 48, color: cs.onSurfaceVariant),
+            const SizedBox(height: 8),
+            Text(
+              'No emails yet',
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: cs.onSurfaceVariant),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: _emails!.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final email = _emails![index];
+        final subject = email['subject'] as String? ?? '(no subject)';
+        final from = email['from_address'] as String? ??
+            email['sender_email'] as String? ??
+            '';
+        final timestamp = email['created_at'] as String? ??
+            email['sent_at'] as String? ??
+            '';
+        final body = email['text_body'] as String? ??
+            email['body'] as String? ??
+            '';
+        final direction =
+            (email['direction'] as String? ?? '').toLowerCase();
+        final isOutbound = direction == 'outbound' || direction == 'sent';
+
+        return Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: cs.outlineVariant),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      isOutbound
+                          ? Icons.arrow_upward_rounded
+                          : Icons.arrow_downward_rounded,
+                      size: 16,
+                      color: isOutbound ? cs.primary : cs.tertiary,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        subject,
+                        style: theme.textTheme.titleSmall
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (timestamp.isNotEmpty)
+                      Text(
+                        _fmtTs(timestamp),
+                        style: theme.textTheme.labelSmall
+                            ?.copyWith(color: cs.onSurfaceVariant),
+                      ),
+                  ],
+                ),
+                if (from.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'From: $from',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: cs.onSurfaceVariant),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                if (body.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    body,
+                    style: theme.textTheme.bodySmall,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _fmtTs(String iso) {
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      return '${dt.day}/${dt.month}/${dt.year} '
+          '${dt.hour.toString().padLeft(2, '0')}:'
+          '${dt.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return iso;
+    }
   }
 }

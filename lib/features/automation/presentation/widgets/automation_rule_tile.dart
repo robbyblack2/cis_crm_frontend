@@ -60,6 +60,8 @@ class AutomationRuleTile extends StatelessWidget {
       'record.updated' => Icons.edit_outlined,
       'contact.created' => Icons.person_add_outlined,
       'contact.updated' => Icons.person_outline,
+      'activity.created' => Icons.add_task,
+      'activity.completed' => Icons.check_circle,
       'task.created' => Icons.task_alt,
       'task.completed' => Icons.check_circle_outline,
       'email.received' => Icons.email_outlined,

@@ -4,14 +4,12 @@ const _typeMap = {
   'task': ActivityType.task,
   'call': ActivityType.call,
   'meeting': ActivityType.meeting,
-  'email': ActivityType.email,
 };
 
 const _typeToString = {
   ActivityType.task: 'task',
   ActivityType.call: 'call',
   ActivityType.meeting: 'meeting',
-  ActivityType.email: 'email',
 };
 
 const _priorityMap = {
@@ -31,12 +29,16 @@ class ActivityModel extends Activity {
     required super.id,
     required super.activityType,
     required super.title,
-    required super.status,
+    required super.statusId,
+    required super.statusName,
+    required super.statusPhase,
     required super.createdAt,
     required super.updatedAt,
     super.description,
     super.priority,
     super.assigneeId,
+    super.subtypeId,
+    super.subtypeName,
     super.dueDate,
     super.dueTime,
     super.completedAt,
@@ -52,10 +54,14 @@ class ActivityModel extends Activity {
       activityType:
           _typeMap[json['activity_type'] as String?] ?? ActivityType.task,
       title: json['title'] as String? ?? '',
-      status: json['status'] as String? ?? '',
+      statusId: json['status_id'] as String? ?? '',
+      statusName: json['status_name'] as String? ?? '',
+      statusPhase: json['status_phase'] as String? ?? 'open',
       description: json['description'] as String?,
       priority: _priorityMap[json['priority'] as String?],
       assigneeId: json['assignee_id'] as String?,
+      subtypeId: json['subtype_id'] as String?,
+      subtypeName: json['subtype_name'] as String?,
       dueDate: json['due_date'] as String?,
       dueTime: json['due_time'] as String?,
       completedAt: json['completed_at'] != null
@@ -81,10 +87,11 @@ class ActivityModel extends Activity {
   Map<String, dynamic> toJson() => {
         'activity_type': _typeToString[activityType],
         'title': title,
-        'status': status,
+        'status_id': statusId,
         if (description != null) 'description': description,
         if (priority != null) 'priority': _priorityToString[priority],
         if (assigneeId != null) 'assignee_id': assigneeId,
+        if (subtypeId != null) 'subtype_id': subtypeId,
         if (dueDate != null) 'due_date': dueDate,
         if (dueTime != null) 'due_time': dueTime,
         if (data.isNotEmpty) 'data': data,

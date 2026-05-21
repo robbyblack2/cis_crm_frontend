@@ -2,8 +2,8 @@ import 'package:cis_crm/core/error/exceptions.dart';
 import 'package:cis_crm/core/error/failures.dart';
 import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/features/activity/data/datasources/activity_remote_data_source.dart';
-import 'package:cis_crm/features/activity/data/models/crm_task_model.dart';
-import 'package:cis_crm/features/activity/domain/entities/crm_task.dart';
+import 'package:cis_crm/features/activity/data/models/activity_model.dart';
+import 'package:cis_crm/features/activity/domain/entities/activity.dart';
 import 'package:cis_crm/features/activity/domain/repositories/task_repository.dart';
 
 class TaskRepositoryImpl implements TaskRepository {
@@ -14,9 +14,12 @@ class TaskRepositoryImpl implements TaskRepository {
   final ActivityRemoteDataSource _remoteDataSource;
 
   @override
-  Future<Result<List<CrmTask>, AppFailure>> getTasks() async {
+  Future<Result<List<Activity>, AppFailure>> getTasks() async {
     try {
-      final tasks = await _remoteDataSource.getTasks();
+      final tasks = await _remoteDataSource.getActivities(
+        activityType: 'task',
+        perPage: 100,
+      );
       return Success(tasks);
     } on NetworkException catch (e) {
       return Failure(NetworkFailure(e.message));
@@ -30,9 +33,9 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
-  Future<Result<CrmTask, AppFailure>> getTask(String id) async {
+  Future<Result<Activity, AppFailure>> getTask(String id) async {
     try {
-      final task = await _remoteDataSource.getTask(id);
+      final task = await _remoteDataSource.getActivity(id);
       return Success(task);
     } on NetworkException catch (e) {
       return Failure(NetworkFailure(e.message));
@@ -46,10 +49,10 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
-  Future<Result<CrmTask, AppFailure>> createTask(CrmTask task) async {
+  Future<Result<Activity, AppFailure>> createTask(Activity task) async {
     try {
-      final model = CrmTaskModel.fromEntity(task);
-      final created = await _remoteDataSource.createTask(model);
+      final model = task as ActivityModel;
+      final created = await _remoteDataSource.createActivity(model);
       return Success(created);
     } on NetworkException catch (e) {
       return Failure(NetworkFailure(e.message));
@@ -63,10 +66,10 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
-  Future<Result<CrmTask, AppFailure>> updateTask(CrmTask task) async {
+  Future<Result<Activity, AppFailure>> updateTask(Activity task) async {
     try {
-      final model = CrmTaskModel.fromEntity(task);
-      final updated = await _remoteDataSource.updateTask(model);
+      final model = task as ActivityModel;
+      final updated = await _remoteDataSource.updateActivity(model);
       return Success(updated);
     } on NetworkException catch (e) {
       return Failure(NetworkFailure(e.message));
@@ -82,7 +85,7 @@ class TaskRepositoryImpl implements TaskRepository {
   @override
   Future<Result<void, AppFailure>> deleteTask(String id) async {
     try {
-      await _remoteDataSource.deleteTask(id);
+      await _remoteDataSource.deleteActivity(id);
       return const Success(null);
     } on NetworkException catch (e) {
       return Failure(NetworkFailure(e.message));

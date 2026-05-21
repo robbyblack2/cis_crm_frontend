@@ -2,8 +2,8 @@ import 'package:cis_crm/core/error/exceptions.dart';
 import 'package:cis_crm/core/error/failures.dart';
 import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/features/activity/data/datasources/activity_remote_data_source.dart';
-import 'package:cis_crm/features/activity/data/models/call_log_model.dart';
-import 'package:cis_crm/features/activity/domain/entities/call_log.dart';
+import 'package:cis_crm/features/activity/data/models/activity_model.dart';
+import 'package:cis_crm/features/activity/domain/entities/activity.dart';
 import 'package:cis_crm/features/activity/domain/repositories/call_log_repository.dart';
 
 class CallLogRepositoryImpl implements CallLogRepository {
@@ -14,10 +14,13 @@ class CallLogRepositoryImpl implements CallLogRepository {
   final ActivityRemoteDataSource _remoteDataSource;
 
   @override
-  Future<Result<List<CallLog>, AppFailure>> getCallLogs() async {
+  Future<Result<List<Activity>, AppFailure>> getCallLogs() async {
     try {
-      final logs = await _remoteDataSource.getCallLogs();
-      return Success(logs);
+      final calls = await _remoteDataSource.getActivities(
+        activityType: 'call',
+        perPage: 100,
+      );
+      return Success(calls);
     } on NetworkException catch (e) {
       return Failure(NetworkFailure(e.message));
     } on UnauthorizedException catch (e) {
@@ -30,10 +33,10 @@ class CallLogRepositoryImpl implements CallLogRepository {
   }
 
   @override
-  Future<Result<CallLog, AppFailure>> logCall(CallLog callLog) async {
+  Future<Result<Activity, AppFailure>> logCall(Activity callLog) async {
     try {
-      final model = CallLogModel.fromEntity(callLog);
-      final created = await _remoteDataSource.logCall(model);
+      final model = callLog as ActivityModel;
+      final created = await _remoteDataSource.createActivity(model);
       return Success(created);
     } on NetworkException catch (e) {
       return Failure(NetworkFailure(e.message));

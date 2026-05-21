@@ -4,7 +4,13 @@ import 'package:cis_crm/features/activity/domain/entities/activity.dart';
 
 abstract interface class CalendarActivityRepository {
   Future<Result<List<Activity>, AppFailure>> getActivities({
-    required String from,
-    required String to,
+    String? activityType,
+    String? statusId,
+    String? phase,
+    String? assigneeId,
+    String? from,
+    String? to,
+    int page = 1,
+    int perPage = 25,
   });
 }

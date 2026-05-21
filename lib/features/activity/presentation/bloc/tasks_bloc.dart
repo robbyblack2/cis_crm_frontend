@@ -1,6 +1,6 @@
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:cis_crm/core/error/result.dart';
-import 'package:cis_crm/features/activity/domain/entities/crm_task.dart';
+import 'package:cis_crm/features/activity/domain/entities/activity.dart';
 import 'package:cis_crm/features/activity/domain/repositories/task_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
@@ -23,7 +23,7 @@ final class TasksLoadRequested extends TasksEvent {
 final class TaskCreateRequested extends TasksEvent {
   const TaskCreateRequested({required this.task});
 
-  final CrmTask task;
+  final Activity task;
 
   @override
   List<Object?> get props => [task];
@@ -32,26 +32,7 @@ final class TaskCreateRequested extends TasksEvent {
 final class TaskUpdateRequested extends TasksEvent {
   const TaskUpdateRequested({required this.task});
 
-  final CrmTask task;
-
-  @override
-  List<Object?> get props => [task];
-}
-
-// Keep legacy event names used by the UI pages.
-final class TaskCreated extends TasksEvent {
-  const TaskCreated(this.task);
-
-  final CrmTask task;
-
-  @override
-  List<Object?> get props => [task];
-}
-
-final class TaskUpdated extends TasksEvent {
-  const TaskUpdated(this.task);
-
-  final CrmTask task;
+  final Activity task;
 
   @override
   List<Object?> get props => [task];
@@ -87,7 +68,7 @@ final class TasksLoading extends TasksState {
 final class TasksLoaded extends TasksState {
   const TasksLoaded({required this.tasks});
 
-  final List<CrmTask> tasks;
+  final List<Activity> tasks;
 
   @override
   List<Object?> get props => [tasks];
@@ -111,8 +92,6 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     on<TasksLoadRequested>(_onLoad, transformer: restartable());
     on<TaskCreateRequested>(_onCreateRequested, transformer: droppable());
     on<TaskUpdateRequested>(_onUpdateRequested, transformer: droppable());
-    on<TaskCreated>(_onCreate);
-    on<TaskUpdated>(_onUpdate);
     on<TaskDeleted>(_onDelete);
   }
 
@@ -170,15 +149,6 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
       case Failure(:final error):
         emit(TasksError(message: error.message));
     }
-  }
-
-  // Legacy event handlers used by UI pages.
-  void _onCreate(TaskCreated event, Emitter<TasksState> emit) {
-    add(TaskCreateRequested(task: event.task));
-  }
-
-  void _onUpdate(TaskUpdated event, Emitter<TasksState> emit) {
-    add(TaskUpdateRequested(task: event.task));
   }
 
   Future<void> _onDelete(TaskDeleted event, Emitter<TasksState> emit) async {

@@ -2,17 +2,12 @@ import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/core/widgets/state/empty_state.dart';
 import 'package:cis_crm/core/widgets/state/page_error.dart';
 import 'package:cis_crm/core/widgets/state/page_loading.dart';
-import 'package:cis_crm/features/activity/domain/entities/crm_task.dart';
-import 'package:cis_crm/features/activity/domain/entities/task_priority.dart';
-import 'package:cis_crm/features/activity/domain/entities/task_status.dart';
+import 'package:cis_crm/features/activity/domain/entities/activity.dart';
 import 'package:cis_crm/features/activity/domain/repositories/calendar_activity_repository.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/calendar_activities_bloc.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/tasks_bloc.dart';
-import 'package:cis_crm/features/activity/presentation/pages/task_detail_page.dart';
 import 'package:cis_crm/features/activity/presentation/widgets/activities_calendar_view.dart';
 import 'package:cis_crm/features/activity/presentation/widgets/day_detail_panel.dart';
-import 'package:cis_crm/features/activity/presentation/widgets/task_tile.dart';
-import 'package:cis_crm/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -49,9 +44,8 @@ class _TasksView extends StatefulWidget {
 }
 
 class _TasksViewState extends State<_TasksView> {
-  TaskStatus? _filter;
+  String? _phaseFilter; // null = all, "open", "closed"
   String _search = '';
-  // Calendar is the default view per issue #193.
   bool _calendarView = true;
 
   @override
@@ -86,16 +80,13 @@ class _TasksViewState extends State<_TasksView> {
         return Scaffold(
           appBar: AppBar(
             title: const Text('Activities'),
-            actions: [
-              _viewToggle(),
-            ],
+            actions: [_viewToggle()],
           ),
           body: LayoutBuilder(
             builder: (context, constraints) {
               final width = constraints.maxWidth;
 
               if (width >= 1200) {
-                // Desktop: calendar 65% + day detail 35%
                 return Row(
                   children: [
                     Expanded(
@@ -110,7 +101,7 @@ class _TasksViewState extends State<_TasksView> {
                         selectedDay: calState.selectedDay,
                         activities: calState.selectedDayActivities,
                         onActivityTap: _onActivityTap,
-                        onNewActivity: () => _showCreateTaskSheet(context),
+                        onNewActivity: () => _showCreateSheet(context),
                       ),
                     ),
                   ],
@@ -118,7 +109,6 @@ class _TasksViewState extends State<_TasksView> {
               }
 
               if (width >= 800) {
-                // Tablet: calendar on top, day detail below
                 return Column(
                   children: [
                     Expanded(
@@ -133,14 +123,13 @@ class _TasksViewState extends State<_TasksView> {
                         selectedDay: calState.selectedDay,
                         activities: calState.selectedDayActivities,
                         onActivityTap: _onActivityTap,
-                        onNewActivity: () => _showCreateTaskSheet(context),
+                        onNewActivity: () => _showCreateSheet(context),
                       ),
                     ),
                   ],
                 );
               }
 
-              // Mobile: just calendar, tap day to navigate
               return ActivitiesCalendarView(
                 onDaySelected: (day) {
                   _showDayDetailSheet(context, calState, day);
@@ -151,8 +140,7 @@ class _TasksViewState extends State<_TasksView> {
           ),
           floatingActionButton: FloatingActionButton.extended(
             heroTag: 'tasks_fab',
-            tooltip: 'New Activity',
-            onPressed: () => _showCreateTaskSheet(context),
+            onPressed: () => _showCreateSheet(context),
             icon: const Icon(Icons.add),
             label: const Text('New Activity'),
           ),
@@ -161,10 +149,7 @@ class _TasksViewState extends State<_TasksView> {
     );
   }
 
-  void _onActivityTap(activity) {
-    // For now, activities don't have a dedicated detail page.
-    // TODO: Navigate to activity detail when available.
-  }
+  void _onActivityTap(activity) {}
 
   void _showDayDetailSheet(
     BuildContext context,
@@ -183,7 +168,7 @@ class _TasksViewState extends State<_TasksView> {
           onActivityTap: _onActivityTap,
           onNewActivity: () {
             Navigator.pop(context);
-            _showCreateTaskSheet(context);
+            _showCreateSheet(context);
           },
         ),
       ),
@@ -192,7 +177,7 @@ class _TasksViewState extends State<_TasksView> {
 
   // ── List View ──
 
-  Widget _buildListView(BuildContext context, List<CrmTask> tasks) {
+  Widget _buildListView(BuildContext context, List<Activity> tasks) {
     var filtered = _search.isEmpty
         ? tasks
         : tasks.where((t) {
@@ -201,21 +186,18 @@ class _TasksViewState extends State<_TasksView> {
                 (t.description?.toLowerCase().contains(q) ?? false);
           }).toList();
 
-    if (_filter != null) {
-      filtered = filtered.where((t) => t.status == _filter).toList();
+    if (_phaseFilter != null) {
+      filtered =
+          filtered.where((t) => t.statusPhase == _phaseFilter).toList();
     }
 
-    final todoCount = tasks.where((t) => t.status == TaskStatus.todo).length;
-    final ipCount =
-        tasks.where((t) => t.status == TaskStatus.inProgress).length;
-    final doneCount = tasks.where((t) => t.status == TaskStatus.done).length;
+    final openCount = tasks.where((t) => t.statusPhase == 'open').length;
+    final closedCount = tasks.where((t) => t.statusPhase == 'closed').length;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Activities'),
-        actions: [
-          _viewToggle(),
-        ],
+        actions: [_viewToggle()],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(100),
           child: Column(
@@ -224,7 +206,7 @@ class _TasksViewState extends State<_TasksView> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: TextField(
                   decoration: InputDecoration(
-                    hintText: 'Search tasks...',
+                    hintText: 'Search activities...',
                     prefixIcon: const Icon(Icons.search, size: 20),
                     isDense: true,
                     border: OutlineInputBorder(
@@ -245,28 +227,22 @@ class _TasksViewState extends State<_TasksView> {
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: Row(
                   children: [
-                    _filterChip(
+                    _phaseChip(
                       context,
                       label: 'All (${tasks.length})',
                       value: null,
                     ),
                     const SizedBox(width: 8),
-                    _filterChip(
+                    _phaseChip(
                       context,
-                      label: 'To Do ($todoCount)',
-                      value: TaskStatus.todo,
+                      label: 'Open ($openCount)',
+                      value: 'open',
                     ),
                     const SizedBox(width: 8),
-                    _filterChip(
+                    _phaseChip(
                       context,
-                      label: 'In Progress ($ipCount)',
-                      value: TaskStatus.inProgress,
-                    ),
-                    const SizedBox(width: 8),
-                    _filterChip(
-                      context,
-                      label: 'Done ($doneCount)',
-                      value: TaskStatus.done,
+                      label: 'Closed ($closedCount)',
+                      value: 'closed',
                     ),
                   ],
                 ),
@@ -286,30 +262,22 @@ class _TasksViewState extends State<_TasksView> {
               itemCount: filtered.length,
               separatorBuilder: (_, __) => const SizedBox(height: 2),
               itemBuilder: (context, index) {
-                final task = filtered[index];
-                return TaskTile(
-                  task: task,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => BlocProvider.value(
-                        value: context.read<TasksBloc>(),
-                        child: TaskDetailPage(task: task),
-                      ),
-                    ),
-                  ),
-                  onStatusToggled: (updated) =>
-                      context.read<TasksBloc>().add(TaskUpdated(updated)),
-                  onDeleted: (id) =>
-                      context.read<TasksBloc>().add(TaskDeleted(id)),
+                final activity = filtered[index];
+                return _ActivityListTile(
+                  activity: activity,
+                  onTap: () => _onActivityTap(activity),
+                  onToggleComplete: () {
+                    // Toggle between open/closed not implemented yet —
+                    // requires fetching available statuses.
+                  },
                 );
               },
             ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'tasks_fab',
-        tooltip: AppLocalizations.of(context)!.addTask,
-        onPressed: () => _showCreateTaskSheet(context),
+        onPressed: () => _showCreateSheet(context),
         icon: const Icon(Icons.add),
-        label: const Text('New Task'),
+        label: const Text('New Activity'),
       ),
     );
   }
@@ -332,189 +300,114 @@ class _TasksViewState extends State<_TasksView> {
       ],
       selected: {_calendarView},
       onSelectionChanged: (v) => setState(() => _calendarView = v.first),
-      style: const ButtonStyle(
-        visualDensity: VisualDensity.compact,
-      ),
+      style: const ButtonStyle(visualDensity: VisualDensity.compact),
     );
   }
 
-  Widget _filterChip(
+  Widget _phaseChip(
     BuildContext context, {
     required String label,
-    required TaskStatus? value,
+    required String? value,
   }) {
-    final isSelected = _filter == value;
+    final isSelected = _phaseFilter == value;
     return FilterChip(
       label: Text(label),
       selected: isSelected,
-      onSelected: (_) => setState(() => _filter = value),
+      onSelected: (_) => setState(() => _phaseFilter = value),
     );
   }
 
-  void _showCreateTaskSheet(BuildContext context) {
-    final titleCtrl = TextEditingController();
-    final descCtrl = TextEditingController();
-    var priority = TaskPriority.medium;
-    var status = TaskStatus.todo;
-    DateTime? dueDate;
+  void _showCreateSheet(BuildContext context) {
+    // Placeholder — full activity creation form needs status/subtype pickers.
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Activity creation coming soon')),
+    );
+  }
+}
 
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Padding(
-          padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'New Task',
-                  style: Theme.of(ctx).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: titleCtrl,
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Title *',
-                    border: OutlineInputBorder(),
-                  ),
-                  textCapitalization: TextCapitalization.sentences,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                  minLines: 2,
-                  textCapitalization: TextCapitalization.sentences,
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<TaskPriority>(
-                        value: priority,
-                        decoration: const InputDecoration(
-                          labelText: 'Priority',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: TaskPriority.values
-                            .map(
-                              (p) => DropdownMenuItem(
-                                value: p,
-                                child: Text(
-                                  p.name[0].toUpperCase() +
-                                      p.name.substring(1),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (v) {
-                          if (v != null) {
-                            setSheetState(() => priority = v);
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DropdownButtonFormField<TaskStatus>(
-                        value: status,
-                        decoration: const InputDecoration(
-                          labelText: 'Status',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: TaskStatus.values
-                            .map(
-                              (s) => DropdownMenuItem(
-                                value: s,
-                                child: Text(
-                                  s == TaskStatus.inProgress
-                                      ? 'In Progress'
-                                      : s.name[0].toUpperCase() +
-                                          s.name.substring(1),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (v) {
-                          if (v != null) {
-                            setSheetState(() => status = v);
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.event_outlined),
-                  label: Text(
-                    dueDate != null
-                        ? 'Due: ${dueDate!.year}-'
-                            '${dueDate!.month.toString().padLeft(2, '0')}-'
-                            '${dueDate!.day.toString().padLeft(2, '0')}'
-                        : 'Set due date',
-                  ),
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: ctx,
-                      initialDate: dueDate ?? DateTime.now(),
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime(2030),
-                    );
-                    if (picked != null) {
-                      setSheetState(() => dueDate = picked);
-                    }
-                  },
-                ),
-                const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: () {
-                    final title = titleCtrl.text.trim();
-                    if (title.isEmpty) return;
-                    final now = DateTime.now();
-                    final authState = getIt<AuthBloc>().state;
-                    final userId = authState is AuthAuthenticated
-                        ? authState.user.id
-                        : null;
-                    final task = CrmTask(
-                      id: '',
-                      title: title,
-                      description: descCtrl.text.trim().isNotEmpty
-                          ? descCtrl.text.trim()
-                          : null,
-                      status: status,
-                      priority: priority,
-                      createdBy: userId,
-                      dueDate: dueDate,
-                      createdAt: now,
-                      updatedAt: now,
-                    );
-                    context
-                        .read<TasksBloc>()
-                        .add(TaskCreateRequested(task: task));
-                    Navigator.pop(ctx);
-                  },
-                  child: const Text('Create Task'),
-                ),
-              ],
-            ),
-          ),
+/// Simple activity list tile for the list view.
+class _ActivityListTile extends StatelessWidget {
+  const _ActivityListTile({
+    required this.activity,
+    this.onTap,
+    this.onToggleComplete,
+  });
+
+  final Activity activity;
+  final VoidCallback? onTap;
+  final VoidCallback? onToggleComplete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isClosed = activity.isCompleted;
+
+    return ListTile(
+      leading: IconButton(
+        icon: Icon(
+          isClosed ? Icons.check_circle : Icons.radio_button_unchecked,
+          color: isClosed ? Colors.green : cs.onSurfaceVariant,
+        ),
+        onPressed: onToggleComplete,
+        tooltip: isClosed ? 'Reopen' : 'Complete',
+      ),
+      title: Text(
+        activity.title,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          decoration: isClosed ? TextDecoration.lineThrough : null,
+          color: isClosed ? cs.onSurfaceVariant : null,
         ),
       ),
+      subtitle: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            decoration: BoxDecoration(
+              color: cs.primaryContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              activity.statusName,
+              style:
+                  theme.textTheme.labelSmall?.copyWith(fontSize: 10),
+            ),
+          ),
+          if (activity.subtypeName != null) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: cs.tertiaryContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                activity.subtypeName!,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: cs.onTertiaryContainer,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+          ],
+          if (activity.dueDate != null) ...[
+            const SizedBox(width: 8),
+            Icon(Icons.calendar_today, size: 12, color: cs.onSurfaceVariant),
+            const SizedBox(width: 4),
+            Text(
+              activity.dueDate!,
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: cs.onSurfaceVariant),
+            ),
+          ],
+          if (activity.priority == ActivityPriority.high) ...[
+            const SizedBox(width: 8),
+            Icon(Icons.flag, size: 12, color: Colors.red[400]),
+          ],
+        ],
+      ),
+      trailing: const Icon(Icons.chevron_right, size: 16),
+      onTap: onTap,
     );
   }
 }

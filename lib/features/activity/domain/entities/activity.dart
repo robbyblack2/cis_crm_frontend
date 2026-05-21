@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 
-enum ActivityType { task, call, meeting, email }
+enum ActivityType { task, call, meeting }
 
 enum ActivityPriority { low, medium, high }
 
@@ -11,12 +11,16 @@ class Activity extends Equatable {
     required this.id,
     required this.activityType,
     required this.title,
-    required this.status,
+    required this.statusId,
+    required this.statusName,
+    required this.statusPhase,
     required this.createdAt,
     required this.updatedAt,
     this.description,
     this.priority,
     this.assigneeId,
+    this.subtypeId,
+    this.subtypeName,
     this.dueDate,
     this.dueTime,
     this.completedAt,
@@ -28,10 +32,14 @@ class Activity extends Equatable {
   final String id;
   final ActivityType activityType;
   final String title;
-  final String status;
+  final String statusId;
+  final String statusName;
+  final String statusPhase; // "open" or "closed"
   final String? description;
   final ActivityPriority? priority;
   final String? assigneeId;
+  final String? subtypeId;
+  final String? subtypeName;
   final String? dueDate;
   final String? dueTime;
   final DateTime? completedAt;
@@ -41,15 +49,21 @@ class Activity extends Equatable {
   final Map<String, dynamic> data;
   final List<ActivityLink> links;
 
+  bool get isCompleted => statusPhase == 'closed';
+
   @override
   List<Object?> get props => [
         id,
         activityType,
         title,
-        status,
+        statusId,
+        statusName,
+        statusPhase,
         description,
         priority,
         assigneeId,
+        subtypeId,
+        subtypeName,
         dueDate,
         dueTime,
         completedAt,

@@ -92,9 +92,12 @@ class EventDetailPage extends StatelessWidget {
               value: event.location!,
             ),
           ],
-          if (event.meetingLink != null) ...[
-            const SizedBox(height: 8),
-            _MeetingLinkRow(link: event.meetingLink!),
+          if (event.hasMeeting) ...[
+            const SizedBox(height: 16),
+            _JoinMeetingCard(
+              meetingUrl: event.meetingLink!,
+              provider: event.conferenceProvider,
+            ),
           ],
           if (event.linkedRecordId != null) ...[
             const SizedBox(height: 8),
@@ -146,47 +149,78 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-class _MeetingLinkRow extends StatelessWidget {
-  const _MeetingLinkRow({required this.link});
+class _JoinMeetingCard extends StatelessWidget {
+  const _JoinMeetingCard({
+    required this.meetingUrl,
+    this.provider,
+  });
 
-  final String link;
+  final String meetingUrl;
+  final String? provider;
+
+  IconData get _providerIcon {
+    final p = (provider ?? '').toLowerCase();
+    if (p.contains('zoom')) return Icons.videocam;
+    if (p.contains('teams')) return Icons.groups;
+    return Icons.video_call; // Google Meet default
+  }
+
+  Color _providerColor(ColorScheme cs) {
+    final p = (provider ?? '').toLowerCase();
+    if (p.contains('zoom')) return const Color(0xFF2D8CFF);
+    if (p.contains('teams')) return const Color(0xFF6264A7);
+    return const Color(0xFF1A73E8); // Google Meet blue
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final color = _providerColor(cs);
 
-    return Row(
-      children: [
-        Icon(
-          Icons.videocam,
-          size: 20,
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: color.withValues(alpha: 0.3)),
+      ),
+      color: color.withValues(alpha: 0.05),
+      child: InkWell(
+        onTap: () => _launchUrl(meetingUrl),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
             children: [
-              Text(
-                AppLocalizations.of(context)!.eventMeetingLink,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+              Icon(_providerIcon, size: 28, color: color),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Join ${provider ?? 'Meeting'}',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      meetingUrl,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
-              InkWell(
-                onTap: () => _launchUrl(link),
-                child: Text(
-                  link,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.primary,
-                    decoration: TextDecoration.underline,
-                  ),
-                ),
-              ),
+              Icon(Icons.open_in_new, size: 18, color: color),
             ],
           ),
         ),
-      ],
+      ),
     );
   }
 

@@ -334,7 +334,6 @@ class _ActivityCard extends StatelessWidget {
         ActivityType.meeting => 'Meeting',
         ActivityType.task => 'Task',
         ActivityType.call => 'Call',
-        ActivityType.email => 'Email',
       };
 
   String _callDirection(Map<String, dynamic> data) {
