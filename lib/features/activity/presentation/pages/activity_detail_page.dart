@@ -3,6 +3,7 @@ import 'package:cis_crm/features/activity/presentation/widgets/activities_calend
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Full-page activity detail showing all fields for any activity type.
 class ActivityDetailPage extends StatelessWidget {
@@ -179,8 +180,60 @@ class ActivityDetailPage extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
+        // Join Meeting button for meetings with a URL
+        if (activity.isMeeting &&
+            activity.meetingUrl != null &&
+            activity.meetingUrl!.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () => _launchUrl(activity.meetingUrl!),
+              icon: Icon(_meetingIcon(activity.conferenceProvider)),
+              label: Text(
+                _joinLabel(activity.conferenceProvider),
+              ),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+        ],
+        // Meeting time summary
+        if (activity.isMeeting &&
+            activity.startTime != null) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(Icons.schedule, size: 16, color: cs.onSurfaceVariant),
+              const SizedBox(width: 8),
+              Text(
+                _meetingTimeSummary(),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
+  }
+
+  String _meetingTimeSummary() {
+    final start = activity.startTime!.toLocal();
+    final buf = StringBuffer(_dateTimeFmt.format(start));
+    if (activity.endTime != null) {
+      final end = activity.endTime!.toLocal();
+      if (start.year == end.year &&
+          start.month == end.month &&
+          start.day == end.day) {
+        buf.write(' – ${_timeFmt.format(end)}');
+      } else {
+        buf.write(' – ${_dateTimeFmt.format(end)}');
+      }
+    }
+    return buf.toString();
   }
 
   // ── All detail fields ──
@@ -221,15 +274,13 @@ class ActivityDetailPage extends StatelessWidget {
             ),
           if (activity.meetingUrl != null &&
               activity.meetingUrl!.isNotEmpty)
-            _detailRow(
+            _tappableDetailRow(
               theme,
               cs,
               Icons.videocam,
               'Meeting Link',
               activity.meetingUrl!,
-              isLink: true,
-              onCopy: () => _copyToClipboard(
-                  context: null, text: activity.meetingUrl!),
+              onTap: () => _launchUrl(activity.meetingUrl!),
             ),
           if (activity.conferenceProvider != null)
             _detailRow(
@@ -570,8 +621,75 @@ class ActivityDetailPage extends StatelessWidget {
     return _timeFmt.format(dt);
   }
 
-  void _copyToClipboard({BuildContext? context, required String text}) {
-    Clipboard.setData(ClipboardData(text: text));
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  IconData _meetingIcon(String? provider) => switch (provider) {
+        'google_meet' => Icons.video_call,
+        'zoom' => Icons.videocam,
+        'teams' => Icons.groups,
+        _ => Icons.videocam,
+      };
+
+  String _joinLabel(String? provider) => switch (provider) {
+        'google_meet' => 'Join Google Meet',
+        'zoom' => 'Join Zoom Meeting',
+        'teams' => 'Join Teams Meeting',
+        _ => 'Join Meeting',
+      };
+
+  Widget _tappableDetailRow(
+    ThemeData theme,
+    ColorScheme cs,
+    IconData icon,
+    String label,
+    String value, {
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: cs.onSurfaceVariant),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          ),
+          Expanded(
+            child: InkWell(
+              onTap: onTap,
+              child: Text(
+                value,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: cs.primary,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.copy, size: 16),
+            tooltip: 'Copy link',
+            onPressed: () => Clipboard.setData(ClipboardData(text: value)),
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(),
+            padding: EdgeInsets.zero,
+          ),
+        ],
+      ),
+    );
   }
 }
 
