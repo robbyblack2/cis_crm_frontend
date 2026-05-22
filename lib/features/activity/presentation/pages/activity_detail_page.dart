@@ -33,6 +33,7 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
 
   // Text controllers for inline editing
   final _titleCtrl = TextEditingController();
+  final _attendeeEmailCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
 
   // Cached config
@@ -55,6 +56,7 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
   void dispose() {
     _titleCtrl.dispose();
     _descCtrl.dispose();
+    _attendeeEmailCtrl.dispose();
     super.dispose();
   }
 
@@ -102,6 +104,50 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
   }
 
   void _cancelEdit() => setState(() => _editingField = null);
+
+  Future<void> _addAttendeeToMeeting(String email) async {
+    if (email.isEmpty || !email.contains('@')) return;
+    final current = List<Map<String, dynamic>>.from(
+        _activity.attendees ?? []);
+    if (current.any((a) => a['email'] == email)) return;
+    current.add({'email': email, 'rsvp_status': 'needs_action'});
+    await _saveField({'attendees': current});
+    _attendeeEmailCtrl.clear();
+  }
+
+  Future<void> _removeAttendee(String email) async {
+    final current = List<Map<String, dynamic>>.from(
+        _activity.attendees ?? []);
+    current.removeWhere((a) => a['email'] == email);
+    await _saveField({'attendees': current});
+  }
+
+  Widget _addAttendeeRow(ColorScheme cs) {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _attendeeEmailCtrl,
+            decoration: const InputDecoration(
+              hintText: 'Add attendee email',
+              border: OutlineInputBorder(),
+              isDense: true,
+              prefixIcon: Icon(Icons.person_add, size: 20),
+            ),
+            keyboardType: TextInputType.emailAddress,
+            onSubmitted: (v) => _addAttendeeToMeeting(v.trim()),
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton.filled(
+          onPressed: () =>
+              _addAttendeeToMeeting(_attendeeEmailCtrl.text.trim()),
+          icon: const Icon(Icons.add),
+          tooltip: 'Add attendee',
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -181,12 +227,24 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
           _buildHeader(theme, cs, color),
           const SizedBox(height: 24),
           _buildDescriptionSection(theme, cs),
-          if (_activity.isMeeting &&
-              _activity.attendees != null &&
-              _activity.attendees!.isNotEmpty) ...[
+          if (_activity.isMeeting) ...[
             _sectionTitle(theme, cs, 'Attendees'),
             const SizedBox(height: 8),
-            ..._activity.attendees!.map((a) => _AttendeeRow(attendee: a)),
+            if (_activity.attendees != null)
+              ..._activity.attendees!.map((a) => _AttendeeRow(
+                    attendee: a,
+                    onRemove: () => _removeAttendee(a['email'] as String? ?? ''),
+                  )),
+            const SizedBox(height: 8),
+            _addAttendeeRow(cs),
+            const SizedBox(height: 4),
+            Text(
+              'Adding or removing attendees sends invite updates via Google Calendar',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
             const SizedBox(height: 24),
           ],
           if (_activity.links.isNotEmpty) ...[
@@ -1018,9 +1076,10 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
 
 /// Row showing attendee info with RSVP status.
 class _AttendeeRow extends StatelessWidget {
-  const _AttendeeRow({required this.attendee});
+  const _AttendeeRow({required this.attendee, this.onRemove});
 
   final Map<String, dynamic> attendee;
+  final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -1063,6 +1122,13 @@ class _AttendeeRow extends StatelessWidget {
             ),
           ),
           if (rsvp.isNotEmpty) _rsvpBadge(cs, rsvp),
+          if (onRemove != null)
+            IconButton(
+              icon: Icon(Icons.close, size: 16, color: cs.error),
+              tooltip: 'Remove attendee',
+              onPressed: onRemove,
+              visualDensity: VisualDensity.compact,
+            ),
         ],
       ),
     );

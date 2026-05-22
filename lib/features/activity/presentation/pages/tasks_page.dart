@@ -35,60 +35,58 @@ class TasksPage extends StatelessWidget {
                 )),
         ),
       ],
-      child: const _TasksView(),
+      child: const _ActivitiesTabView(),
     );
   }
 }
 
-class _TasksView extends StatefulWidget {
-  const _TasksView();
+// ── Tab Shell ──────────────────────────────────────────────────────────
 
-  @override
-  State<_TasksView> createState() => _TasksViewState();
-}
-
-class _TasksViewState extends State<_TasksView> {
-  Set<String> _phaseFilter = {};
-  Set<String> _typeFilter = {};
-  Set<String> _priorityFilter = {};
-  String _search = '';
-  bool _calendarView = true;
-  bool _sidebarOpen = false;
+class _ActivitiesTabView extends StatelessWidget {
+  const _ActivitiesTabView();
 
   @override
   Widget build(BuildContext context) {
-    if (_calendarView) {
-      return _buildCalendarView(context);
-    }
-
-    return BlocBuilder<TasksBloc, TasksState>(
-      builder: (context, state) {
-        return switch (state) {
-          TasksInitial() ||
-          TasksLoading() =>
-            PageLoading(label: AppLocalizations.of(context)!.tasksLoading),
-          TasksError(:final message) => PageError(
-              title: AppLocalizations.of(context)!.failedToLoadTasks,
-              message: message,
-              onRetry: () =>
-                  context.read<TasksBloc>().add(const TasksLoadRequested()),
+    return DefaultTabController(
+      length: 3,
+      child: Column(
+        children: [
+          Material(
+            color: Theme.of(context).colorScheme.surface,
+            elevation: 1,
+            child: const TabBar(
+              tabs: [
+                Tab(icon: Icon(Icons.calendar_month), text: 'Calendar'),
+                Tab(icon: Icon(Icons.task_alt), text: 'Tasks'),
+                Tab(icon: Icon(Icons.event), text: 'Meetings'),
+              ],
             ),
-          TasksLoaded(:final tasks) => _buildListView(context, tasks),
-        };
-      },
+          ),
+          const Expanded(
+            child: TabBarView(
+              children: [
+                _CalendarTab(),
+                _TypedActivityTab(activityType: ActivityType.task),
+                _TypedActivityTab(activityType: ActivityType.meeting),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
+}
 
-  // ── Calendar View ──
+// ── Calendar Tab ───────────────────────────────────────────────────────
 
-  Widget _buildCalendarView(BuildContext context) {
+class _CalendarTab extends StatelessWidget {
+  const _CalendarTab();
+
+  @override
+  Widget build(BuildContext context) {
     return BlocBuilder<CalendarActivitiesBloc, CalendarActivitiesState>(
       builder: (context, calState) {
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Activities'),
-            actions: [_viewToggle()],
-          ),
           body: LayoutBuilder(
             builder: (context, constraints) {
               final width = constraints.maxWidth;
@@ -99,7 +97,7 @@ class _TasksViewState extends State<_TasksView> {
                     Expanded(
                       flex: 65,
                       child: ActivitiesCalendarView(
-                        onActivityTap: _onActivityTap,
+                        onActivityTap: (a) => _onActivityTap(context, a),
                       ),
                     ),
                     Expanded(
@@ -107,7 +105,7 @@ class _TasksViewState extends State<_TasksView> {
                       child: DayDetailPanel(
                         selectedDay: calState.selectedDay,
                         activities: calState.selectedDayActivities,
-                        onActivityTap: _onActivityTap,
+                        onActivityTap: (a) => _onActivityTap(context, a),
                         onNewActivity: () => _showCreateSheet(context),
                       ),
                     ),
@@ -121,7 +119,7 @@ class _TasksViewState extends State<_TasksView> {
                     Expanded(
                       flex: 60,
                       child: ActivitiesCalendarView(
-                        onActivityTap: _onActivityTap,
+                        onActivityTap: (a) => _onActivityTap(context, a),
                       ),
                     ),
                     Expanded(
@@ -129,7 +127,7 @@ class _TasksViewState extends State<_TasksView> {
                       child: DayDetailPanel(
                         selectedDay: calState.selectedDay,
                         activities: calState.selectedDayActivities,
-                        onActivityTap: _onActivityTap,
+                        onActivityTap: (a) => _onActivityTap(context, a),
                         onNewActivity: () => _showCreateSheet(context),
                       ),
                     ),
@@ -141,41 +139,18 @@ class _TasksViewState extends State<_TasksView> {
                 onDaySelected: (day) {
                   _showDayDetailPage(context, calState, day);
                 },
-                onActivityTap: _onActivityTap,
+                onActivityTap: (a) => _onActivityTap(context, a),
               );
             },
           ),
+          floatingActionButton: FloatingActionButton.extended(
+            heroTag: 'calendar_fab',
+            onPressed: () => _showCreateSheet(context),
+            icon: const Icon(Icons.add),
+            label: const Text('New Activity'),
+          ),
         );
       },
-    );
-  }
-
-  void _refreshAll() {
-    context.read<TasksBloc>().add(const TasksLoadRequested());
-    context.read<CalendarActivitiesBloc>().add(
-          const CalendarRefreshRequested(),
-        );
-  }
-
-  void _onActivityTap(Activity activity) {
-    Navigator.push<void>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ActivityDetailPage(
-          activity: activity,
-          onStatusChanged: () {
-            Navigator.pop(context);
-            _refreshAll();
-          },
-          onDeleted: () {
-            Navigator.pop(context);
-            context.read<TasksBloc>().add(TaskDeleted(activity.id));
-            context.read<CalendarActivitiesBloc>().add(
-                  const CalendarRefreshRequested(),
-                );
-          },
-        ),
-      ),
     );
   }
 
@@ -192,7 +167,7 @@ class _TasksViewState extends State<_TasksView> {
           body: DayDetailPanel(
             selectedDay: day,
             activities: state.activitiesForDay(day),
-            onActivityTap: _onActivityTap,
+            onActivityTap: (a) => _onActivityTap(context, a),
             onNewActivity: () {
               Navigator.pop(context);
               _showCreateSheet(context);
@@ -202,44 +177,135 @@ class _TasksViewState extends State<_TasksView> {
       ),
     );
   }
+}
 
-  // ── List View ──
+// ── Typed Activity Tab (Tasks or Meetings) ────────────────────────────
 
-  Widget _buildListView(BuildContext context, List<Activity> tasks) {
-    var filtered = _search.isEmpty
-        ? tasks
-        : tasks.where((t) {
-            final q = _search.toLowerCase();
-            return t.title.toLowerCase().contains(q) ||
-                (t.description?.toLowerCase().contains(q) ?? false);
-          }).toList();
+class _TypedActivityTab extends StatefulWidget {
+  const _TypedActivityTab({required this.activityType});
 
-    if (_phaseFilter.isNotEmpty) {
-      filtered =
-          filtered.where((t) => _phaseFilter.contains(t.statusPhase)).toList();
+  final ActivityType activityType;
+
+  @override
+  State<_TypedActivityTab> createState() => _TypedActivityTabState();
+}
+
+class _TypedActivityTabState extends State<_TypedActivityTab> {
+  Set<String> _phaseFilter = {};
+  Set<String> _priorityFilter = {};
+  Set<String> _subtypeFilter = {};
+  String _search = '';
+  bool _sidebarOpen = false;
+
+  bool get _isMeetings => widget.activityType == ActivityType.meeting;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<TasksBloc, TasksState>(
+      builder: (context, state) {
+        return switch (state) {
+          TasksInitial() ||
+          TasksLoading() =>
+            PageLoading(label: AppLocalizations.of(context)!.tasksLoading),
+          TasksError(:final message) => PageError(
+              title: AppLocalizations.of(context)!.failedToLoadTasks,
+              message: message,
+              onRetry: () =>
+                  context.read<TasksBloc>().add(const TasksLoadRequested()),
+            ),
+          TasksLoaded(:final tasks) => _buildList(context, tasks),
+        };
+      },
+    );
+  }
+
+  Widget _buildList(BuildContext context, List<Activity> allActivities) {
+    // Filter to this tab's type
+    var filtered = allActivities
+        .where((a) => a.activityType == widget.activityType)
+        .toList();
+
+    final totalForType = filtered.length;
+
+    // Collect available subtypes for filter options
+    final availableSubtypes = filtered
+        .map((a) => a.subtypeName)
+        .whereType<String>()
+        .where((s) => s.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+
+    // Apply search
+    if (_search.isNotEmpty) {
+      final q = _search.toLowerCase();
+      filtered = filtered.where((a) {
+        return a.title.toLowerCase().contains(q) ||
+            (a.description?.toLowerCase().contains(q) ?? false) ||
+            a.statusName.toLowerCase().contains(q) ||
+            (a.subtypeName?.toLowerCase().contains(q) ?? false);
+      }).toList();
     }
-    if (_typeFilter.isNotEmpty) {
+
+    // Apply filters
+    if (_phaseFilter.isNotEmpty) {
       filtered = filtered
-          .where((t) => _typeFilter.contains(t.activityType.name))
+          .where((a) => _phaseFilter.contains(a.statusPhase))
           .toList();
     }
     if (_priorityFilter.isNotEmpty) {
       filtered = filtered
-          .where(
-              (t) => t.priority != null && _priorityFilter.contains(t.priority!.name))
+          .where((a) =>
+              a.priority != null &&
+              _priorityFilter.contains(a.priority!.name))
+          .toList();
+    }
+    if (_subtypeFilter.isNotEmpty) {
+      filtered = filtered
+          .where((a) =>
+              a.subtypeName != null &&
+              _subtypeFilter.contains(a.subtypeName))
           .toList();
     }
 
+    final activeCount = (_phaseFilter.isNotEmpty ? 1 : 0) +
+        (_priorityFilter.isNotEmpty ? 1 : 0) +
+        (_subtypeFilter.isNotEmpty ? 1 : 0);
+
+    // Build active filter chips
+    final activeFilters = <ActiveFilter>[
+      for (final p in _phaseFilter)
+        ActiveFilter(
+          label: 'Phase: $p',
+          onRemove: () => setState(() {
+            _phaseFilter = Set.from(_phaseFilter)..remove(p);
+          }),
+        ),
+      for (final p in _priorityFilter)
+        ActiveFilter(
+          label: 'Priority: $p',
+          onRemove: () => setState(() {
+            _priorityFilter = Set.from(_priorityFilter)..remove(p);
+          }),
+        ),
+      for (final s in _subtypeFilter)
+        ActiveFilter(
+          label: '${_isMeetings ? "Type" : "Subtype"}: $s',
+          onRemove: () => setState(() {
+            _subtypeFilter = Set.from(_subtypeFilter)..remove(s);
+          }),
+        ),
+    ];
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Activities'),
+        title: Text(_isMeetings ? 'Meetings' : 'Tasks'),
         actions: [
-          IconButton(
-            icon: Icon(_sidebarOpen ? Icons.filter_list_off : Icons.filter_list),
-            tooltip: 'Filters',
+          FilterToggleButton(
+            activeCount: activeCount,
+            isOpen: _sidebarOpen,
             onPressed: () => setState(() => _sidebarOpen = !_sidebarOpen),
           ),
-          _viewToggle(),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(56),
@@ -247,7 +313,9 @@ class _TasksViewState extends State<_TasksView> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'Search activities...',
+                hintText: _isMeetings
+                    ? 'Search meetings...'
+                    : 'Search tasks...',
                 prefixIcon: const Icon(Icons.search, size: 20),
                 isDense: true,
                 border: OutlineInputBorder(
@@ -257,6 +325,12 @@ class _TasksViewState extends State<_TasksView> {
                   horizontal: 12,
                   vertical: 8,
                 ),
+                suffixIcon: _search.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () => setState(() => _search = ''),
+                      )
+                    : null,
               ),
               onChanged: (v) => setState(() => _search = v),
             ),
@@ -266,34 +340,52 @@ class _TasksViewState extends State<_TasksView> {
       body: Row(
         children: [
           Expanded(
-            child: filtered.isEmpty
-                ? EmptyState(
-              icon: Icons.task_alt,
-              title: AppLocalizations.of(context)!.tasksEmpty,
-              message: AppLocalizations.of(context)!.tasksEmptyAction,
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: filtered.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 2),
-              itemBuilder: (context, index) {
-                final activity = filtered[index];
-                return _ActivityListTile(
-                  activity: activity,
-                  onTap: () => _onActivityTap(activity),
-                  onToggleComplete: () => _toggleComplete(context, activity),
-                );
-              },
+            child: Column(
+              children: [
+                ActiveFilterChips(filters: activeFilters),
+                Expanded(
+                  child: filtered.isEmpty
+                      ? EmptyState(
+                          icon: _isMeetings
+                              ? Icons.event_busy
+                              : Icons.task_alt,
+                          title: _isMeetings
+                              ? 'No meetings'
+                              : AppLocalizations.of(context)!.tasksEmpty,
+                          message: _isMeetings
+                              ? 'No meetings match your filters.'
+                              : AppLocalizations.of(context)!
+                                    .tasksEmptyAction,
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 2),
+                          itemBuilder: (context, index) {
+                            final activity = filtered[index];
+                            return _ActivityListTile(
+                              activity: activity,
+                              onTap: () =>
+                                  _onActivityTap(context, activity),
+                              onToggleComplete: () =>
+                                  _toggleComplete(context, activity),
+                              showTimeInfo: _isMeetings,
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
           ),
           if (_sidebarOpen)
             FilterSidebar(
-              totalCount: tasks.length,
+              totalCount: totalForType,
               resultCount: filtered.length,
               onClearAll: () => setState(() {
                 _phaseFilter = {};
-                _typeFilter = {};
                 _priorityFilter = {};
+                _subtypeFilter = {};
               }),
               sections: [
                 FilterSection.checkboxGroup(
@@ -306,16 +398,6 @@ class _TasksViewState extends State<_TasksView> {
                   onChanged: (v) => setState(() => _phaseFilter = v),
                 ),
                 FilterSection.checkboxGroup(
-                  title: 'Type',
-                  options: const [
-                    FilterOption(value: 'task', label: 'Task'),
-                    FilterOption(value: 'call', label: 'Call'),
-                    FilterOption(value: 'meeting', label: 'Meeting'),
-                  ],
-                  selected: _typeFilter,
-                  onChanged: (v) => setState(() => _typeFilter = v),
-                ),
-                FilterSection.checkboxGroup(
                   title: 'Priority',
                   options: const [
                     FilterOption(value: 'low', label: 'Low'),
@@ -325,25 +407,36 @@ class _TasksViewState extends State<_TasksView> {
                   selected: _priorityFilter,
                   onChanged: (v) => setState(() => _priorityFilter = v),
                 ),
+                if (availableSubtypes.isNotEmpty)
+                  FilterSection.checkboxGroup(
+                    title: _isMeetings ? 'Meeting Type' : 'Subtype',
+                    options: availableSubtypes
+                        .map((s) => FilterOption(value: s, label: s))
+                        .toList(),
+                    selected: _subtypeFilter,
+                    onChanged: (v) => setState(() => _subtypeFilter = v),
+                  ),
               ],
             ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'tasks_fab',
+        heroTag: _isMeetings ? 'meetings_fab' : 'tasks_fab',
         onPressed: () => _showCreateSheet(context),
         icon: const Icon(Icons.add),
-        label: const Text('New Activity'),
+        label: Text(_isMeetings ? 'New Meeting' : 'New Task'),
       ),
     );
   }
 
-  Future<void> _toggleComplete(BuildContext context, Activity activity) async {
+  Future<void> _toggleComplete(
+    BuildContext context,
+    Activity activity,
+  ) async {
     final config = ActivityConfigService.instance;
     final typeName = activity.activityType.name;
 
     if (activity.isCompleted) {
-      // Reopen: set to the default open status.
       final defaultStatus = await config.getDefaultStatus(typeName);
       if (defaultStatus == null) return;
       final updated = ActivityModel(
@@ -367,12 +460,11 @@ class _TasksViewState extends State<_TasksView> {
       );
       if (context.mounted) {
         context.read<TasksBloc>().add(TaskUpdateRequested(task: updated));
-        context.read<CalendarActivitiesBloc>().add(
-              const CalendarRefreshRequested(),
-            );
+        context
+            .read<CalendarActivitiesBloc>()
+            .add(const CalendarRefreshRequested());
       }
     } else {
-      // Complete: set to the first closed status.
       final closedStatus = await config.getClosedStatus(typeName);
       if (closedStatus == null) return;
       final updated = ActivityModel(
@@ -396,67 +488,79 @@ class _TasksViewState extends State<_TasksView> {
       );
       if (context.mounted) {
         context.read<TasksBloc>().add(TaskUpdateRequested(task: updated));
-        context.read<CalendarActivitiesBloc>().add(
-              const CalendarRefreshRequested(),
-            );
+        context
+            .read<CalendarActivitiesBloc>()
+            .add(const CalendarRefreshRequested());
       }
     }
   }
-
-  // ── Shared Widgets ──
-
-  Widget _viewToggle() {
-    return SegmentedButton<bool>(
-      segments: const [
-        ButtonSegment(
-          value: true,
-          icon: Icon(Icons.calendar_month, size: 18),
-          label: Text('Calendar'),
-        ),
-        ButtonSegment(
-          value: false,
-          icon: Icon(Icons.view_list, size: 18),
-          label: Text('List'),
-        ),
-      ],
-      selected: {_calendarView},
-      onSelectionChanged: (v) => setState(() => _calendarView = v.first),
-      style: const ButtonStyle(visualDensity: VisualDensity.compact),
-    );
-  }
-
-  void _showCreateSheet(BuildContext context, {DateTime? prefilledDate}) {
-    Navigator.push<void>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => _CreateActivityForm(
-          prefilledDate: prefilledDate,
-          onCreated: (activity) {
-            Navigator.pop(context);
-            context.read<TasksBloc>().add(
-                  TaskCreateRequested(task: activity),
-                );
-            context.read<CalendarActivitiesBloc>().add(
-                  const CalendarRefreshRequested(),
-                );
-          },
-        ),
-      ),
-    );
-  }
 }
 
-/// Simple activity list tile for the list view.
+// ── Shared Helpers ─────────────────────────────────────────────────────
+
+void _refreshAll(BuildContext context) {
+  context.read<TasksBloc>().add(const TasksLoadRequested());
+  context
+      .read<CalendarActivitiesBloc>()
+      .add(const CalendarRefreshRequested());
+}
+
+void _onActivityTap(BuildContext context, Activity activity) {
+  Navigator.push<void>(
+    context,
+    MaterialPageRoute(
+      builder: (_) => ActivityDetailPage(
+        activity: activity,
+        onStatusChanged: () {
+          Navigator.pop(context);
+          _refreshAll(context);
+        },
+        onDeleted: () {
+          Navigator.pop(context);
+          context.read<TasksBloc>().add(TaskDeleted(activity.id));
+          context
+              .read<CalendarActivitiesBloc>()
+              .add(const CalendarRefreshRequested());
+        },
+      ),
+    ),
+  );
+}
+
+void _showCreateSheet(BuildContext context, {DateTime? prefilledDate}) {
+  Navigator.push<void>(
+    context,
+    MaterialPageRoute(
+      builder: (_) => _CreateActivityForm(
+        prefilledDate: prefilledDate,
+        onCreated: (activity) {
+          Navigator.pop(context);
+          context.read<TasksBloc>().add(
+                TaskCreateRequested(task: activity),
+              );
+          context.read<CalendarActivitiesBloc>().add(
+                const CalendarRefreshRequested(),
+              );
+        },
+      ),
+    ),
+  );
+}
+
+// ── Activity List Tile ─────────────────────────────────────────────────
+
 class _ActivityListTile extends StatelessWidget {
   const _ActivityListTile({
     required this.activity,
     this.onTap,
     this.onToggleComplete,
+    this.showTimeInfo = false,
   });
 
   final Activity activity;
   final VoidCallback? onTap;
   final VoidCallback? onToggleComplete;
+  final bool showTimeInfo;
 
   @override
   Widget build(BuildContext context) {
@@ -511,7 +615,26 @@ class _ActivityListTile extends StatelessWidget {
               ),
             ),
           ],
-          if (activity.dueDate != null) ...[
+          // Show time info for meetings
+          if (showTimeInfo && activity.startTime != null) ...[
+            const SizedBox(width: 8),
+            Icon(Icons.schedule, size: 12, color: cs.onSurfaceVariant),
+            const SizedBox(width: 4),
+            Text(
+              DateFormat.jm().format(activity.startTime!),
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: cs.onSurfaceVariant),
+            ),
+            if (activity.endTime != null) ...[
+              Text(
+                ' – ${DateFormat.jm().format(activity.endTime!)}',
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(color: cs.onSurfaceVariant),
+              ),
+            ],
+          ],
+          // Show due date for tasks
+          if (!showTimeInfo && activity.dueDate != null) ...[
             const SizedBox(width: 8),
             Icon(Icons.calendar_today, size: 12, color: cs.onSurfaceVariant),
             const SizedBox(width: 4),
@@ -533,7 +656,8 @@ class _ActivityListTile extends StatelessWidget {
   }
 }
 
-/// Full activity creation form with type, title, status, subtype, due date.
+// ── Create Activity Form ───────────────────────────────────────────────
+
 class _CreateActivityForm extends StatefulWidget {
   const _CreateActivityForm({this.prefilledDate, required this.onCreated});
 
@@ -547,6 +671,7 @@ class _CreateActivityForm extends StatefulWidget {
 class _CreateActivityFormState extends State<_CreateActivityForm> {
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
+  final _attendeeCtrl = TextEditingController();
   var _type = ActivityType.task;
   ActivityStatus? _status;
   ActivitySubtype? _subtype;
@@ -555,6 +680,7 @@ class _CreateActivityFormState extends State<_CreateActivityForm> {
   // Meeting-specific
   DateTime? _startTime;
   DateTime? _endTime;
+  final List<Map<String, dynamic>> _attendees = [];
   List<ActivityStatus> _statuses = [];
   List<ActivitySubtype> _subtypes = [];
   bool _loadingConfig = true;
@@ -563,7 +689,6 @@ class _CreateActivityFormState extends State<_CreateActivityForm> {
   void initState() {
     super.initState();
     _dueDate = widget.prefilledDate ?? DateTime.now();
-    // Default meeting times: next hour, 1 hour duration
     final now = DateTime.now();
     final nextHour = DateTime(now.year, now.month, now.day, now.hour + 1);
     _startTime = nextHour;
@@ -602,13 +727,12 @@ class _CreateActivityFormState extends State<_CreateActivityForm> {
   void dispose() {
     _titleCtrl.dispose();
     _descCtrl.dispose();
+    _attendeeCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('New Activity'),
@@ -690,7 +814,8 @@ class _CreateActivityFormState extends State<_CreateActivityForm> {
                               .toList(),
                           onChanged: (id) {
                             setState(() {
-                              _status = _statuses.firstWhere((s) => s.id == id);
+                              _status =
+                                  _statuses.firstWhere((s) => s.id == id);
                             });
                           },
                         ),
@@ -754,17 +879,15 @@ class _CreateActivityFormState extends State<_CreateActivityForm> {
                   onChanged: (v) => setState(() => _priority = v),
                 ),
                 const SizedBox(height: 12),
-                // Meeting: start/end time pickers
+                // Meeting: start/end time pickers + attendees
                 if (_type == ActivityType.meeting) ...[
                   _dateTimePickerRow(
                     label: 'Start Time *',
                     value: _startTime!,
                     onChanged: (dt) => setState(() {
                       _startTime = dt;
-                      // Auto-adjust end time to maintain 1hr gap
-                      if (_endTime != null && dt.isAfter(_endTime!)) {
-                        _endTime = dt.add(const Duration(hours: 1));
-                      }
+                      // Always set end = start + 30 min
+                      _endTime = dt.add(const Duration(minutes: 30));
                     }),
                   ),
                   const SizedBox(height: 12),
@@ -772,6 +895,70 @@ class _CreateActivityFormState extends State<_CreateActivityForm> {
                     label: 'End Time *',
                     value: _endTime!,
                     onChanged: (dt) => setState(() => _endTime = dt),
+                  ),
+                  const SizedBox(height: 16),
+                  // Attendees
+                  Text('Attendees',
+                      style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _attendeeCtrl,
+                          decoration: const InputDecoration(
+                            hintText: 'Enter email address',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                            prefixIcon: Icon(Icons.person_add, size: 20),
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                          onSubmitted: (_) => _addAttendee(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton.filled(
+                        onPressed: _addAttendee,
+                        icon: const Icon(Icons.add),
+                        tooltip: 'Add attendee',
+                      ),
+                    ],
+                  ),
+                  if (_attendees.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    ..._attendees.asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final a = entry.value;
+                      return ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          radius: 14,
+                          child: Text(
+                            (a['email'] as String)[0].toUpperCase(),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        title: Text(
+                          a['email'] as String,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.close, size: 16),
+                          onPressed: () =>
+                              setState(() => _attendees.removeAt(i)),
+                        ),
+                      );
+                    }),
+                  ],
+                  const SizedBox(height: 8),
+                  Text(
+                    'A Google Meet link will be created automatically',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontStyle: FontStyle.italic,
+                        ),
                   ),
                 ],
                 // Task/Call: due date
@@ -802,6 +989,16 @@ class _CreateActivityFormState extends State<_CreateActivityForm> {
               ],
             ),
     );
+  }
+
+  void _addAttendee() {
+    final email = _attendeeCtrl.text.trim();
+    if (email.isEmpty || !email.contains('@')) return;
+    if (_attendees.any((a) => a['email'] == email)) return;
+    setState(() {
+      _attendees.add({'email': email, 'rsvp_status': 'needs_action'});
+      _attendeeCtrl.clear();
+    });
   }
 
   Widget _dateTimePickerRow({
@@ -864,11 +1061,13 @@ class _CreateActivityFormState extends State<_CreateActivityForm> {
       dueDate: _type != ActivityType.meeting && _dueDate != null
           ? DateFormat('yyyy-MM-dd').format(_dueDate!)
           : null,
-      // Meeting-specific fields
       startTime: _type == ActivityType.meeting ? _startTime : null,
       endTime: _type == ActivityType.meeting ? _endTime : null,
+      attendees:
+          _type == ActivityType.meeting && _attendees.isNotEmpty
+              ? _attendees
+              : null,
     );
     widget.onCreated(activity);
   }
 }
-

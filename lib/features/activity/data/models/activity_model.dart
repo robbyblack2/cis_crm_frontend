@@ -202,6 +202,13 @@ class ActivityModel extends Activity {
           'end_time': endTime!.toUtc().toIso8601String(),
         if (attendees != null) 'attendees': attendees,
         if (meetingUrl != null) 'meeting_url': meetingUrl,
+        // Auto-generate Google Meet link for new meetings (id is empty
+        // on create). Backend uses this flag to create the Meet link and
+        // push to Google Calendar.
+        if (activityType == ActivityType.meeting &&
+            id.isEmpty &&
+            meetingUrl == null)
+          'create_meet_link': true,
       };
 
   /// Build a create payload for POST /api/activities (meeting-specific).
