@@ -1,7 +1,6 @@
 import 'package:cis_crm/core/error/exceptions.dart';
 import 'package:cis_crm/features/activity/data/datasources/activity_remote_data_source.dart';
 import 'package:cis_crm/features/activity/data/models/activity_model.dart';
-import 'package:cis_crm/features/activity/domain/entities/activity.dart';
 import 'package:cis_crm/features/activity/data/models/timeline_entry_model.dart';
 import 'package:dio/dio.dart';
 
@@ -68,15 +67,8 @@ class ActivityRemoteDataSourceImpl implements ActivityRemoteDataSource {
   @override
   Future<ActivityModel> createActivity(ActivityModel activity) async {
     try {
-      // Meetings go through /api/calendar/events which pushes to
-      // Google Calendar and generates Meet links. Tasks/calls use
-      // the regular /api/activities endpoint.
-      final isMeeting = activity.activityType == ActivityType.meeting;
-      final endpoint =
-          isMeeting ? '/api/calendar/events' : '/api/activities';
-
       final response = await _dio.post<Map<String, dynamic>>(
-        endpoint,
+        '/api/activities',
         data: activity.toJson(),
       );
       return ActivityModel.fromJson(
