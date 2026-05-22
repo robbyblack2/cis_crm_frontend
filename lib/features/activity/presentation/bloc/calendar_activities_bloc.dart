@@ -1,7 +1,7 @@
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/features/activity/domain/entities/activity.dart';
-import 'package:cis_crm/features/activity/domain/repositories/calendar_activity_repository.dart';
+import 'package:cis_crm/features/activity/domain/repositories/task_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -116,7 +116,7 @@ class CalendarActivitiesState extends Equatable {
 class CalendarActivitiesBloc
     extends Bloc<CalendarActivitiesEvent, CalendarActivitiesState> {
   CalendarActivitiesBloc({
-    required CalendarActivityRepository repository,
+    required TaskRepository repository,
   })  : _repository = repository,
         super(CalendarActivitiesState(
           focusedMonth: DateTime(DateTime.now().year, DateTime.now().month),
@@ -129,7 +129,7 @@ class CalendarActivitiesBloc
     on<CalendarRefreshRequested>(_onRefresh, transformer: restartable());
   }
 
-  final CalendarActivityRepository _repository;
+  final TaskRepository _repository;
   final Set<String> _fetchedMonths = {};
   final Set<String> _failedMonths = {};
   static final _dateFmt = DateFormat('yyyy-MM-dd');
@@ -178,13 +178,11 @@ class CalendarActivitiesBloc
   }) async {
     emit(state.copyWith(isLoading: true));
 
-    // Fetch ALL activities without server-side date filters.
-    // The backend's from/to only filters due_date, which excludes
-    // meetings (they use start_time instead). Client-side keying
-    // places each activity on the correct calendar day.
-    final result = await _repository.getActivities(
-      perPage: 200,
-    );
+    // Use the same getActivities() that powers the working list view.
+    // No date filters — client-side keying places activities on the
+    // correct calendar day using startTime for meetings, dueDate for
+    // tasks/calls.
+    final result = await _repository.getActivities();
 
     switch (result) {
       case Success(:final data):

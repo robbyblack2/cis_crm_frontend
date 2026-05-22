@@ -3,12 +3,12 @@ import 'package:cis_crm/core/error/failures.dart';
 import 'package:cis_crm/core/error/result.dart';
 import 'package:cis_crm/features/activity/data/models/activity_model.dart';
 import 'package:cis_crm/features/activity/domain/entities/activity.dart';
-import 'package:cis_crm/features/activity/domain/repositories/calendar_activity_repository.dart';
+import 'package:cis_crm/features/activity/domain/repositories/task_repository.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/calendar_activities_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class _MockRepo extends Mock implements CalendarActivityRepository {}
+class _MockRepo extends Mock implements TaskRepository {}
 
 final _may = DateTime(2026, 5);
 
@@ -28,18 +28,7 @@ void main() {
   late _MockRepo repo;
 
   void stubAll([Result<List<Activity>, AppFailure>? result]) {
-    when(() => repo.getActivities(
-          from: any(named: 'from'),
-          to: any(named: 'to'),
-          startFrom: any(named: 'startFrom'),
-          startTo: any(named: 'startTo'),
-          perPage: any(named: 'perPage'),
-          activityType: any(named: 'activityType'),
-          statusId: any(named: 'statusId'),
-          phase: any(named: 'phase'),
-          assigneeId: any(named: 'assigneeId'),
-          page: any(named: 'page'),
-        )).thenAnswer(
+    when(() => repo.getActivities()).thenAnswer(
         (_) async => result ?? const Success(<Activity>[]));
   }
 
@@ -124,12 +113,9 @@ void main() {
       act: (b) => b.add(CalendarMonthRequested(month: _may)),
       wait: const Duration(seconds: 2),
       verify: (_) {
-        // Verify the call was made WITHOUT from/to/startFrom/startTo
-        // since the backend from/to only filters due_date, excluding
-        // meetings that use start_time.
-        verify(() => repo.getActivities(
-              perPage: 200,
-            )).called(greaterThanOrEqualTo(1));
+        // Uses the same getActivities() as the working list view
+        verify(() => repo.getActivities())
+            .called(greaterThanOrEqualTo(1));
       },
     );
 

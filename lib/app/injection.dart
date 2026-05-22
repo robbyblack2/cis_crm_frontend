@@ -50,6 +50,7 @@ import 'package:cis_crm/features/contacts/data/repositories/company_repository_i
 import 'package:cis_crm/features/contacts/data/repositories/contact_repository_impl.dart';
 import 'package:cis_crm/features/contacts/domain/repositories/company_repository.dart';
 import 'package:cis_crm/features/contacts/domain/repositories/contact_repository.dart';
+import 'package:cis_crm/features/contacts/presentation/bloc/companies_cubit.dart';
 import 'package:cis_crm/features/contacts/presentation/bloc/contacts_bloc.dart';
 import 'package:cis_crm/features/contacts/presentation/pages/contacts_page.dart';
 import 'package:cis_crm/features/email/data/datasources/email_remote_data_source.dart';
@@ -351,6 +352,11 @@ Future<void> configureDependencies(FlavorConfig config) async {
         contactRepository: getIt<ContactRepository>(),
       ),
     )
+    ..registerFactory<CompaniesCubit>(
+      () => CompaniesCubit(
+        companyRepository: getIt<CompanyRepository>(),
+      ),
+    )
     ..registerFactory<PipelineBloc>(
       () => PipelineBloc(
         pipelineRepository: getIt<PipelineRepository>(),
@@ -373,7 +379,7 @@ Future<void> configureDependencies(FlavorConfig config) async {
     )
     ..registerFactory<CalendarActivitiesBloc>(
       () => CalendarActivitiesBloc(
-        repository: getIt<CalendarActivityRepository>(),
+        repository: getIt<TaskRepository>(),
       ),
     )
     ..registerFactory<CallLogCubit>(
