@@ -1271,7 +1271,7 @@ class _RecordListViewState extends State<_RecordListView> {
 }
 
 /// Row with hover highlight for desktop.
-class _HoverableRow extends StatefulWidget {
+class _HoverableRow extends StatelessWidget {
   const _HoverableRow({
     required this.onTap,
     required this.child,
@@ -1281,26 +1281,16 @@ class _HoverableRow extends StatefulWidget {
   final Widget child;
 
   @override
-  State<_HoverableRow> createState() => _HoverableRowState();
-}
-
-class _HoverableRowState extends State<_HoverableRow> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: Container(
-          color: _hovered
-              ? colorScheme.primary.withValues(alpha: 0.05)
-              : null,
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: onTap,
+        hoverColor:
+            Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+        child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: widget.child,
+          child: child,
         ),
       ),
     );
