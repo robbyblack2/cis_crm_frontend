@@ -1,9 +1,5 @@
 import 'package:cis_crm/features/activity/domain/entities/timeline_entry.dart';
-import 'package:json_annotation/json_annotation.dart';
 
-part 'timeline_entry_model.g.dart';
-
-@JsonSerializable(fieldRename: FieldRename.snake)
 class TimelineEntryModel extends TimelineEntry {
   const TimelineEntryModel({
     required super.id,
@@ -16,8 +12,29 @@ class TimelineEntryModel extends TimelineEntry {
     required super.createdAt,
   });
 
-  factory TimelineEntryModel.fromJson(Map<String, dynamic> json) =>
-      _$TimelineEntryModelFromJson(json);
+  factory TimelineEntryModel.fromJson(Map<String, dynamic> json) {
+    return TimelineEntryModel(
+      id: json['id']?.toString() ?? '',
+      entityType: json['entity_type'] as String? ?? '',
+      entityId: json['entity_id']?.toString() ?? '',
+      eventType: json['event_type'] as String? ?? '',
+      actorType: json['actor_type'] as String? ?? '',
+      actorId: json['actor_id']?.toString() ?? '',
+      summary: json['summary'] as String? ?? '',
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+    );
+  }
 
-  Map<String, dynamic> toJson() => _$TimelineEntryModelToJson(this);
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'entity_type': entityType,
+        'entity_id': entityId,
+        'event_type': eventType,
+        'actor_type': actorType,
+        'actor_id': actorId,
+        'summary': summary,
+        'created_at': createdAt.toIso8601String(),
+      };
 }
