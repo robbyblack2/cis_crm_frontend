@@ -171,18 +171,12 @@ class CalendarActivitiesBloc
   }) async {
     emit(state.copyWith(isLoading: true));
 
-    final from = _dateFmt.format(month);
-    final lastDay = DateTime(month.year, month.month + 1, 0);
-    final to = _dateFmt.format(lastDay);
-
-    // Fetch ALL activities for this month using only from/to.
-    // The unified backend filters both due_date and start_time with
-    // a single date range. Sending start_from/start_to alongside
-    // from/to caused an AND that excluded every row.
+    // Fetch ALL activities without server-side date filters.
+    // The backend's from/to only filters due_date, which excludes
+    // meetings (they use start_time instead). Client-side keying
+    // places each activity on the correct calendar day.
     final result = await _repository.getActivities(
-      from: from,
-      to: to,
-      perPage: 100,
+      perPage: 200,
     );
 
     switch (result) {

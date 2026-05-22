@@ -116,7 +116,7 @@ void main() {
     );
 
     blocTest<CalendarActivitiesBloc, CalendarActivitiesState>(
-      'does not send startFrom/startTo to avoid AND filtering',
+      'fetches without date filters so meetings with start_time are included',
       build: () {
         stubAll(Success([_activity]));
         return build();
@@ -124,11 +124,11 @@ void main() {
       act: (b) => b.add(CalendarMonthRequested(month: _may)),
       wait: const Duration(seconds: 2),
       verify: (_) {
-        // Verify the call was made WITHOUT startFrom/startTo
+        // Verify the call was made WITHOUT from/to/startFrom/startTo
+        // since the backend from/to only filters due_date, excluding
+        // meetings that use start_time.
         verify(() => repo.getActivities(
-              from: '2026-05-01',
-              to: '2026-05-31',
-              perPage: 100,
+              perPage: 200,
             )).called(greaterThanOrEqualTo(1));
       },
     );
@@ -136,19 +136,7 @@ void main() {
     blocTest<CalendarActivitiesBloc, CalendarActivitiesState>(
       'emits error on failure',
       build: () {
-        when(() => repo.getActivities(
-              from: any(named: 'from'),
-              to: any(named: 'to'),
-              startFrom: any(named: 'startFrom'),
-              startTo: any(named: 'startTo'),
-              perPage: 100,
-              activityType: any(named: 'activityType'),
-              statusId: any(named: 'statusId'),
-              phase: any(named: 'phase'),
-              assigneeId: any(named: 'assigneeId'),
-              page: any(named: 'page'),
-            )).thenAnswer(
-            (_) async => const Failure(ServerFailure('fail')));
+        stubAll(const Failure(ServerFailure('fail')));
         return build();
       },
       act: (b) => b.add(CalendarMonthRequested(month: _may)),
