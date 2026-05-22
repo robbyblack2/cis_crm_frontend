@@ -1,4 +1,7 @@
+import 'package:cis_crm/core/router/routes.dart';
+import 'package:cis_crm/core/utils/color_utils.dart';
 import 'package:cis_crm/core/utils/name_resolver.dart';
+import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
 import 'package:cis_crm/features/pipeline/data/datasources/pipeline_remote_data_source.dart';
 import 'package:cis_crm/features/pipeline/data/datasources/record_remote_data_source.dart';
@@ -11,14 +14,6 @@ import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
-
-Color _parseColor(String colorStr) {
-  if (colorStr.startsWith('#')) {
-    final hex = colorStr.replaceFirst('#', '');
-    return Color(int.parse('FF$hex', radix: 16));
-  }
-  return Color(int.tryParse(colorStr) ?? 0xFF9E9E9E);
-}
 
 class StageColumn extends StatelessWidget {
   const StageColumn({
@@ -35,7 +30,7 @@ class StageColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final stageColor = _parseColor(stage.color);
+    final stageColor = parseHexColor(stage.color);
 
     return DragTarget<PipelineRecord>(
       onWillAcceptWithDetails: (details) =>
@@ -247,14 +242,6 @@ class _StagePromptSheetState extends State<_StagePromptSheet> {
     NameResolver.instance.loadCompanies();
   }
 
-  Color _parseColor(String colorStr) {
-    if (colorStr.startsWith('#')) {
-      final hex = colorStr.replaceFirst('#', '');
-      return Color(int.parse('FF$hex', radix: 16));
-    }
-    return Color(int.tryParse(colorStr) ?? 0xFF9E9E9E);
-  }
-
   String _humanizeKey(String key) {
     return key
         .replaceAll('_', ' ')
@@ -268,7 +255,7 @@ class _StagePromptSheetState extends State<_StagePromptSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final stageColor = _parseColor(widget.stageColor);
+    final stageColor = parseHexColor(widget.stageColor);
 
     final sortedPrompts = [...widget.prompts]
       ..sort(
@@ -741,7 +728,7 @@ class _DraggableRecordCard extends StatelessWidget {
                   width: 12,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: _parseColor(s.color),
+                    color: parseHexColor(s.color),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -790,6 +777,12 @@ class _DraggableRecordCard extends StatelessWidget {
       child: RecordCard(
         record: record,
         onTap: onTap,
+        onEmail: () {
+          context.push(
+            '${Routes.emailCompose}?record_id=${record.id}'
+            '${record.contactId != null ? '&contact_id=${record.contactId}' : ''}',
+          );
+        },
         onAddNote: () => _showAddNote(context),
         onManageTags: () => _showTagManager(context),
         onMoveStage: () => _showMoveMenu(context),

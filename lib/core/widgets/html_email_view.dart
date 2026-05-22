@@ -5,9 +5,11 @@ import 'package:url_launcher/url_launcher.dart';
 
 /// Renders an email body as styled HTML or plain text.
 ///
-/// - Default: renders styled HTML using flutter_widget_from_html
-/// - Toggle: user can switch to plain text view
-/// - Safe: no JavaScript execution (Flutter HTML renderer only builds widgets)
+/// Performance optimizations:
+/// - `containsHtml` computed once in `initState`, not per build
+/// - `renderEmailBody` (17+ regex ops) cached after first call
+/// - `RepaintBoundary` isolates expensive HTML rendering
+/// - `HtmlWidget` keyed on body hash to avoid redundant re-parses
 class HtmlEmailView extends StatefulWidget {
   const HtmlEmailView({
     required this.body,
@@ -30,26 +32,37 @@ enum EmailViewMode { html, plainText }
 
 class _HtmlEmailViewState extends State<HtmlEmailView> {
   late EmailViewMode _mode;
+  late bool _isHtml;
+  String? _plainTextCache;
 
   @override
   void initState() {
     super.initState();
-    // Auto-detect: if body doesn't contain HTML, default to plain text
-    _mode = containsHtml(widget.body)
-        ? widget.initialMode
-        : EmailViewMode.plainText;
+    _isHtml = containsHtml(widget.body);
+    _mode = _isHtml ? widget.initialMode : EmailViewMode.plainText;
   }
+
+  @override
+  void didUpdateWidget(covariant HtmlEmailView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.body != widget.body) {
+      _isHtml = containsHtml(widget.body);
+      _plainTextCache = null;
+      if (!_isHtml) _mode = EmailViewMode.plainText;
+    }
+  }
+
+  String get _plainText =>
+      _plainTextCache ??= renderEmailBody(widget.body);
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isHtml = containsHtml(widget.body);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Toggle (only show if body actually has HTML)
-        if (widget.showToggle && isHtml)
+        if (widget.showToggle && _isHtml)
           Align(
             alignment: Alignment.centerRight,
             child: SegmentedButton<EmailViewMode>(
@@ -75,26 +88,29 @@ class _HtmlEmailViewState extends State<HtmlEmailView> {
               ),
             ),
           ),
-        if (widget.showToggle && isHtml) const SizedBox(height: 8),
-
-        // Content
-        if (_mode == EmailViewMode.html && isHtml)
-          HtmlWidget(
-            widget.body,
-            textStyle: widget.textStyle ?? theme.textTheme.bodyMedium,
-            onTapUrl: (url) async {
-              final uri = Uri.tryParse(url);
-              if (uri != null) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }
-              return true;
-            },
-          )
-        else
-          SelectableText(
-            renderEmailBody(widget.body),
-            style: widget.textStyle ?? theme.textTheme.bodyMedium,
-          ),
+        if (widget.showToggle && _isHtml) const SizedBox(height: 8),
+        RepaintBoundary(
+          child: _mode == EmailViewMode.html && _isHtml
+              ? HtmlWidget(
+                  widget.body,
+                  key: ValueKey(widget.body.hashCode),
+                  textStyle: widget.textStyle ?? theme.textTheme.bodyMedium,
+                  onTapUrl: (url) async {
+                    final uri = Uri.tryParse(url);
+                    if (uri != null) {
+                      await launchUrl(
+                        uri,
+                        mode: LaunchMode.externalApplication,
+                      );
+                    }
+                    return true;
+                  },
+                )
+              : SelectableText(
+                  _plainText,
+                  style: widget.textStyle ?? theme.textTheme.bodyMedium,
+                ),
+        ),
       ],
     );
   }

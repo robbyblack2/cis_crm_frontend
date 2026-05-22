@@ -1384,16 +1384,51 @@ class _OriginalEmailPreviewState extends State<_OriginalEmailPreview> {
 
   Future<void> _load() async {
     try {
-      final messages = await GetIt.instance<RecordRemoteDataSource>()
-          .getConversation(widget.recordId);
+      final ds = GetIt.instance<RecordRemoteDataSource>();
+      var messages = await ds.getConversation(widget.recordId);
+
+      // Fall back to /emails if conversation is empty.
+      if (messages.isEmpty) {
+        try {
+          messages = await ds.getEmails(widget.recordId);
+        } catch (_) {}
+      }
+
       if (mounted) {
+        // Normalize nested data structure if present.
+        Map<String, dynamic>? first;
+        if (messages.isNotEmpty) {
+          final raw = messages.first;
+          final data = raw['data'];
+          if (data is Map<String, dynamic>) {
+            first = {
+              ...data,
+              if (data['created_at'] == null && raw['timestamp'] != null)
+                'created_at': raw['timestamp'],
+            };
+          } else {
+            first = raw;
+          }
+        }
         setState(() {
-          _firstMessage = messages.isNotEmpty ? messages.first : null;
+          _firstMessage = first;
           _loading = false;
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      // Try /emails as last resort.
+      try {
+        final emails = await GetIt.instance<RecordRemoteDataSource>()
+            .getEmails(widget.recordId);
+        if (mounted) {
+          setState(() {
+            _firstMessage = emails.isNotEmpty ? emails.first : null;
+            _loading = false;
+          });
+        }
+      } catch (_) {
+        if (mounted) setState(() => _loading = false);
+      }
     }
   }
 
@@ -1425,9 +1460,11 @@ class _OriginalEmailPreviewState extends State<_OriginalEmailPreview> {
         '';
     final subject = msg['subject'] as String? ?? '(no subject)';
     final body = renderEmailBody(
-      msg['text_body'] as String? ??
-          msg['body'] as String? ??
+      msg['body_html'] as String? ??
           msg['html_body'] as String? ??
+          msg['body_text'] as String? ??
+          msg['text_body'] as String? ??
+          msg['body'] as String? ??
           '',
     );
     final timestamp = msg['created_at'] as String? ??
@@ -1509,15 +1546,13 @@ class _ConversationSection extends StatefulWidget {
   State<_ConversationSection> createState() => _ConversationSectionState();
 }
 
-enum _SendStatus { idle, sending, sent, failed }
 
 class _ConversationSectionState extends State<_ConversationSection> {
   List<Map<String, dynamic>>? _messages;
   bool _loading = true;
-  final _replyCtrl = TextEditingController();
-  _SendStatus _sendStatus = _SendStatus.idle;
   int _visibleThreads = 20;
   final Set<String> _expandedThreads = {};
+  List<_EmailThread>? _cachedThreads;
 
   @override
   void initState() {
@@ -1525,40 +1560,90 @@ class _ConversationSectionState extends State<_ConversationSection> {
     _load();
   }
 
-  @override
-  void dispose() {
-    _replyCtrl.dispose();
-    super.dispose();
-  }
-
   Future<void> _load() async {
     try {
-      final messages = await GetIt.instance<RecordRemoteDataSource>()
-          .getConversation(widget.recordId);
+      final ds = GetIt.instance<RecordRemoteDataSource>();
+
+      // Try /conversation first (combined emails + notes).
+      var messages = await ds.getConversation(widget.recordId);
+
+      // If conversation is empty, fall back to /emails endpoint.
+      if (messages.isEmpty) {
+        try {
+          messages = await ds.getEmails(widget.recordId);
+        } catch (_) {}
+      }
+
       if (mounted) {
+        _cachedThreads = null;
         setState(() {
           _messages = messages;
           _loading = false;
         });
-        // Auto-expand the first thread for email-sourced records.
-        if (widget.isEmailSourced && messages.isNotEmpty) {
-          final threads = _buildThreads();
-          if (threads.isNotEmpty) {
-            setState(() => _expandedThreads.add(threads.first.key));
+        final threads = _buildThreads();
+        setState(() {
+          for (final t in threads) {
+            _expandedThreads.add(t.key);
           }
-        }
+        });
       }
     } catch (_) {
-      if (mounted) setState(() { _messages = []; _loading = false; });
+      // Even if /conversation fails, try /emails before giving up.
+      try {
+        final emails = await GetIt.instance<RecordRemoteDataSource>()
+            .getEmails(widget.recordId);
+        if (mounted) {
+          _cachedThreads = null;
+          setState(() {
+            _messages = emails;
+            _loading = false;
+          });
+          final threads = _buildThreads();
+          setState(() {
+            for (final t in threads) {
+              _expandedThreads.add(t.key);
+            }
+          });
+        }
+      } catch (_) {
+        if (mounted) setState(() { _messages = []; _loading = false; });
+      }
     }
   }
 
-  /// Group messages into threads by normalized subject.
+  /// Normalizes a conversation item — if it has a nested `data` field
+  /// (from /conversation endpoint), flatten it so email fields are at top level.
+  Map<String, dynamic> _normalize(Map<String, dynamic> raw) {
+    final type = raw['type'] as String?;
+    final data = raw['data'];
+    if (type != null && data is Map<String, dynamic>) {
+      // Merge the nested data with the wrapper, preserving type and timestamp.
+      return {
+        ...data,
+        'type': type,
+        'timestamp': raw['timestamp'],
+        if (data['created_at'] == null && raw['timestamp'] != null)
+          'created_at': raw['timestamp'],
+      };
+    }
+    return raw;
+  }
+
+  /// Group messages into threads by normalized subject (memoized).
   List<_EmailThread> _buildThreads() {
+    if (_cachedThreads != null) return _cachedThreads!;
     if (_messages == null || _messages!.isEmpty) return [];
 
+    // Filter to email items only (skip notes) and normalize.
+    final emails = _messages!
+        .map(_normalize)
+        .where((m) => m['type'] != 'note')
+        .toList();
+
+    if (emails.isEmpty) return [];
+
     final threadMap = <String, List<Map<String, dynamic>>>{};
-    for (final msg in _messages!) {
+    for (final msg in emails) {
       final subject = (msg['subject'] as String? ?? '(no subject)')
           .replaceAll(RegExp(r'^(Re|Fwd|Fw):\s*', caseSensitive: false), '')
           .trim();
@@ -1569,8 +1654,12 @@ class _ConversationSectionState extends State<_ConversationSection> {
     final threads = threadMap.entries.map((e) {
       // Sort messages within thread oldest first
       e.value.sort((a, b) {
-        final aTs = a['created_at'] as String? ?? '';
-        final bTs = b['created_at'] as String? ?? '';
+        final aTs = a['created_at'] as String? ??
+            a['timestamp'] as String? ??
+            '';
+        final bTs = b['created_at'] as String? ??
+            b['timestamp'] as String? ??
+            '';
         return aTs.compareTo(bTs);
       });
       final latest = e.value.last;
@@ -1586,30 +1675,8 @@ class _ConversationSectionState extends State<_ConversationSection> {
 
     // Sort threads newest first
     threads.sort((a, b) => b.latestTimestamp.compareTo(a.latestTimestamp));
+    _cachedThreads = threads;
     return threads;
-  }
-
-  Future<void> _sendReply() async {
-    final body = _replyCtrl.text.trim();
-    if (body.isEmpty) return;
-
-    setState(() => _sendStatus = _SendStatus.sending);
-    try {
-      await GetIt.instance<RecordRemoteDataSource>()
-          .replyToRecord(widget.recordId, body);
-      _replyCtrl.clear();
-      if (mounted) setState(() => _sendStatus = _SendStatus.sent);
-      await _load();
-      await Future<void>.delayed(const Duration(seconds: 2));
-      if (mounted) setState(() => _sendStatus = _SendStatus.idle);
-    } catch (_) {
-      if (mounted) {
-        setState(() => _sendStatus = _SendStatus.failed);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to send reply')),
-        );
-      }
-    }
   }
 
   @override
@@ -1679,9 +1746,11 @@ class _ConversationSectionState extends State<_ConversationSection> {
                 final isExpanded = _expandedThreads.contains(thread.key);
                 final latest = thread.messages.last;
                 final latestBody = renderEmailBody(
-                  latest['text_body'] as String? ??
-                      latest['body'] as String? ??
+                  latest['body_html'] as String? ??
                       latest['html_body'] as String? ??
+                      latest['body_text'] as String? ??
+                      latest['text_body'] as String? ??
+                      latest['body'] as String? ??
                       '',
                 );
                 final participants = thread.messages
@@ -1790,14 +1859,40 @@ class _ConversationSectionState extends State<_ConversationSection> {
                           ),
                         ),
                       ),
-                      // Expanded: all messages
+                      // Expanded: all messages + inline reply
                       if (isExpanded) ...[
                         const Divider(height: 1),
-                        ...thread.messages.map(
-                          (msg) => Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            child: _MessageBubble(message: msg),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 4,
+                          ),
+                          child: Column(
+                            children: [
+                              for (var i = 0;
+                                  i < thread.messages.length;
+                                  i++)
+                                _MessageBubble(
+                                  key: ValueKey(
+                                    thread.messages[i]['id'] ??
+                                        '${thread.key}_$i',
+                                  ),
+                                  message: thread.messages[i],
+                                  initiallyExpanded:
+                                      i == thread.messages.length - 1,
+                                ),
+                            ],
+                          ),
+                        ),
+                        // Per-thread reply composer
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                          child: _ThreadReplyComposer(
+                            recordId: widget.recordId,
+                            onSent: () {
+                              setState(() => _loading = true);
+                              _load();
+                            },
                           ),
                         ),
                       ],
@@ -1817,105 +1912,6 @@ class _ConversationSectionState extends State<_ConversationSection> {
                 ),
             ],
 
-            const SizedBox(height: 16),
-
-            // ── Reply composer ──
-            Container(
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: colorScheme.outlineVariant),
-              ),
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Reply',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _replyCtrl,
-                    decoration: const InputDecoration(
-                      hintText: 'Type your reply...',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                    ),
-                    maxLines: 5,
-                    minLines: 3,
-                    textCapitalization: TextCapitalization.sentences,
-                    enabled: _sendStatus != _SendStatus.sending,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      if (_sendStatus == _SendStatus.sending)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                width: 14, height: 14,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: colorScheme.primary,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text('Sending...',
-                                  style: theme.textTheme.labelSmall
-                                      ?.copyWith(color: colorScheme.primary)),
-                            ],
-                          ),
-                        )
-                      else if (_sendStatus == _SendStatus.sent)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.check_circle, size: 14,
-                                  color: colorScheme.primary),
-                              const SizedBox(width: 4),
-                              Text('Sent',
-                                  style: theme.textTheme.labelSmall
-                                      ?.copyWith(color: colorScheme.primary)),
-                            ],
-                          ),
-                        )
-                      else if (_sendStatus == _SendStatus.failed)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.error_outline, size: 14,
-                                  color: colorScheme.error),
-                              const SizedBox(width: 4),
-                              Text('Failed to send',
-                                  style: theme.textTheme.labelSmall
-                                      ?.copyWith(color: colorScheme.error)),
-                            ],
-                          ),
-                        ),
-                      const Spacer(),
-                      FilledButton.icon(
-                        onPressed: _sendStatus == _SendStatus.sending
-                            ? null
-                            : _sendReply,
-                        icon: const Icon(Icons.send, size: 18),
-                        label: const Text('Send Reply'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),
@@ -1937,28 +1933,189 @@ class _EmailThread {
   final String latestTimestamp;
 }
 
-/// A single message bubble in the conversation thread.
-/// Inbound messages (from customer) align left, outbound (replies) align right.
-class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message});
+/// Inline reply composer shown at the bottom of each expanded thread.
+class _ThreadReplyComposer extends StatefulWidget {
+  const _ThreadReplyComposer({
+    required this.recordId,
+    required this.onSent,
+  });
 
-  final Map<String, dynamic> message;
+  final String recordId;
+  final VoidCallback onSent;
+
+  @override
+  State<_ThreadReplyComposer> createState() => _ThreadReplyComposerState();
+}
+
+class _ThreadReplyComposerState extends State<_ThreadReplyComposer> {
+  final _ctrl = TextEditingController();
+  bool _sending = false;
+  bool _sent = false;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final body = _ctrl.text.trim();
+    if (body.isEmpty) return;
+
+    setState(() => _sending = true);
+    try {
+      await GetIt.instance<RecordRemoteDataSource>()
+          .replyToRecord(widget.recordId, body);
+      _ctrl.clear();
+      if (mounted) {
+        setState(() {
+          _sending = false;
+          _sent = true;
+        });
+        widget.onSent();
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _sending = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to send reply')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.reply, size: 16, color: colorScheme.primary),
+              const SizedBox(width: 6),
+              Text(
+                'Reply',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _ctrl,
+            decoration: InputDecoration(
+              hintText: 'Type your reply...',
+              border: const OutlineInputBorder(),
+              isDense: true,
+              filled: true,
+              fillColor: colorScheme.surface,
+            ),
+            maxLines: 5,
+            minLines: 2,
+            textCapitalization: TextCapitalization.sentences,
+            enabled: !_sending,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              if (_sending)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Sending...',
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: colorScheme.primary),
+                    ),
+                  ],
+                )
+              else if (_sent)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_circle,
+                        size: 14, color: colorScheme.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Sent',
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: colorScheme.primary),
+                    ),
+                  ],
+                ),
+              const Spacer(),
+              FilledButton.icon(
+                onPressed: _sending ? null : _send,
+                icon: const Icon(Icons.send, size: 16),
+                label: const Text('Send'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Gmail-style message bubble: collapsed header → tap to expand body.
+class _MessageBubble extends StatefulWidget {
+  const _MessageBubble({
+    required this.message,
+    this.initiallyExpanded = false,
+    super.key,
+  });
+
+  final Map<String, dynamic> message;
+  final bool initiallyExpanded;
+
+  @override
+  State<_MessageBubble> createState() => _MessageBubbleState();
+}
+
+class _MessageBubbleState extends State<_MessageBubble> {
+  late bool _expanded = widget.initiallyExpanded;
+  String? _plainPreviewCache;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final message = widget.message;
+
     final direction = (message['direction'] as String? ?? '').toLowerCase();
     final isOutbound = direction == 'outbound' || direction == 'out' ||
         direction == 'sent' || direction == 'reply';
 
     final subject = message['subject'] as String?;
-    final body = message['text_body'] as String? ??
-        message['body'] as String? ??
+    final body = message['body_html'] as String? ??
         message['html_body'] as String? ??
+        message['body_text'] as String? ??
+        message['text_body'] as String? ??
+        message['body'] as String? ??
         message['content'] as String? ??
         '';
+    final plainPreview = _plainPreviewCache ??= renderEmailBody(body);
     final fromAddress = message['from_address'] as String? ??
         message['sender_email'] as String? ??
         message['from'] as String? ??
@@ -1971,403 +2128,220 @@ class _MessageBubble extends StatelessWidget {
         message['date'] as String? ??
         '';
 
-    final cc = message['cc'] as String? ?? message['cc_addresses'] as String? ?? '';
-    final bcc = message['bcc'] as String? ?? message['bcc_addresses'] as String? ?? '';
+    final cc =
+        message['cc'] as String? ?? message['cc_addresses'] as String? ?? '';
+    final bcc =
+        message['bcc'] as String? ?? message['bcc_addresses'] as String? ?? '';
     final replyTo = message['reply_to'] as String? ?? '';
     final messageId = message['message_id'] as String? ?? '';
     final attachments = message['attachments'] as List<dynamic>? ?? [];
 
+    // Sender display name (strip <email> if present)
+    final senderDisplay = fromAddress.contains('<')
+        ? fromAddress.substring(0, fromAddress.indexOf('<')).trim()
+        : fromAddress.split('@').first;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Align(
-        alignment: isOutbound ? Alignment.centerRight : Alignment.centerLeft,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.85,
-          ),
-          child: InkWell(
-            onTap: () => _showFullEmail(
-              context,
-              subject: subject,
-              body: body,
-              fromAddress: fromAddress,
-              toAddress: toAddress,
-              cc: cc,
-              bcc: bcc,
-              replyTo: replyTo,
-              messageId: messageId,
-              timestamp: timestamp,
-              isOutbound: isOutbound,
-              attachments: attachments,
-            ),
+      padding: const EdgeInsets.only(bottom: 4),
+      child: InkWell(
+        onTap: () => setState(() => _expanded = !_expanded),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: _expanded
+                ? (isOutbound
+                    ? colorScheme.primaryContainer.withValues(alpha: 0.5)
+                    : colorScheme.surfaceContainerHighest)
+                : null,
             borderRadius: BorderRadius.circular(12),
-            child: Card(
-            color: isOutbound
-                ? colorScheme.primaryContainer
-                : colorScheme.surfaceContainerHighest,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(
-                color: isOutbound
-                    ? colorScheme.primary.withValues(alpha: 0.2)
-                    : colorScheme.outlineVariant,
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Subject + timestamp
-                  Row(
-                    children: [
-                      Icon(
-                        isOutbound
-                            ? Icons.arrow_upward_rounded
-                            : Icons.arrow_downward_rounded,
-                        size: 16,
-                        color: isOutbound
-                            ? colorScheme.primary
-                            : colorScheme.tertiary,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          subject ?? '(no subject)',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: isOutbound
-                                ? colorScheme.onPrimaryContainer
-                                : colorScheme.onSurface,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (timestamp.isNotEmpty)
-                        Text(
-                          _fmtTs(timestamp),
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  // From + To
-                  if (fromAddress.isNotEmpty)
-                    Text(
-                      'From: $fromAddress',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  if (toAddress.isNotEmpty)
-                    Text(
-                      'To: $toAddress',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  if (cc.isNotEmpty)
-                    Text(
-                      'CC: $cc',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-
-                  // Body preview (plain text, truncated — no HTML rendering for perf)
-                  if (body.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      renderEmailBody(body),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: isOutbound
-                            ? colorScheme.onPrimaryContainer
-                            : colorScheme.onSurface,
-                      ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                  // Attachment indicator
-                  if (attachments.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.attach_file, size: 14,
-                            color: colorScheme.onSurfaceVariant),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${attachments.length} attachment${attachments.length == 1 ? '' : 's'}',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  // Tap to view hint
-                  const SizedBox(height: 4),
-                  Text(
-                    'Tap for full email',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.primary.withValues(alpha: 0.6),
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            border: _expanded
+                ? Border.all(
+                    color: isOutbound
+                        ? colorScheme.primary.withValues(alpha: 0.2)
+                        : colorScheme.outlineVariant,
+                  )
+                : null,
           ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  static void _showFullEmail(
-    BuildContext context, {
-    String? subject,
-    required String body,
-    required String fromAddress,
-    required String toAddress,
-    required String cc,
-    required String bcc,
-    required String replyTo,
-    required String messageId,
-    required String timestamp,
-    required bool isOutbound,
-    required List<dynamic> attachments,
-  }) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.85,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        expand: false,
-        builder: (ctx, scrollCtrl) {
-          final theme = Theme.of(ctx);
-
-          return Scaffold(
-            appBar: AppBar(
-              title: Text(subject ?? 'Email'),
-              leading: IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.pop(ctx),
-              ),
-            ),
-            body: _EmailDetailBody(
-              scrollCtrl: scrollCtrl,
-              subject: subject,
-              body: body,
-              fromAddress: fromAddress,
-              toAddress: toAddress,
-              cc: cc,
-              bcc: bcc,
-              replyTo: replyTo,
-              messageId: messageId,
-              timestamp: timestamp,
-              attachments: attachments,
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _EmailDetailBody extends StatefulWidget {
-  const _EmailDetailBody({
-    required this.scrollCtrl,
-    this.subject,
-    required this.body,
-    required this.fromAddress,
-    required this.toAddress,
-    required this.cc,
-    required this.bcc,
-    required this.replyTo,
-    required this.messageId,
-    required this.timestamp,
-    required this.attachments,
-  });
-
-  final ScrollController scrollCtrl;
-  final String? subject;
-  final String body;
-  final String fromAddress;
-  final String toAddress;
-  final String cc;
-  final String bcc;
-  final String replyTo;
-  final String messageId;
-  final String timestamp;
-  final List<dynamic> attachments;
-
-  @override
-  State<_EmailDetailBody> createState() => _EmailDetailBodyState();
-}
-
-class _EmailDetailBodyState extends State<_EmailDetailBody> {
-  bool _showRawSource = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return ListView(
-      controller: widget.scrollCtrl,
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Headers card
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Email Headers',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Header row (always visible, Gmail-style) ──
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
                 ),
-                const Divider(height: 24),
-                if (widget.fromAddress.isNotEmpty)
-                  _headerRow(theme, 'From', widget.fromAddress),
-                if (widget.toAddress.isNotEmpty)
-                  _headerRow(theme, 'To', widget.toAddress),
-                if (widget.cc.isNotEmpty)
-                  _headerRow(theme, 'CC', widget.cc),
-                if (widget.bcc.isNotEmpty)
-                  _headerRow(theme, 'BCC', widget.bcc),
-                if (widget.replyTo.isNotEmpty)
-                  _headerRow(theme, 'Reply-To', widget.replyTo),
-                if (widget.subject != null && widget.subject!.isNotEmpty)
-                  _headerRow(theme, 'Subject', widget.subject!),
-                if (widget.timestamp.isNotEmpty)
-                  _headerRow(theme, 'Date', _fmtTs(widget.timestamp)),
-                if (widget.messageId.isNotEmpty)
-                  _headerRow(theme, 'Message-ID', widget.messageId),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Body with view mode toggle
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+                child: Row(
                   children: [
-                    Expanded(
+                    // Avatar
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: isOutbound
+                          ? colorScheme.primary
+                          : colorScheme.tertiaryContainer,
                       child: Text(
-                        _showRawSource ? 'Raw Source' : 'Body',
-                        style: theme.textTheme.titleMedium?.copyWith(
+                        senderDisplay.isNotEmpty
+                            ? senderDisplay[0].toUpperCase()
+                            : '?',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: isOutbound
+                              ? colorScheme.onPrimary
+                              : colorScheme.onTertiaryContainer,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-                    if (containsHtml(widget.body))
-                      TextButton.icon(
-                        icon: Icon(
-                          _showRawSource ? Icons.article : Icons.code,
-                          size: 16,
-                        ),
-                        label: Text(
-                          _showRawSource ? 'Styled view' : 'Raw source',
-                        ),
-                        onPressed: () =>
-                            setState(() => _showRawSource = !_showRawSource),
+                    const SizedBox(width: 10),
+                    // Sender + preview
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  isOutbound ? 'You' : senderDisplay,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (attachments.isNotEmpty) ...[
+                                Icon(Icons.attach_file,
+                                    size: 14,
+                                    color: colorScheme.onSurfaceVariant),
+                                const SizedBox(width: 4),
+                              ],
+                              Text(
+                                _fmtTs(timestamp),
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (!_expanded && plainPreview.isNotEmpty)
+                            Text(
+                              plainPreview,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
                       ),
+                    ),
+                    Icon(
+                      _expanded ? Icons.expand_less : Icons.expand_more,
+                      size: 18,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ],
                 ),
-                const Divider(height: 16),
-                if (_showRawSource)
-                  SelectableText(
-                    widget.body,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontFamily: 'monospace',
-                    ),
-                  )
-                else
-                  HtmlEmailView(
-                    body: widget.body,
-                    showToggle: true,
-                    textStyle: theme.textTheme.bodyMedium,
+              ),
+
+              // ── Expanded: full inline email ──
+              if (_expanded) ...[
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Address headers
+                      if (fromAddress.isNotEmpty)
+                        _addressRow(theme, 'From', fromAddress),
+                      if (toAddress.isNotEmpty)
+                        _addressRow(theme, 'To', toAddress),
+                      if (cc.isNotEmpty) _addressRow(theme, 'CC', cc),
+                      if (bcc.isNotEmpty) _addressRow(theme, 'BCC', bcc),
+                      if (subject != null && subject!.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          subject!,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+
+                      // Full email body
+                      if (body.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: colorScheme.outlineVariant
+                                  .withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: HtmlEmailView(
+                            body: body,
+                            showToggle: true,
+                            textStyle:
+                                theme.textTheme.bodyMedium?.copyWith(
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ],
+
+                      // Attachments
+                      if (attachments.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: attachments.map((a) {
+                            final name = a is Map
+                                ? (a['filename'] as String? ?? 'File')
+                                : a.toString();
+                            final size =
+                                a is Map ? (a['size'] as int?) : null;
+                            final sizeLabel = size != null
+                                ? ' (${(size / 1024).toStringAsFixed(1)} KB)'
+                                : '';
+                            return Chip(
+                              avatar:
+                                  const Icon(Icons.attach_file, size: 14),
+                              label: Text('$name$sizeLabel'),
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ],
                   ),
+                ),
               ],
-            ),
+            ],
           ),
         ),
-
-        // Attachments
-        if (widget.attachments.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Attachments (${widget.attachments.length})',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Divider(height: 24),
-                  ...widget.attachments.map((a) {
-                    final name = a is Map
-                        ? (a['filename'] as String? ?? 'File')
-                        : a.toString();
-                    final size = a is Map ? (a['size'] as int?) : null;
-                    final sizeStr = size != null
-                        ? '${(size / 1024).toStringAsFixed(1)} KB'
-                        : '';
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.attach_file),
-                      title: Text(name),
-                      subtitle:
-                          sizeStr.isNotEmpty ? Text(sizeStr) : null,
-                    );
-                  }),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ],
+      ),
     );
   }
 
-  static Widget _headerRow(ThemeData theme, String label, String value) {
+  static Widget _addressRow(ThemeData theme, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.only(bottom: 2),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 80,
+            width: 40,
             child: Text(
               label,
-              style: theme.textTheme.labelMedium?.copyWith(
+              style: theme.textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -2376,7 +2350,7 @@ class _EmailDetailBodyState extends State<_EmailDetailBody> {
           Expanded(
             child: SelectableText(
               value,
-              style: theme.textTheme.bodyMedium,
+              style: theme.textTheme.bodySmall,
             ),
           ),
         ],
@@ -2585,7 +2559,7 @@ class _TimelineSection extends StatelessWidget {
 
     return FutureBuilder(
       future: GetIt.instance<TimelineRepository>().getTimeline(
-        entityType: 'record',
+        entityType: 'records',
         entityId: recordId,
       ),
       builder: (context, snapshot) {
@@ -2600,11 +2574,21 @@ class _TimelineSection extends StatelessWidget {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: Center(
-              child: Text(
-                l10n.timelineLoadFailed,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.error,
-                ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.timeline_outlined,
+                    size: 48,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.noTimelineEntries,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
           );
@@ -3166,6 +3150,16 @@ class _RecordDetailsCardState extends State<_RecordDetailsCard> {
               label: l10n.source,
               value: record.source.name,
             ),
+
+            // ── Sender Email (shown for email-sourced records) ──
+            if (record.source == RecordSource.email &&
+                record.senderEmail != null &&
+                record.senderEmail!.isNotEmpty)
+              _DetailRow(
+                icon: Icons.email_outlined,
+                label: 'From',
+                value: record.senderEmail!,
+              ),
 
             // ── Tags (interactive) ──
             const SizedBox(height: 12),

@@ -4,6 +4,9 @@ import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/core/network/web_socket_cubit.dart';
 import 'package:cis_crm/core/network/web_socket_event.dart';
 import 'package:cis_crm/core/responsive/breakpoints.dart';
+import 'package:cis_crm/core/utils/color_utils.dart';
+import 'package:cis_crm/core/widgets/crm_tag_chip.dart';
+import 'package:cis_crm/core/widgets/filter_sidebar.dart';
 import 'package:cis_crm/core/widgets/state/empty_state.dart';
 import 'package:cis_crm/core/widgets/state/page_error.dart';
 import 'package:cis_crm/core/widgets/state/page_loading.dart';
@@ -22,6 +25,7 @@ import 'package:cis_crm/features/pipeline/presentation/pages/pipeline_settings_p
 import 'package:cis_crm/features/pipeline/presentation/pages/record_detail_page.dart';
 import 'package:cis_crm/features/pipeline/presentation/widgets/stage_column.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -148,6 +152,9 @@ class _LoadedPipelineView extends StatefulWidget {
 
 class _LoadedPipelineViewState extends State<_LoadedPipelineView> {
   bool _listView = false;
+  bool _sidebarOpen = false;
+  Set<String> _stageFilter = {};
+  Set<String> _sourceFilter = {};
 
   PipelineLoaded get state => widget.state;
 
@@ -172,6 +179,23 @@ class _LoadedPipelineViewState extends State<_LoadedPipelineView> {
     final isListView =
         getIt<SharedPreferences>().getBool('pipeline_view_$pid') ?? false;
     if (mounted) setState(() => _listView = isListView);
+  }
+
+  List<PipelineRecord> _applyRecordFilters(
+    List<PipelineRecord> records,
+    List<Stage> stages,
+  ) {
+    var filtered = records;
+    if (_stageFilter.isNotEmpty) {
+      filtered =
+          filtered.where((r) => _stageFilter.contains(r.stageId)).toList();
+    }
+    if (_sourceFilter.isNotEmpty) {
+      filtered = filtered
+          .where((r) => _sourceFilter.contains(r.source.name))
+          .toList();
+    }
+    return filtered;
   }
 
   void _setViewPref(bool listView) {
@@ -213,11 +237,20 @@ class _LoadedPipelineViewState extends State<_LoadedPipelineView> {
                     context
                         .read<PipelineBloc>()
                         .add(PipelineKanbanRequested(pipelineId: id));
+                    context
+                        .read<RecordBloc>()
+                        .add(RecordLoadRequested(pipelineId: id));
                   }
                 },
               )
             : Text(currentName),
         actions: [
+          if (_listView)
+            IconButton(
+              icon: Icon(_sidebarOpen ? Icons.filter_list_off : Icons.filter_list),
+              tooltip: 'Filters',
+              onPressed: () => setState(() => _sidebarOpen = !_sidebarOpen),
+            ),
           SegmentedButton<bool>(
             segments: const [
               ButtonSegment(
@@ -303,9 +336,54 @@ class _LoadedPipelineViewState extends State<_LoadedPipelineView> {
                 ),
               ),
             RecordLoaded(:final records) => _listView
-                ? _RecordListView(
-                    stages: stages,
-                    records: records,
+                ? Row(
+                    children: [
+                      Expanded(
+                        child: _RecordListView(
+                          stages: stages,
+                          records: _applyRecordFilters(records, stages),
+                        ),
+                      ),
+                      if (_sidebarOpen)
+                        FilterSidebar(
+                          totalCount: records.length,
+                          resultCount:
+                              _applyRecordFilters(records, stages).length,
+                          onClearAll: () => setState(() {
+                            _stageFilter = {};
+                            _sourceFilter = {};
+                          }),
+                          sections: [
+                            FilterSection.checkboxGroup(
+                              title: 'Stage',
+                              options: stages
+                                  .map((s) => FilterOption(
+                                      value: s.id, label: s.name))
+                                  .toList(),
+                              selected: _stageFilter,
+                              onChanged: (v) =>
+                                  setState(() => _stageFilter = v),
+                            ),
+                            FilterSection.checkboxGroup(
+                              title: 'Source',
+                              options: const [
+                                FilterOption(
+                                    value: 'manual', label: 'Manual'),
+                                FilterOption(
+                                    value: 'email', label: 'Email'),
+                                FilterOption(
+                                    value: 'automation',
+                                    label: 'Automation'),
+                                FilterOption(
+                                    value: 'sync_rule', label: 'Sync'),
+                              ],
+                              selected: _sourceFilter,
+                              onChanged: (v) =>
+                                  setState(() => _sourceFilter = v),
+                            ),
+                          ],
+                        ),
+                    ],
                   )
                 : _KanbanBoard(
                     stages: stages,
@@ -361,24 +439,40 @@ class _CreateRecordSheet extends StatefulWidget {
 
 class _CreateRecordSheetState extends State<_CreateRecordSheet> {
   final _titleCtrl = TextEditingController();
-  final _tagsCtrl = TextEditingController();
   late String _selectedStageId;
 
   String? _selectedContactId;
   Map<String, dynamic>? _selectedContact;
   String? _selectedCompanyId;
   Map<String, dynamic>? _selectedCompany;
+  List<String> _selectedTags = [];
+  List<String> _availableTags = [];
 
   @override
   void initState() {
     super.initState();
     _selectedStageId = widget.stages.first.id;
+    _loadTags();
+  }
+
+  Future<void> _loadTags() async {
+    try {
+      final response = await getIt<Dio>().get<Map<String, dynamic>>('/api/tags');
+      final list = response.data?['data'] as List<dynamic>? ?? [];
+      if (mounted) {
+        setState(() {
+          _availableTags = list
+              .map((t) => (t as Map<String, dynamic>)['name'] as String? ?? '')
+              .where((n) => n.isNotEmpty)
+              .toList();
+        });
+      }
+    } catch (_) {}
   }
 
   @override
   void dispose() {
     _titleCtrl.dispose();
-    _tagsCtrl.dispose();
     super.dispose();
   }
 
@@ -622,11 +716,7 @@ class _CreateRecordSheetState extends State<_CreateRecordSheet> {
   void _submit() {
     final title = _titleCtrl.text.trim();
     if (title.isEmpty) return;
-    final tags = _tagsCtrl.text
-        .split(',')
-        .map((t) => t.trim())
-        .where((t) => t.isNotEmpty)
-        .toList();
+    final tags = _selectedTags;
     widget.recordBloc.add(
       RecordCreateRequested(
         pipelineId: widget.pipelineId,
@@ -764,12 +854,43 @@ class _CreateRecordSheetState extends State<_CreateRecordSheet> {
               const SizedBox(height: 16),
 
               // ── Tags ──
-              TextField(
-                controller: _tagsCtrl,
+              InputDecorator(
                 decoration: const InputDecoration(
                   labelText: 'Tags',
-                  hintText: 'Comma-separated (optional)',
                   border: OutlineInputBorder(),
+                ),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    ..._selectedTags.map((tag) => Chip(
+                          label: Text(tag, style: const TextStyle(fontSize: 12)),
+                          onDeleted: () =>
+                              setState(() => _selectedTags.remove(tag)),
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                        )),
+                    PopupMenuButton<String>(
+                      tooltip: 'Add tag',
+                      offset: const Offset(0, 32),
+                      onSelected: (tag) {
+                        if (!_selectedTags.contains(tag)) {
+                          setState(() => _selectedTags.add(tag));
+                        }
+                      },
+                      itemBuilder: (_) => _availableTags
+                          .where((t) => !_selectedTags.contains(t))
+                          .map((t) => PopupMenuItem(value: t, child: Text(t)))
+                          .toList(),
+                      child: const Chip(
+                        avatar: Icon(Icons.add, size: 14),
+                        label: Text('Add', style: TextStyle(fontSize: 12)),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 24),
@@ -789,6 +910,44 @@ class _CreateRecordSheetState extends State<_CreateRecordSheet> {
       ),
     );
   }
+}
+
+/// Columns available in the list view, ordered by priority.
+enum _ListColumn {
+  title,
+  stage,
+  contact,
+  owner,
+  tags,
+  source,
+  created;
+
+  /// Which columns to show at each breakpoint.
+  static List<_ListColumn> visibleAt(WindowSize size) => switch (size) {
+        WindowSize.compact => [title, stage],
+        WindowSize.medium => [title, stage, contact, tags],
+        WindowSize.expanded => values,
+      };
+
+  int get flex => switch (this) {
+        title => 3,
+        stage => 2,
+        contact => 2,
+        owner => 2,
+        tags => 2,
+        source => 1,
+        created => 1,
+      };
+
+  String get label => switch (this) {
+        title => 'Title',
+        stage => 'Stage',
+        contact => 'Contact',
+        owner => 'Owner',
+        tags => 'Tags',
+        source => 'Source',
+        created => 'Created',
+      };
 }
 
 class _RecordListView extends StatefulWidget {
@@ -815,15 +974,7 @@ class _RecordListViewState extends State<_RecordListView> {
         );
   }
 
-  Color _parseColor(String colorStr) {
-    if (colorStr.startsWith('#')) {
-      final hex = colorStr.replaceFirst('#', '');
-      return Color(int.parse('FF$hex', radix: 16));
-    }
-    return Color(int.tryParse(colorStr) ?? 0xFF9E9E9E);
-  }
-
-  String _timeAgo(DateTime dt) {
+  static String timeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
     if (diff.inDays > 0) return '${diff.inDays}d ago';
     if (diff.inHours > 0) return '${diff.inHours}h ago';
@@ -831,14 +982,14 @@ class _RecordListViewState extends State<_RecordListView> {
     return 'Just now';
   }
 
-  IconData _sourceIcon(RecordSource source) => switch (source) {
+  static IconData _sourceIcon(RecordSource source) => switch (source) {
         RecordSource.email => Icons.email_outlined,
         RecordSource.automation => Icons.smart_toy_outlined,
         RecordSource.syncRule => Icons.sync_outlined,
         RecordSource.manual => Icons.edit_outlined,
       };
 
-  String _sourceLabel(RecordSource source) => switch (source) {
+  static String _sourceLabel(RecordSource source) => switch (source) {
         RecordSource.email => 'Email',
         RecordSource.automation => 'Auto',
         RecordSource.syncRule => 'Sync',
@@ -879,32 +1030,158 @@ class _RecordListViewState extends State<_RecordListView> {
     });
   }
 
-  Widget _headerCell(String label, String column, {int flex = 2}) {
-    final isActive = _sortColumn == column;
+  Widget _headerCell(
+    _ListColumn col, {
+    required ThemeData theme,
+  }) {
+    final isActive = _sortColumn == col.name;
     return Expanded(
-      flex: flex,
+      flex: col.flex,
       child: InkWell(
-        onTap: () => _toggleSort(column),
-        child: Row(
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: isActive
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-            if (isActive)
-              Icon(
-                _sortAsc ? Icons.arrow_upward : Icons.arrow_downward,
-                size: 12,
-                color: Theme.of(context).colorScheme.primary,
+        onTap: () => _toggleSort(col.name),
+        borderRadius: BorderRadius.circular(4),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Text(
+                col.label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: isActive
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
               ),
-          ],
+              if (isActive)
+                Icon(
+                  _sortAsc ? Icons.arrow_upward : Icons.arrow_downward,
+                  size: 12,
+                  color: theme.colorScheme.primary,
+                ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _cellForColumn(
+    _ListColumn col,
+    PipelineRecord record,
+    Stage? stage,
+    Color stageColor, {
+    required ThemeData theme,
+    required ColorScheme colorScheme,
+  }) {
+    return Expanded(
+      flex: col.flex,
+      child: switch (col) {
+        _ListColumn.title => Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: stageColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  record.title,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        _ListColumn.stage => _InlineStageChip(
+            stage: stage,
+            allStages: widget.stages,
+            stageColor: stageColor,
+            record: record,
+          ),
+        _ListColumn.contact => record.contactId != null
+            ? ResolvedName(
+                id: record.contactId,
+                type: 'contact',
+                style: theme.textTheme.bodySmall,
+              )
+            : record.senderEmail != null && record.senderEmail!.isNotEmpty
+                ? Row(
+                    children: [
+                      Icon(
+                        Icons.alternate_email,
+                        size: 12,
+                        color: colorScheme.tertiary,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          record.senderEmail!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.tertiary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  )
+                : Text(
+                    '—',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+        _ListColumn.owner => record.ownerId != null
+            ? ResolvedName(
+                id: record.ownerId,
+                type: 'user',
+                style: theme.textTheme.bodySmall,
+              )
+            : Text(
+                '—',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+        _ListColumn.tags => _TagsCell(tags: record.tags),
+        _ListColumn.source => Row(
+            children: [
+              Icon(
+                _sourceIcon(record.source),
+                size: 14,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  _sourceLabel(record.source),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        _ListColumn.created => Tooltip(
+            message: record.createdAt.toIso8601String(),
+            child: Text(
+              timeAgo(record.createdAt),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+      },
     );
   }
 
@@ -914,198 +1191,149 @@ class _RecordListViewState extends State<_RecordListView> {
     final colorScheme = theme.colorScheme;
     final sorted = _sortedRecords;
 
-    return Column(
-      children: [
-        // Column headers
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: colorScheme.outlineVariant),
-            ),
-          ),
-          child: Row(
-            children: [
-              const SizedBox(width: 20), // stage dot space
-              const SizedBox(width: 8),
-              _headerCell('Title', 'title', flex: 3),
-              _headerCell('Stage', 'stage'),
-              _headerCell('Contact', 'contact'),
-              _headerCell('Owner', 'owner'),
-              _headerCell('Tags', 'tags'),
-              _headerCell('Source', 'source'),
-              _headerCell('Created', 'created'),
-            ],
-          ),
-        ),
-        // Rows
-        Expanded(
-          child: ListView.separated(
-            itemCount: sorted.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final record = sorted[index];
-              final stage = _stageForRecord(record);
-              final stageColor =
-                  stage != null ? _parseColor(stage.color) : Colors.grey;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final windowSize = windowSizeFor(constraints.maxWidth);
+        final visibleColumns = _ListColumn.visibleAt(windowSize);
 
-              return InkWell(
-                onTap: () {
-                  final pipelineBloc = context.read<PipelineBloc>();
-                  final recordBloc = context.read<RecordBloc>();
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => MultiBlocProvider(
-                        providers: [
-                          BlocProvider<PipelineBloc>.value(
-                              value: pipelineBloc),
-                          BlocProvider<RecordBloc>.value(
-                              value: recordBloc),
-                        ],
-                        child: RecordDetailPage(recordId: record.id),
-                      ),
+        return Column(
+          children: [
+            // Column headers
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerLow,
+                border: Border(
+                  bottom: BorderSide(color: colorScheme.outlineVariant),
+                ),
+              ),
+              child: Row(
+                children: [
+                  for (final col in visibleColumns)
+                    _headerCell(col, theme: theme),
+                ],
+              ),
+            ),
+            // Rows
+            Expanded(
+              child: ListView.separated(
+                itemCount: sorted.length,
+                separatorBuilder: (_, __) =>
+                    Divider(height: 1, color: colorScheme.outlineVariant),
+                itemBuilder: (context, index) {
+                  final record = sorted[index];
+                  final stage = _stageForRecord(record);
+                  final stageColor = stage != null
+                      ? parseHexColor(stage.color)
+                      : Colors.grey;
+
+                  return _HoverableRow(
+                    onTap: () {
+                      final pipelineBloc = context.read<PipelineBloc>();
+                      final recordBloc = context.read<RecordBloc>();
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => MultiBlocProvider(
+                            providers: [
+                              BlocProvider<PipelineBloc>.value(
+                                  value: pipelineBloc),
+                              BlocProvider<RecordBloc>.value(
+                                  value: recordBloc),
+                            ],
+                            child: RecordDetailPage(recordId: record.id),
+                          ),
+                        ),
+                      );
+                    },
+                    child: Row(
+                      children: [
+                        for (final col in visibleColumns)
+                          _cellForColumn(
+                            col,
+                            record,
+                            stage,
+                            stageColor,
+                            theme: theme,
+                            colorScheme: colorScheme,
+                          ),
+                      ],
                     ),
                   );
                 },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    children: [
-                      // Stage color dot
-                      Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: stageColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Title
-                      Expanded(
-                        flex: 3,
-                        child: Text(
-                          record.title,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      // Stage name (tappable for inline change)
-                      Expanded(
-                        flex: 2,
-                        child: _InlineStageChip(
-                          stage: stage,
-                          allStages: widget.stages,
-                          stageColor: stageColor,
-                          record: record,
-                        ),
-                      ),
-                      // Contact
-                      Expanded(
-                        flex: 2,
-                        child: record.contactId != null
-                            ? ResolvedName(
-                                id: record.contactId,
-                                type: 'contact',
-                                style: theme.textTheme.bodySmall,
-                              )
-                            : Text(
-                                '—',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                      ),
-                      // Owner
-                      Expanded(
-                        flex: 2,
-                        child: record.ownerId != null
-                            ? ResolvedName(
-                                id: record.ownerId,
-                                type: 'user',
-                                style: theme.textTheme.bodySmall,
-                              )
-                            : Text(
-                                '—',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                      ),
-                      // Tags
-                      Expanded(
-                        flex: 2,
-                        child: record.tags.isNotEmpty
-                            ? Wrap(
-                                spacing: 4,
-                                children: record.tags.take(2).map((tag) {
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 1,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: colorScheme.primary
-                                          .withValues(alpha: 0.08),
-                                      borderRadius:
-                                          BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      tag,
-                                      style: theme.textTheme.labelSmall
-                                          ?.copyWith(fontSize: 10),
-                                    ),
-                                  );
-                                }).toList(),
-                              )
-                            : const SizedBox.shrink(),
-                      ),
-                      // Source
-                      Expanded(
-                        flex: 2,
-                        child: Row(
-                          children: [
-                            Icon(
-                              _sourceIcon(record.source),
-                              size: 14,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _sourceLabel(record.source),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Created
-                      Expanded(
-                        flex: 2,
-                        child: Tooltip(
-                          message: record.createdAt.toIso8601String(),
-                          child: Text(
-                            _timeAgo(record.createdAt),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Row with hover highlight for desktop.
+class _HoverableRow extends StatefulWidget {
+  const _HoverableRow({
+    required this.onTap,
+    required this.child,
+  });
+
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  State<_HoverableRow> createState() => _HoverableRowState();
+}
+
+class _HoverableRowState extends State<_HoverableRow> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
+          color: _hovered
+              ? colorScheme.primary.withValues(alpha: 0.05)
+              : null,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: widget.child,
         ),
+      ),
+    );
+  }
+}
+
+/// Shows up to 2 tags with a +N overflow indicator.
+class _TagsCell extends StatelessWidget {
+  const _TagsCell({required this.tags});
+
+  final List<String> tags;
+
+  @override
+  Widget build(BuildContext context) {
+    if (tags.isEmpty) return const SizedBox.shrink();
+
+    final visible = tags.take(2).toList();
+    final overflow = tags.length - visible.length;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final tag in visible) ...[
+          Flexible(child: CrmTagChip(name: tag)),
+          const SizedBox(width: 4),
+        ],
+        if (overflow > 0)
+          Text(
+            '+$overflow',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
       ],
     );
   }
@@ -1140,7 +1368,7 @@ class _InlineStageChip extends StatelessWidget {
             );
       },
       itemBuilder: (_) => allStages.map((s) {
-        final color = _parseStageColor(s.color);
+        final color = parseHexColor(s.color);
         return PopupMenuItem(
           value: s.id,
           child: Row(
@@ -1199,14 +1427,6 @@ class _InlineStageChip extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Color _parseStageColor(String colorStr) {
-    if (colorStr.startsWith('#')) {
-      final hex = colorStr.replaceFirst('#', '');
-      return Color(int.parse('FF$hex', radix: 16));
-    }
-    return Color(int.tryParse(colorStr) ?? 0xFF9E9E9E);
   }
 }
 

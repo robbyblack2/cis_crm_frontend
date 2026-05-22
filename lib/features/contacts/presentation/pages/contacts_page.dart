@@ -8,6 +8,7 @@ import 'package:cis_crm/features/contacts/data/models/company_model.dart';
 import 'package:cis_crm/features/contacts/domain/entities/company.dart';
 import 'package:cis_crm/features/contacts/domain/entities/contact.dart';
 import 'package:cis_crm/features/contacts/domain/repositories/contact_repository.dart';
+import 'package:cis_crm/features/contacts/presentation/bloc/companies_cubit.dart';
 import 'package:cis_crm/features/contacts/presentation/bloc/contact_form_cubit.dart';
 import 'package:cis_crm/features/contacts/presentation/bloc/contacts_bloc.dart';
 import 'package:cis_crm/features/contacts/presentation/pages/company_detail_page.dart';
@@ -130,6 +131,12 @@ class _ContactsViewState extends State<_ContactsView> {
                     state: state,
                     statusFilter: _statusFilter,
                     tagFilter: _tagFilter,
+                    onRemoveStatusFilter: (s) => setState(() {
+                      _statusFilter = Set.from(_statusFilter)..remove(s);
+                    }),
+                    onRemoveTagFilter: (t) => setState(() {
+                      _tagFilter = Set.from(_tagFilter)..remove(t);
+                    }),
                   ),
             ContactsError(:final failure) => PageError(
                 title: l10n.failedToLoadContacts,
@@ -610,11 +617,15 @@ class _ContactsList extends StatefulWidget {
     required this.state,
     this.statusFilter = const {},
     this.tagFilter = const {},
+    this.onRemoveStatusFilter,
+    this.onRemoveTagFilter,
   });
 
   final ContactsLoaded state;
   final Set<String> statusFilter;
   final Set<String> tagFilter;
+  final ValueChanged<String>? onRemoveStatusFilter;
+  final ValueChanged<String>? onRemoveTagFilter;
 
   @override
   State<_ContactsList> createState() => _ContactsListState();
@@ -657,7 +668,7 @@ class _ContactsListState extends State<_ContactsList> {
     var contacts = widget.state.contacts;
     final hasMore = widget.state.hasMore;
 
-    // Apply search
+    // Apply search (name, email, phone, job title, tags)
     if (_search.isNotEmpty) {
       final q = _search.toLowerCase();
       contacts = contacts.where((c) {
@@ -665,7 +676,8 @@ class _ContactsListState extends State<_ContactsList> {
         return name.contains(q) ||
             c.email.toLowerCase().contains(q) ||
             (c.phone ?? '').contains(q) ||
-            (c.jobTitle ?? '').toLowerCase().contains(q);
+            (c.jobTitle ?? '').toLowerCase().contains(q) ||
+            c.tags.any((t) => t.toLowerCase().contains(q));
       }).toList();
     }
     // Apply sidebar filters
@@ -680,12 +692,18 @@ class _ContactsListState extends State<_ContactsList> {
           .toList();
     }
 
-    // Build active filter chips for display
+    // Build active filter chips with working remove callbacks
     final activeFilters = <ActiveFilter>[
       for (final s in widget.statusFilter)
-        ActiveFilter(label: 'Status: $s', onRemove: () {}),
+        ActiveFilter(
+          label: 'Status: $s',
+          onRemove: () => widget.onRemoveStatusFilter?.call(s),
+        ),
       for (final t in widget.tagFilter)
-        ActiveFilter(label: 'Tag: $t', onRemove: () {}),
+        ActiveFilter(
+          label: 'Tag: $t',
+          onRemove: () => widget.onRemoveTagFilter?.call(t),
+        ),
     ];
 
     return Column(
@@ -820,147 +838,426 @@ class _ContactSearchDelegate extends SearchDelegate<Contact?> {
 
 // ── Companies Tab ──────────────────────────────────────────────────────
 
-class _CompaniesTab extends StatefulWidget {
+class _CompaniesTab extends StatelessWidget {
   const _CompaniesTab();
 
   @override
-  State<_CompaniesTab> createState() => _CompaniesTabState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) =>
+          getIt<CompaniesCubit>()..loadCompanies(),
+      child: const _CompaniesView(),
+    );
+  }
 }
 
-class _CompaniesTabState extends State<_CompaniesTab> {
-  List<Company>? _companies;
-  bool _loading = true;
+class _CompaniesView extends StatefulWidget {
+  const _CompaniesView();
 
   @override
-  void initState() {
-    super.initState();
-    _load();
-  }
+  State<_CompaniesView> createState() => _CompaniesViewState();
+}
 
-  Future<void> _load() async {
-    try {
-      final companies =
-          await getIt<CompanyRemoteDataSource>().getCompanies();
-      if (mounted) {
-        setState(() { _companies = companies; _loading = false; });
-      }
-    } catch (_) {
-      if (mounted) setState(() { _companies = []; _loading = false; });
-    }
-  }
+class _CompaniesViewState extends State<_CompaniesView> {
+  bool _sidebarOpen = false;
+  Set<String> _industryFilter = {};
+  Set<String> _tagFilter = {};
 
-  void _showCreateDialog() {
-    final nameCtrl = TextEditingController();
-    final websiteCtrl = TextEditingController();
-    final industryCtrl = TextEditingController();
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
 
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Create Company'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(labelText: 'Name'),
-                autofocus: true,
-                textCapitalization: TextCapitalization.words,
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: websiteCtrl,
-                decoration: const InputDecoration(labelText: 'Website'),
-                keyboardType: TextInputType.url,
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: industryCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'Industry'),
-              ),
-            ],
-          ),
-        ),
+    var activeCount = 0;
+    if (_industryFilter.isNotEmpty) activeCount++;
+    if (_tagFilter.isNotEmpty) activeCount++;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Companies'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final name = nameCtrl.text.trim();
-              if (name.isEmpty) return;
-              Navigator.pop(ctx);
-              try {
-                final company = CompanyModel(
-                  id: '',
-                  name: name,
-                  domain: websiteCtrl.text.trim().isNotEmpty
-                      ? websiteCtrl.text.trim()
-                      : null,
-                  industry: industryCtrl.text.trim().isNotEmpty
-                      ? industryCtrl.text.trim()
-                      : null,
-                  tags: const [],
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
-                );
-                await getIt<CompanyRemoteDataSource>()
-                    .createCompany(company);
-                await _load();
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed: $e')),
-                  );
-                }
-              }
-            },
-            child: const Text('Create'),
+          FilterToggleButton(
+            activeCount: activeCount,
+            isOpen: _sidebarOpen,
+            onPressed: () => setState(() => _sidebarOpen = !_sidebarOpen),
           ),
         ],
       ),
+      body: BlocBuilder<CompaniesCubit, CompaniesState>(
+        builder: (context, state) {
+          final listContent = switch (state) {
+            CompaniesInitial() ||
+            CompaniesLoading() =>
+              const Center(child: CircularProgressIndicator()) as Widget,
+            CompaniesLoaded(:final companies) => companies.isEmpty
+                ? EmptyState(
+                    icon: Icons.business_outlined,
+                    title: 'No companies',
+                    message: 'Tap + to create your first company.',
+                    action: FilledButton.icon(
+                      onPressed: () => _showCreateSheet(context),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Company'),
+                    ),
+                  )
+                : _CompaniesList(
+                    companies: companies,
+                    industryFilter: _industryFilter,
+                    tagFilter: _tagFilter,
+                    onRemoveIndustryFilter: (v) => setState(() {
+                      _industryFilter = Set.from(_industryFilter)..remove(v);
+                    }),
+                    onRemoveTagFilter: (v) => setState(() {
+                      _tagFilter = Set.from(_tagFilter)..remove(v);
+                    }),
+                  ),
+            CompaniesError(:final failure) => PageError(
+                title: 'Failed to load companies',
+                message: failure.message,
+                onRetry: () =>
+                    context.read<CompaniesCubit>().loadCompanies(),
+              ),
+          };
+
+          // Build sidebar sections from loaded data
+          final allIndustries = <String>[];
+          final allTags = <String>[];
+          int totalCount = 0;
+          if (state is CompaniesLoaded) {
+            allIndustries.addAll(
+              state.companies
+                  .map((c) => c.industry)
+                  .whereType<String>()
+                  .where((i) => i.isNotEmpty)
+                  .toSet()
+                  .toList()
+                ..sort(),
+            );
+            allTags.addAll(
+              state.companies
+                  .expand((c) => c.tags)
+                  .toSet()
+                  .toList()
+                ..sort(),
+            );
+            totalCount = state.companies.length;
+          }
+
+          return Row(
+            children: [
+              Expanded(child: listContent),
+              if (_sidebarOpen)
+                FilterSidebar(
+                  totalCount: totalCount,
+                  onClearAll: () => setState(() {
+                    _industryFilter = {};
+                    _tagFilter = {};
+                  }),
+                  sections: [
+                    FilterSection.checkboxGroup(
+                      title: 'Industry',
+                      options: allIndustries
+                          .map((i) => FilterOption(value: i, label: i))
+                          .toList(),
+                      selected: _industryFilter,
+                      onChanged: (v) =>
+                          setState(() => _industryFilter = v),
+                    ),
+                    FilterSection.checkboxGroup(
+                      title: 'Tags',
+                      options: allTags
+                          .map((t) => FilterOption(value: t, label: t))
+                          .toList(),
+                      selected: _tagFilter,
+                      onChanged: (v) =>
+                          setState(() => _tagFilter = v),
+                    ),
+                  ],
+                ),
+            ],
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'companies_tab_fab',
+        tooltip: 'Add company',
+        onPressed: () => _showCreateSheet(context),
+        child: const Icon(Icons.add),
+      ),
     );
+  }
+
+  void _showCreateSheet(BuildContext context) {
+    final cubit = context.read<CompaniesCubit>();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _CreateCompanySheet(cubit: cubit),
+    );
+  }
+}
+
+class _CreateCompanySheet extends StatefulWidget {
+  const _CreateCompanySheet({required this.cubit});
+
+  final CompaniesCubit cubit;
+
+  @override
+  State<_CreateCompanySheet> createState() => _CreateCompanySheetState();
+}
+
+class _CreateCompanySheetState extends State<_CreateCompanySheet> {
+  final _nameCtrl = TextEditingController();
+  final _websiteCtrl = TextEditingController();
+  final _industryCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _tagsCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _websiteCtrl.dispose();
+    _industryCtrl.dispose();
+    _phoneCtrl.dispose();
+    _tagsCtrl.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'companies_tab_fab',
-        onPressed: _showCreateDialog,
-        child: const Icon(Icons.add),
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _companies == null || _companies!.isEmpty
-              ? const EmptyState(
-                  icon: Icons.business_outlined,
-                  title: 'No companies',
-                  message: 'Tap + to create your first company.',
-                )
-              : ListView.separated(
-                  itemCount: _companies!.length,
-                  separatorBuilder: (_, __) =>
-                      const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final company = _companies![index];
-                    return CompanyTile(
-                      company: company,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) =>
-                              CompanyDetailPage(company: company),
-                        ),
-                      ),
-                      onUpdated: _load,
-                    );
-                  },
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        maxChildSize: 0.95,
+        minChildSize: 0.4,
+        expand: false,
+        builder: (context, scrollController) => SingleChildScrollView(
+          controller: scrollController,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Add Company',
+                      style: theme.textTheme.headlineSmall,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+              TextField(
+                controller: _nameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  border: OutlineInputBorder(),
                 ),
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _websiteCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Website',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.url,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _industryCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Industry',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _phoneCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Phone',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _tagsCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Tags (comma-separated)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _submit,
+                  icon: const Icon(Icons.add),
+                  label: Text(AppLocalizations.of(context)!.create),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _submit() {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) return;
+    final tags = _tagsCtrl.text
+        .split(',')
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+    final company = Company(
+      id: '',
+      name: name,
+      domain: _websiteCtrl.text.trim().isNotEmpty
+          ? _websiteCtrl.text.trim()
+          : null,
+      industry: _industryCtrl.text.trim().isNotEmpty
+          ? _industryCtrl.text.trim()
+          : null,
+      phone: _phoneCtrl.text.trim().isNotEmpty
+          ? _phoneCtrl.text.trim()
+          : null,
+      tags: tags,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    widget.cubit.createCompany(company);
+    Navigator.pop(context);
+  }
+}
+
+class _CompaniesList extends StatefulWidget {
+  const _CompaniesList({
+    required this.companies,
+    this.industryFilter = const {},
+    this.tagFilter = const {},
+    this.onRemoveIndustryFilter,
+    this.onRemoveTagFilter,
+  });
+
+  final List<Company> companies;
+  final Set<String> industryFilter;
+  final Set<String> tagFilter;
+  final ValueChanged<String>? onRemoveIndustryFilter;
+  final ValueChanged<String>? onRemoveTagFilter;
+
+  @override
+  State<_CompaniesList> createState() => _CompaniesListState();
+}
+
+class _CompaniesListState extends State<_CompaniesList> {
+  String _search = '';
+
+  @override
+  Widget build(BuildContext context) {
+    var companies = widget.companies;
+
+    // Apply search (name, domain, industry, phone, tags)
+    if (_search.isNotEmpty) {
+      final q = _search.toLowerCase();
+      companies = companies.where((c) {
+        return c.name.toLowerCase().contains(q) ||
+            (c.domain ?? '').toLowerCase().contains(q) ||
+            (c.industry ?? '').toLowerCase().contains(q) ||
+            (c.phone ?? '').contains(q) ||
+            c.tags.any((t) => t.toLowerCase().contains(q));
+      }).toList();
+    }
+    // Apply sidebar filters
+    if (widget.industryFilter.isNotEmpty) {
+      companies = companies
+          .where((c) => widget.industryFilter.contains(c.industry))
+          .toList();
+    }
+    if (widget.tagFilter.isNotEmpty) {
+      companies = companies
+          .where((c) => c.tags.any(widget.tagFilter.contains))
+          .toList();
+    }
+
+    // Build active filter chips with working remove callbacks
+    final activeFilters = <ActiveFilter>[
+      for (final i in widget.industryFilter)
+        ActiveFilter(
+          label: 'Industry: $i',
+          onRemove: () => widget.onRemoveIndustryFilter?.call(i),
+        ),
+      for (final t in widget.tagFilter)
+        ActiveFilter(
+          label: 'Tag: $t',
+          onRemove: () => widget.onRemoveTagFilter?.call(t),
+        ),
+    ];
+
+    return Column(
+      children: [
+        // Search bar (identical to contacts)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: TextField(
+            decoration: InputDecoration(
+              hintText: 'Search by name, domain, industry, tags...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              isDense: true,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+              suffixIcon: _search.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () => setState(() => _search = ''),
+                    )
+                  : null,
+            ),
+            onChanged: (v) => setState(() => _search = v),
+          ),
+        ),
+        // Active filter chips
+        ActiveFilterChips(filters: activeFilters),
+        // List
+        Expanded(
+          child: ListView.separated(
+            itemCount: companies.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final company = companies[index];
+              return CompanyTile(
+                company: company,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => CompanyDetailPage(company: company),
+                  ),
+                ),
+                onUpdated: () =>
+                    context.read<CompaniesCubit>().loadCompanies(),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
