@@ -46,60 +46,71 @@ class _SavedViewsPageState extends State<SavedViewsPage> {
 
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Create Saved View'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(labelText: 'View name'),
-              autofocus: true,
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: filterCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Filter (JSON)',
-                hintText: '{"status": "active"}',
+      builder: (ctx) => Dialog(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440, maxHeight: 380),
+          child: Scaffold(
+            appBar: AppBar(
+              title: const Text('Create Saved View'),
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(ctx),
               ),
-              maxLines: 3,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final name = nameCtrl.text.trim();
-              if (name.isEmpty) return;
-              Navigator.pop(ctx);
-              try {
-                await getIt<Dio>().post<void>(
-                  '/api/saved-views',
-                  data: {
-                    'name': name,
-                    'entity_type': _entityType,
-                    'filters': filterCtrl.text.trim().isNotEmpty
-                        ? filterCtrl.text.trim()
-                        : '{}',
+              actions: [
+                FilledButton(
+                  onPressed: () async {
+                    final name = nameCtrl.text.trim();
+                    if (name.isEmpty) return;
+                    Navigator.pop(ctx);
+                    try {
+                      await getIt<Dio>().post<void>(
+                        '/api/saved-views',
+                        data: {
+                          'name': name,
+                          'entity_type': _entityType,
+                          'filters': filterCtrl.text.trim().isNotEmpty
+                              ? filterCtrl.text.trim()
+                              : '{}',
+                        },
+                      );
+                      await _load();
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed: $e')),
+                        );
+                      }
+                    }
                   },
-                );
-                await _load();
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed: $e')),
-                  );
-                }
-              }
-            },
-            child: const Text('Create'),
+                  child: const Text('Create'),
+                ),
+                const SizedBox(width: 8),
+              ],
+            ),
+            body: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: nameCtrl,
+                    decoration:
+                        const InputDecoration(labelText: 'View name'),
+                    autofocus: true,
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: filterCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Filter (JSON)',
+                      hintText: '{"status": "active"}',
+                    ),
+                    maxLines: 3,
+                  ),
+                ],
+              ),
+            ),
           ),
-        ],
+        ),
       ),
     );
   }

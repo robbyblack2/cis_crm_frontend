@@ -78,85 +78,91 @@ class _ProductsView extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(l10n.addProduct),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(labelText: l10n.productName),
-                  autofocus: true,
-                  textCapitalization: TextCapitalization.sentences,
+        builder: (dialogContext, setDialogState) => Dialog(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440, maxHeight: 520),
+            child: Scaffold(
+              appBar: AppBar(
+                title: Text(l10n.addProduct),
+                leading: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(dialogContext).pop(),
                 ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<ProductType>(
-                  value: selectedType,
-                  decoration: InputDecoration(labelText: l10n.productType),
-                  items: ProductType.values
-                      .map(
-                        (t) => DropdownMenuItem(
-                          value: t,
-                          child: Text(t.name),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) {
-                    if (v != null) {
-                      setDialogState(() => selectedType = v);
-                    }
-                  },
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: currencyController,
-                  decoration: InputDecoration(labelText: l10n.productCurrency),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: priceController,
-                  decoration: InputDecoration(labelText: l10n.productPrice),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: tagsController,
-                  decoration: InputDecoration(labelText: l10n.productTags),
-                ),
-              ],
+                actions: [
+                  FilledButton(
+                    onPressed: () {
+                      final name = nameController.text.trim();
+                      if (name.isEmpty) return;
+                      final price =
+                          double.tryParse(priceController.text.trim());
+                      final tags = tagsController.text
+                          .split(',')
+                          .map((t) => t.trim())
+                          .where((t) => t.isNotEmpty)
+                          .toList();
+                      context.read<ProductsBloc>().add(
+                            ProductCreateRequested(
+                              name: name,
+                              type: selectedType.name,
+                              currency: currencyController.text.trim(),
+                              defaultPrice: price,
+                              tags: tags,
+                            ),
+                          );
+                      Navigator.of(dialogContext).pop();
+                    },
+                    child: Text(l10n.create),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ),
+              body: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration:
+                        InputDecoration(labelText: l10n.productName),
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.sentences,
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<ProductType>(
+                    value: selectedType,
+                    decoration:
+                        InputDecoration(labelText: l10n.productType),
+                    items: ProductType.values
+                        .map((t) =>
+                            DropdownMenuItem(value: t, child: Text(t.name)))
+                        .toList(),
+                    onChanged: (v) {
+                      if (v != null) setDialogState(() => selectedType = v);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: currencyController,
+                    decoration: InputDecoration(
+                        labelText: l10n.productCurrency),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: priceController,
+                    decoration:
+                        InputDecoration(labelText: l10n.productPrice),
+                    keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: tagsController,
+                    decoration:
+                        InputDecoration(labelText: l10n.productTags),
+                  ),
+                ],
+              ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(l10n.cancel),
-            ),
-            FilledButton(
-              onPressed: () {
-                final name = nameController.text.trim();
-                if (name.isEmpty) return;
-                final price = double.tryParse(priceController.text.trim());
-                final tags = tagsController.text
-                    .split(',')
-                    .map((t) => t.trim())
-                    .where((t) => t.isNotEmpty)
-                    .toList();
-                context.read<ProductsBloc>().add(
-                      ProductCreateRequested(
-                        name: name,
-                        type: selectedType.name,
-                        currency: currencyController.text.trim(),
-                        defaultPrice: price,
-                        tags: tags,
-                      ),
-                    );
-                Navigator.of(dialogContext).pop();
-              },
-              child: Text(l10n.create),
-            ),
-          ],
         ),
       ),
     );

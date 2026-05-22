@@ -37,8 +37,17 @@ class _TagsPageState extends State<TagsPage> {
           await getIt<Dio>().get<Map<String, dynamic>>('/api/tags');
       final list = response.data?['data'] as List<dynamic>?;
       if (mounted) {
+        final tags = list?.cast<Map<String, dynamic>>() ?? [];
+        // Populate tag color cache so CrmTagChip renders correct colors.
+        for (final tag in tags) {
+          final name = tag['name'] as String?;
+          final color = tag['color'] as String?;
+          if (name != null && color != null && color.isNotEmpty) {
+            TagColorCache.instance.put(name, color);
+          }
+        }
         setState(() {
-          _tags = list?.cast<Map<String, dynamic>>() ?? [];
+          _tags = tags;
           _loading = false;
         });
       }
@@ -180,7 +189,7 @@ class _TagsPageState extends State<TagsPage> {
                   Text('Preview',
                       style: Theme.of(ctx).textTheme.labelMedium),
                   const SizedBox(height: 8),
-                  Wrap(children: [CrmTagChip(name: name)]),
+                  Wrap(children: [CrmTagChip(name: name, colorOverride: color)]),
                 ],
                 const SizedBox(height: 20),
                 FilledButton(
@@ -303,17 +312,19 @@ class _TagsPageState extends State<TagsPage> {
                           final color = TagColorCache.instance.colorFor(name);
 
                           return ListTile(
-                            leading: CircleAvatar(
-                              radius: 14,
-                              backgroundColor:
-                                  color.withValues(alpha: 0.15),
-                              child: Icon(
-                                Icons.label,
-                                size: 16,
+                            leading: Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
                                 color: color,
+                                shape: BoxShape.circle,
                               ),
                             ),
                             title: Text(name),
+                            subtitle: CrmTagChip(
+                              name: name,
+                              compact: true,
+                            ),
                             onTap: () => _showEditDialog(tag),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,

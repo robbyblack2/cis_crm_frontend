@@ -1,4 +1,5 @@
 import 'package:cis_crm/app/injection.dart';
+import 'package:cis_crm/core/widgets/crm_tag_chip.dart';
 import 'package:cis_crm/features/contacts/domain/entities/company.dart';
 import 'package:cis_crm/features/contacts/domain/repositories/company_repository.dart';
 import 'package:flutter/material.dart';
@@ -91,20 +92,6 @@ class _CompanyTileState extends State<CompanyTile> {
     widget.onUpdated?.call();
   }
 
-  static const _tagColors = [
-    Color(0xFFEF4444), Color(0xFFF97316), Color(0xFFEAB308),
-    Color(0xFF22C55E), Color(0xFF14B8A6), Color(0xFF3B82F6),
-    Color(0xFF6366F1), Color(0xFF8B5CF6), Color(0xFFEC4899),
-    Color(0xFF64748B),
-  ];
-
-  static Color _colorForTag(String name) {
-    var hash = 0;
-    for (var i = 0; i < name.length; i++) {
-      hash = name.codeUnitAt(i) + ((hash << 5) - hash);
-    }
-    return _tagColors[hash.abs() % _tagColors.length];
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -222,29 +209,10 @@ class _CompanyTileState extends State<CompanyTile> {
 
             // Tags (compact, max 2)
             if (company.tags.isNotEmpty) ...[
-              ...company.tags.take(2).map((tag) {
-                final tagColor = _colorForTag(tag);
-                return Padding(
-                  padding: const EdgeInsets.only(right: 4),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 1,
-                    ),
-                    decoration: BoxDecoration(
-                      color: tagColor.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(8),
-                      border:
-                          Border.all(color: tagColor.withValues(alpha: 0.3)),
-                    ),
-                    child: Text(
-                      tag,
-                      style: theme.textTheme.labelSmall
-                          ?.copyWith(color: tagColor, fontSize: 10),
-                    ),
-                  ),
-                );
-              }),
+              ...company.tags.take(2).map((tag) => Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: CrmTagChip(name: tag),
+                  )),
               if (company.tags.length > 2)
                 Text(
                   '+${company.tags.length - 2}',

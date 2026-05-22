@@ -70,13 +70,56 @@ class _FieldDefinitionsPageState extends State<FieldDefinitionsPage> {
     showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Create Field'),
-          content: SizedBox(
-            width: 400,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+        builder: (ctx, setDialogState) => Dialog(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440, maxHeight: 480),
+            child: Scaffold(
+              appBar: AppBar(
+                title: const Text('Create Field'),
+                leading: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+                actions: [
+                  FilledButton(
+                    onPressed: () async {
+                      final name = nameCtrl.text.trim();
+                      if (name.isEmpty) return;
+                      Navigator.pop(ctx);
+                      try {
+                        final options = fieldType == 'dropdown'
+                            ? optionsCtrl.text
+                                .split(',')
+                                .map((o) => o.trim())
+                                .where((o) => o.isNotEmpty)
+                                .toList()
+                            : null;
+                        await getIt<Dio>().post<void>(
+                          '/api/fields',
+                          data: {
+                            'entity_type': _entityType,
+                            'display_name': name,
+                            'field_type': fieldType,
+                            'is_required': isRequired,
+                            if (options != null) 'options': options,
+                          },
+                        );
+                        await _load();
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed: $e')),
+                          );
+                        }
+                      }
+                    },
+                    child: const Text('Create'),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ),
+              body: ListView(
+                padding: const EdgeInsets.all(16),
                 children: [
                   TextField(
                     controller: nameCtrl,
@@ -90,15 +133,11 @@ class _FieldDefinitionsPageState extends State<FieldDefinitionsPage> {
                     decoration:
                         const InputDecoration(labelText: 'Field type'),
                     items: fieldTypes
-                        .map(
-                          (t) =>
-                              DropdownMenuItem(value: t, child: Text(t)),
-                        )
+                        .map((t) =>
+                            DropdownMenuItem(value: t, child: Text(t)))
                         .toList(),
                     onChanged: (v) {
-                      if (v != null) {
-                        setDialogState(() => fieldType = v);
-                      }
+                      if (v != null) setDialogState(() => fieldType = v);
                     },
                   ),
                   const SizedBox(height: 8),
@@ -122,46 +161,6 @@ class _FieldDefinitionsPageState extends State<FieldDefinitionsPage> {
               ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                final name = nameCtrl.text.trim();
-                if (name.isEmpty) return;
-                Navigator.pop(ctx);
-                try {
-                  final options = fieldType == 'dropdown'
-                      ? optionsCtrl.text
-                          .split(',')
-                          .map((o) => o.trim())
-                          .where((o) => o.isNotEmpty)
-                          .toList()
-                      : null;
-                  await getIt<Dio>().post<void>(
-                    '/api/fields',
-                    data: {
-                      'entity_type': _entityType,
-                      'display_name': name,
-                      'field_type': fieldType,
-                      'is_required': isRequired,
-                      if (options != null) 'options': options,
-                    },
-                  );
-                  await _load();
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed: $e')),
-                    );
-                  }
-                }
-              },
-              child: const Text('Create'),
-            ),
-          ],
         ),
       ),
     );

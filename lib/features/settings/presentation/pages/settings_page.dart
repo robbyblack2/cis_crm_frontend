@@ -1,4 +1,5 @@
 import 'package:cis_crm/core/router/routes.dart';
+import 'package:cis_crm/core/theme/theme_cubit.dart';
 import 'package:cis_crm/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +26,42 @@ class SettingsPage extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(Routes.profile),
           ),
+          BlocBuilder<ThemeCubit, ThemeMode>(
+            builder: (context, themeMode) {
+              return ListTile(
+                leading: Icon(
+                  themeMode == ThemeMode.dark
+                      ? Icons.dark_mode
+                      : themeMode == ThemeMode.light
+                          ? Icons.light_mode
+                          : Icons.brightness_auto,
+                ),
+                title: const Text('Theme'),
+                trailing: SegmentedButton<ThemeMode>(
+                  segments: const [
+                    ButtonSegment(
+                      value: ThemeMode.light,
+                      icon: Icon(Icons.light_mode, size: 16),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      icon: Icon(Icons.brightness_auto, size: 16),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.dark,
+                      icon: Icon(Icons.dark_mode, size: 16),
+                    ),
+                  ],
+                  selected: {themeMode},
+                  onSelectionChanged: (v) =>
+                      context.read<ThemeCubit>().setTheme(v.first),
+                  style: const ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              );
+            },
+          ),
           ListTile(
             leading: const Icon(Icons.extension_outlined),
             title: Text(l10n.integrationsTitle),
@@ -48,6 +85,13 @@ class SettingsPage extends StatelessWidget {
             title: Text(l10n.emailCompose),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(Routes.emailCompose),
+          ),
+          ListTile(
+            leading: const Icon(Icons.drafts_outlined),
+            title: const Text('Email Drafts'),
+            subtitle: const Text('Resume saved drafts'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(Routes.emailDrafts),
           ),
           ListTile(
             leading: const Icon(Icons.description_outlined),

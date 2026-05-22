@@ -1,5 +1,7 @@
 import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/core/utils/html_utils.dart';
+import 'package:cis_crm/core/widgets/crm_tag_chip.dart';
+import 'package:dio/dio.dart';
 import 'package:cis_crm/core/widgets/html_email_view.dart';
 import 'package:cis_crm/core/widgets/activities_section.dart';
 import 'package:cis_crm/core/error/failures.dart';
@@ -215,9 +217,20 @@ class _ContactDetailPageState extends State<ContactDetailPage>
                                 setState(() => _contact = updated);
                               },
                             ),
-                      if (_contact.tags.isNotEmpty && !_editing) ...[
+                      if (!_editing) ...[
                         const SizedBox(height: 16),
-                        _TagsCard(tags: _contact.tags),
+                        _TagsCard(
+                          tags: _contact.tags,
+                          contactId: _contact.id,
+                          contact: _contact,
+                          onUpdated: () async {
+                            final result = await getIt<ContactRepository>()
+                                .getContact(_contact.id);
+                            if (result case Success(:final data)) {
+                              if (mounted) setState(() => _contact = data);
+                            }
+                          },
+                        ),
                       ],
                       const SizedBox(height: 16),
                       _FilesSection(contactId: _contact.id),
@@ -509,10 +522,77 @@ class _ContactInfoCard extends StatelessWidget {
   }
 }
 
-class _TagsCard extends StatelessWidget {
-  const _TagsCard({required this.tags});
+class _TagsCard extends StatefulWidget {
+  const _TagsCard({required this.tags, required this.contactId, required this.contact, this.onUpdated});
 
   final List<String> tags;
+  final String contactId;
+  final Contact contact;
+  final VoidCallback? onUpdated;
+
+  @override
+  State<_TagsCard> createState() => _TagsCardState();
+}
+
+class _TagsCardState extends State<_TagsCard> {
+  List<String> _availableTags = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTags();
+  }
+
+  Future<void> _loadTags() async {
+    try {
+      final response =
+          await getIt<Dio>().get<Map<String, dynamic>>('/api/tags');
+      final list = response.data?['data'] as List<dynamic>? ?? [];
+      if (mounted) {
+        setState(() {
+          _availableTags = list
+              .map((t) => (t as Map<String, dynamic>)['name'] as String? ?? '')
+              .where((n) => n.isNotEmpty)
+              .toList();
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _addTag(String tag) async {
+    final updated = [...widget.tags, tag];
+    await _saveTags(updated);
+  }
+
+  Future<void> _removeTag(String tag) async {
+    final updated = widget.tags.where((t) => t != tag).toList();
+    await _saveTags(updated);
+  }
+
+  Future<void> _saveTags(List<String> tags) async {
+    try {
+      final c = widget.contact;
+      await getIt<ContactRepository>().updateContact(
+        Contact(
+          id: c.id,
+          firstName: c.firstName,
+          lastName: c.lastName,
+          email: c.email,
+          phone: c.phone,
+          jobTitle: c.jobTitle,
+          source: c.source,
+          status: c.status,
+          tags: tags,
+          ownerId: c.ownerId,
+          companyId: c.companyId,
+          version: c.version,
+          createdAt: c.createdAt,
+          updatedAt: DateTime.now(),
+        ),
+      );
+      widget.onUpdated?.call();
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -524,19 +604,35 @@ class _TagsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(AppLocalizations.of(context)!.contactTags, style: theme.textTheme.titleMedium),
+            Text(AppLocalizations.of(context)!.contactTags,
+                style: theme.textTheme.titleMedium),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: tags
-                  .map(
-                    (tag) => Chip(
-                      label: Text(tag),
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                  )
-                  .toList(),
+              children: [
+                ...widget.tags.map(
+                  (tag) => CrmTagChip(
+                    name: tag,
+                    onDeleted: () => _removeTag(tag),
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  tooltip: 'Add tag',
+                  offset: const Offset(0, 32),
+                  onSelected: _addTag,
+                  itemBuilder: (_) => _availableTags
+                      .where((t) => !widget.tags.contains(t))
+                      .map((t) => PopupMenuItem(value: t, child: Text(t)))
+                      .toList(),
+                  child: Chip(
+                    avatar: const Icon(Icons.add, size: 14),
+                    label: const Text('Add'),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -618,7 +714,7 @@ class _EditableInfoRowState extends State<_EditableInfoRow> {
               onPressed: _submit,
             ),
           ),
-          onSubmitted: (_) => _submit,
+          onSubmitted: (_) => _submit(),
         ),
       );
     }
@@ -911,6 +1007,12 @@ class _ContactEmailsSectionState extends State<_ContactEmailsSection> {
     try {
       final emails = await getIt<ContactRemoteDataSource>()
           .getContactEmails(widget.contactId);
+      // Sort newest first.
+      emails.sort((a, b) {
+        final aTime = a['created_at'] as String? ?? a['sent_at'] as String? ?? '';
+        final bTime = b['created_at'] as String? ?? b['sent_at'] as String? ?? '';
+        return bTime.compareTo(aTime);
+      });
       if (mounted) setState(() { _emails = emails; _loading = false; });
     } catch (_) {
       if (mounted) setState(() { _emails = []; _loading = false; });
@@ -1308,11 +1410,32 @@ class _ContactNotesSection extends StatefulWidget {
 class _ContactNotesSectionState extends State<_ContactNotesSection> {
   List<Map<String, dynamic>>? _notes;
   bool _loading = true;
+  final _noteCtrl = TextEditingController();
+  bool _posting = false;
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _noteCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addNote() async {
+    final body = _noteCtrl.text.trim();
+    if (body.isEmpty) return;
+    setState(() => _posting = true);
+    _noteCtrl.clear();
+    try {
+      await getIt<ContactRemoteDataSource>()
+          .addContactNote(widget.contactId, body);
+      await _load();
+    } catch (_) {}
+    if (mounted) setState(() => _posting = false);
   }
 
   Future<void> _load() async {
@@ -1340,6 +1463,35 @@ class _ContactNotesSectionState extends State<_ContactNotesSection> {
               'Notes',
               style: theme.textTheme.titleMedium
                   ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _noteCtrl,
+                    decoration: const InputDecoration(
+                      hintText: 'Add a note...',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    maxLines: 2,
+                    minLines: 1,
+                    enabled: !_posting,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  onPressed: _posting ? null : _addNote,
+                  icon: _posting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.send, size: 18),
+                ),
+              ],
             ),
             const Divider(height: 24),
             if (_loading)

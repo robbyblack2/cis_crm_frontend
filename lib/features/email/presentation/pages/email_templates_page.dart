@@ -2,6 +2,7 @@ import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/core/widgets/state/empty_state.dart';
 import 'package:cis_crm/core/widgets/state/page_error.dart';
 import 'package:cis_crm/core/widgets/state/page_loading.dart';
+import 'package:cis_crm/features/email/data/datasources/email_remote_data_source.dart';
 import 'package:cis_crm/features/email/domain/entities/email_template.dart';
 import 'package:cis_crm/features/email/presentation/bloc/email_bloc.dart';
 import 'package:cis_crm/features/email/presentation/widgets/email_template_tile.dart';
@@ -114,7 +115,19 @@ class _EmailTemplatesViewState extends State<_EmailTemplatesView> {
           child: ListView.builder(
             itemCount: filtered.length,
             itemBuilder: (context, index) {
-              return EmailTemplateTile(template: filtered[index]);
+              final tpl = filtered[index];
+              return EmailTemplateTile(
+                template: tpl,
+                onTap: () => _showTemplateForm(
+                  context,
+                  existingId: tpl.id,
+                  existingName: tpl.name,
+                  existingSubject: tpl.subjectTemplate,
+                  existingBody: tpl.bodyTemplate,
+                  isEditing: true,
+                ),
+                onDelete: () => _deleteTemplate(context, tpl),
+              );
             },
           ),
         ),
@@ -122,8 +135,46 @@ class _EmailTemplatesViewState extends State<_EmailTemplatesView> {
     );
   }
 
+  Future<void> _deleteTemplate(
+    BuildContext context,
+    EmailTemplate template,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete "${template.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    try {
+      await getIt<EmailRemoteDataSource>().deleteTemplate(id: template.id);
+      if (context.mounted) {
+        context.read<EmailBloc>().add(const TemplatesLoadRequested());
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
+    }
+  }
+
   void _showTemplateForm(
     BuildContext context, {
+    String? existingId,
     String? existingName,
     String? existingSubject,
     String? existingBody,
@@ -234,19 +285,35 @@ class _EmailTemplatesViewState extends State<_EmailTemplatesView> {
                 ),
                 const SizedBox(height: 20),
                 FilledButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final name = nameCtrl.text.trim();
                     final subject = subjectCtrl.text.trim();
                     final body = bodyCtrl.text.trim();
                     if (name.isEmpty || subject.isEmpty) return;
-                    context.read<EmailBloc>().add(
-                          TemplateCreateRequested(
-                            name: name,
-                            subject: subject,
-                            body: body,
-                          ),
+                    if (isEditing && existingId != null) {
+                      try {
+                        await getIt<EmailRemoteDataSource>().updateTemplate(
+                          id: existingId,
+                          name: name,
+                          subjectTemplate: subject,
+                          bodyTemplate: body,
                         );
-                    Navigator.pop(ctx);
+                      } catch (_) {}
+                      if (context.mounted) {
+                        context
+                            .read<EmailBloc>()
+                            .add(const TemplatesLoadRequested());
+                      }
+                    } else {
+                      context.read<EmailBloc>().add(
+                            TemplateCreateRequested(
+                              name: name,
+                              subject: subject,
+                              body: body,
+                            ),
+                          );
+                    }
+                    if (ctx.mounted) Navigator.pop(ctx);
                   },
                   child: Text(isEditing ? 'Save' : l10n.create),
                 ),

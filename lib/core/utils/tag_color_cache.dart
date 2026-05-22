@@ -13,6 +13,7 @@ class TagColorCache {
   bool _loaded = false;
 
   static const presetColors = <({String hex, String name})>[
+    // Row 1 — vivid
     (hex: '#EF4444', name: 'Red'),
     (hex: '#F97316', name: 'Orange'),
     (hex: '#F59E0B', name: 'Amber'),
@@ -21,10 +22,24 @@ class TagColorCache {
     (hex: '#14B8A6', name: 'Teal'),
     (hex: '#06B6D4', name: 'Cyan'),
     (hex: '#3B82F6', name: 'Blue'),
+    // Row 2 — rich
     (hex: '#6366F1', name: 'Indigo'),
+    (hex: '#8B5CF6', name: 'Violet'),
     (hex: '#A855F7', name: 'Purple'),
+    (hex: '#D946EF', name: 'Fuchsia'),
     (hex: '#EC4899', name: 'Pink'),
+    (hex: '#F43F5E', name: 'Rose'),
+    (hex: '#10B981', name: 'Emerald'),
+    (hex: '#0EA5E9', name: 'Sky'),
+    // Row 3 — muted / neutral
     (hex: '#64748B', name: 'Slate'),
+    (hex: '#78716C', name: 'Stone'),
+    (hex: '#6B7280', name: 'Gray'),
+    (hex: '#84CC16', name: 'Lime'),
+    (hex: '#059669', name: 'Sea Green'),
+    (hex: '#0891B2', name: 'Dark Cyan'),
+    (hex: '#7C3AED', name: 'Dark Violet'),
+    (hex: '#BE185D', name: 'Dark Pink'),
   ];
 
   Future<void> load() async {

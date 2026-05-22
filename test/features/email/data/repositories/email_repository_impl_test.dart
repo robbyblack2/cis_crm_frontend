@@ -43,8 +43,8 @@ void main() {
   final tTemplateModel = EmailTemplateModel(
     id: 't1',
     name: 'Welcome',
-    subject: 'Welcome!',
-    body: 'Hello',
+    subjectTemplate: 'Welcome!',
+    bodyTemplate: 'Hello',
     createdAt: DateTime(2026),
     updatedAt: DateTime(2026),
   );

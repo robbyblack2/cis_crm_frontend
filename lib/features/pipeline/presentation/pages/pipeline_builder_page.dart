@@ -19,6 +19,7 @@ class _PipelineBuilderPageState extends State<PipelineBuilderPage> {
     _StageEntry(name: 'In Progress', hex: '#F97316'),
     _StageEntry(name: 'Done', hex: '#22C55E', stageType: 'won'),
   ];
+  var _pipelineType = PipelineType.sales;
   bool _creating = false;
 
   static const _presetColors = <({String hex, String name})>[
@@ -86,7 +87,7 @@ class _PipelineBuilderPageState extends State<PipelineBuilderPage> {
     try {
       final pipeline = await getIt<PipelineRemoteDataSource>().createPipeline(
         name: name,
-        pipelineType: PipelineType.sales,
+        pipelineType: _pipelineType,
       );
 
       for (var i = 0; i < _stages.length; i++) {
@@ -110,7 +111,8 @@ class _PipelineBuilderPageState extends State<PipelineBuilderPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Pipeline "$name" created')),
       );
-      Navigator.pop(context);
+      // Pop back through management page to the pipeline Kanban view.
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (e) {
       if (mounted) {
         setState(() => _creating = false);
@@ -258,6 +260,24 @@ class _PipelineBuilderPageState extends State<PipelineBuilderPage> {
               ),
               textCapitalization: TextCapitalization.words,
               style: theme.textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            SegmentedButton<PipelineType>(
+              segments: const [
+                ButtonSegment(
+                  value: PipelineType.sales,
+                  label: Text('Sales'),
+                  icon: Icon(Icons.monetization_on_outlined, size: 16),
+                ),
+                ButtonSegment(
+                  value: PipelineType.support,
+                  label: Text('Support'),
+                  icon: Icon(Icons.support_agent, size: 16),
+                ),
+              ],
+              selected: {_pipelineType},
+              onSelectionChanged: (v) =>
+                  setState(() => _pipelineType = v.first),
             ),
 
             const SizedBox(height: 32),

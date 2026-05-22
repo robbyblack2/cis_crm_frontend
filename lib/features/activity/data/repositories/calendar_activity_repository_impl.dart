@@ -1,16 +1,16 @@
 import 'package:cis_crm/core/error/exceptions.dart';
 import 'package:cis_crm/core/error/failures.dart';
 import 'package:cis_crm/core/error/result.dart';
-import 'package:cis_crm/features/activity/data/datasources/activity_remote_data_source.dart';
+import 'package:cis_crm/features/activity/data/datasources/activities_data_source.dart';
 import 'package:cis_crm/features/activity/domain/entities/activity.dart';
 import 'package:cis_crm/features/activity/domain/repositories/calendar_activity_repository.dart';
 
 class CalendarActivityRepositoryImpl implements CalendarActivityRepository {
   const CalendarActivityRepositoryImpl({
-    required ActivityRemoteDataSource remoteDataSource,
-  }) : _remoteDataSource = remoteDataSource;
+    required ActivitiesDataSource dataSource,
+  }) : _dataSource = dataSource;
 
-  final ActivityRemoteDataSource _remoteDataSource;
+  final ActivitiesDataSource _dataSource;
 
   @override
   Future<Result<List<Activity>, AppFailure>> getActivities({
@@ -20,17 +20,26 @@ class CalendarActivityRepositoryImpl implements CalendarActivityRepository {
     String? assigneeId,
     String? from,
     String? to,
+    String? startFrom,
+    String? startTo,
     int page = 1,
-    int perPage = 25,
+    int perPage = 100,
   }) async {
     try {
-      final activities = await _remoteDataSource.getActivities(
-        activityType: activityType,
+      final activities = await _dataSource.getActivities(
+        type: activityType != null
+            ? ActivityType.values.firstWhere(
+                (t) => t.name == activityType,
+                orElse: () => ActivityType.task,
+              )
+            : null,
         statusId: statusId,
         phase: phase,
         assigneeId: assigneeId,
         from: from,
         to: to,
+        startFrom: startFrom,
+        startTo: startTo,
         page: page,
         perPage: perPage,
       );

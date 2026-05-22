@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 
 abstract class RecordRemoteDataSource {
   Future<PaginatedResponse<RecordModel>> getRecords({
+    String? pipelineId,
     int page = 1,
     int perPage = 25,
   });
@@ -77,13 +78,18 @@ class RecordRemoteDataSourceImpl implements RecordRemoteDataSource {
 
   @override
   Future<PaginatedResponse<RecordModel>> getRecords({
+    String? pipelineId,
     int page = 1,
     int perPage = 25,
   }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         '/api/records',
-        queryParameters: {'page': page, 'per_page': perPage},
+        queryParameters: {
+          if (pipelineId != null) 'pipeline_id': pipelineId,
+          'page': page,
+          'per_page': perPage,
+        },
       );
       final body = response.data;
       if (body == null) {

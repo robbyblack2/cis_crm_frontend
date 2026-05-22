@@ -95,79 +95,87 @@ class ProfilePage extends StatelessWidget {
 
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(AppLocalizations.of(ctx)!.changePassword),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: currentCtrl,
-              decoration:
-                  const InputDecoration(labelText: 'Current password'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: newCtrl,
-              decoration:
-                  const InputDecoration(labelText: 'New password'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: confirmCtrl,
-              decoration:
-                  const InputDecoration(labelText: 'Confirm password'),
-              obscureText: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(AppLocalizations.of(ctx)!.cancel),
-          ),
-          FilledButton(
-            onPressed: () async {
-              if (newCtrl.text != confirmCtrl.text) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Passwords do not match'),
-                  ),
-                );
-                return;
-              }
-              Navigator.pop(ctx);
-              try {
-                final authState = getIt<AuthBloc>().state;
-                final userId = authState is AuthAuthenticated
-                    ? authState.user.id
-                    : '';
-                await getIt<Dio>().put<void>(
-                  '/api/users/$userId/password',
-                  data: {
-                    'current_password': currentCtrl.text,
-                    'new_password': newCtrl.text,
+      builder: (ctx) => Dialog(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400, maxHeight: 400),
+          child: Scaffold(
+            appBar: AppBar(
+              title: Text(AppLocalizations.of(ctx)!.changePassword),
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+              actions: [
+                FilledButton(
+                  onPressed: () async {
+                    if (newCtrl.text != confirmCtrl.text) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Passwords do not match'),
+                        ),
+                      );
+                      return;
+                    }
+                    Navigator.pop(ctx);
+                    try {
+                      final authState = getIt<AuthBloc>().state;
+                      final userId = authState is AuthAuthenticated
+                          ? authState.user.id
+                          : '';
+                      await getIt<Dio>().put<void>(
+                        '/api/users/$userId/password',
+                        data: {
+                          'current_password': currentCtrl.text,
+                          'new_password': newCtrl.text,
+                        },
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Password changed')),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed: $e')),
+                        );
+                      }
+                    }
                   },
-                );
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Password changed'),
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed: $e')),
-                  );
-                }
-              }
-            },
-            child: Text(AppLocalizations.of(ctx)!.save),
+                  child: Text(AppLocalizations.of(ctx)!.save),
+                ),
+                const SizedBox(width: 8),
+              ],
+            ),
+            body: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: currentCtrl,
+                    decoration: const InputDecoration(
+                        labelText: 'Current password'),
+                    obscureText: true,
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: newCtrl,
+                    decoration:
+                        const InputDecoration(labelText: 'New password'),
+                    obscureText: true,
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: confirmCtrl,
+                    decoration: const InputDecoration(
+                        labelText: 'Confirm password'),
+                    obscureText: true,
+                  ),
+                ],
+              ),
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -181,46 +189,58 @@ class ProfilePage extends StatelessWidget {
 
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(label),
-        content: TextField(
-          controller: ctrl,
-          decoration: InputDecoration(
-            labelText: label,
-            hintText: key == 'timezone'
-                ? 'e.g. America/New_York'
-                : 'e.g. week',
+      builder: (ctx) => Dialog(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400, maxHeight: 250),
+          child: Scaffold(
+            appBar: AppBar(
+              title: Text(label),
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+              actions: [
+                FilledButton(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    try {
+                      await getIt<Dio>().put<void>(
+                        '/api/users/me/preferences',
+                        data: {key: ctrl.text.trim()},
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('$label updated')),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed: $e')),
+                        );
+                      }
+                    }
+                  },
+                  child: Text(AppLocalizations.of(ctx)!.save),
+                ),
+                const SizedBox(width: 8),
+              ],
+            ),
+            body: Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                controller: ctrl,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: label,
+                  hintText: key == 'timezone'
+                      ? 'e.g. America/New_York'
+                      : 'e.g. week',
+                ),
+              ),
+            ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(AppLocalizations.of(ctx)!.cancel),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              try {
-                await getIt<Dio>().put<void>(
-                  '/api/users/me/preferences',
-                  data: {key: ctrl.text.trim()},
-                );
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('$label updated')),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed: $e')),
-                  );
-                }
-              }
-            },
-            child: Text(AppLocalizations.of(ctx)!.save),
-          ),
-        ],
       ),
     );
   }

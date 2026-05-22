@@ -17,7 +17,12 @@ sealed class RecordEvent extends Equatable {
 }
 
 final class RecordLoadRequested extends RecordEvent {
-  const RecordLoadRequested();
+  const RecordLoadRequested({this.pipelineId});
+
+  final String? pipelineId;
+
+  @override
+  List<Object?> get props => [pipelineId];
 }
 
 final class RecordLoadMoreRequested extends RecordEvent {
@@ -179,7 +184,7 @@ class RecordBloc extends Bloc<RecordEvent, RecordState> {
     Emitter<RecordState> emit,
   ) async {
     emit(const RecordLoading());
-    final result = await _repository.getRecords();
+    final result = await _repository.getRecords(pipelineId: event.pipelineId);
     switch (result) {
       case Success(:final data):
         emit(

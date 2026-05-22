@@ -116,8 +116,8 @@ void main() {
         {
           'id': 't1',
           'name': 'Welcome',
-          'subject': 'Welcome!',
-          'body': 'Hello',
+          'subject_template': 'Welcome!',
+          'body_template': 'Hello',
           'created_at': '2026-01-01T00:00:00.000',
           'updated_at': '2026-01-01T00:00:00.000',
         },

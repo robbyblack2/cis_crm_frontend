@@ -9,16 +9,19 @@ class CrmTagChip extends StatelessWidget {
     required this.name,
     this.onDeleted,
     this.compact = true,
+    this.colorOverride,
     super.key,
   });
 
   final String name;
   final VoidCallback? onDeleted;
   final bool compact;
+  /// Override color for preview (before tag is saved to server).
+  final Color? colorOverride;
 
   @override
   Widget build(BuildContext context) {
-    final color = TagColorCache.instance.colorFor(name);
+    final color = colorOverride ?? TagColorCache.instance.colorFor(name);
     final theme = Theme.of(context);
 
     return Chip(

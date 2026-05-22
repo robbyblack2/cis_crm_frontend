@@ -19,6 +19,7 @@ abstract final class Routes {
   static const automation = '/automation';
   static const emailTemplates = '/email-templates';
   static const emailCompose = '/email/compose';
+  static const emailDrafts = '/email/drafts';
   static const callLogs = '/call-logs';
   static const files = '/files';
   static const companies = '/companies';

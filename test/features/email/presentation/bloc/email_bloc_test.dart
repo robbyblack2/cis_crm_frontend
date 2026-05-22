@@ -42,8 +42,8 @@ void main() {
   final tTemplate = EmailTemplate(
     id: 't1',
     name: 'Welcome',
-    subject: 'Welcome!',
-    body: 'Hello',
+    subjectTemplate: 'Welcome!',
+    bodyTemplate: 'Hello',
     createdAt: DateTime(2026),
     updatedAt: DateTime(2026),
   );
@@ -195,8 +195,8 @@ void main() {
           when(
             () => mockRepository.createTemplate(
               name: any(named: 'name'),
-              subject: any(named: 'subject'),
-              body: any(named: 'body'),
+              subjectTemplate: any(named: 'subjectTemplate'),
+              bodyTemplate: any(named: 'bodyTemplate'),
             ),
           ).thenAnswer((_) async => Success(tTemplate));
           when(() => mockRepository.getTemplates())
@@ -222,8 +222,8 @@ void main() {
           when(
             () => mockRepository.createTemplate(
               name: any(named: 'name'),
-              subject: any(named: 'subject'),
-              body: any(named: 'body'),
+              subjectTemplate: any(named: 'subjectTemplate'),
+              bodyTemplate: any(named: 'bodyTemplate'),
             ),
           ).thenAnswer(
             (_) async => const Failure(ServerFailure('Create failed')),

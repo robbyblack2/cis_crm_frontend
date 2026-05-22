@@ -2,6 +2,7 @@ import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/core/widgets/state/empty_state.dart';
 import 'package:cis_crm/core/widgets/state/page_error.dart';
 import 'package:cis_crm/core/widgets/state/page_loading.dart';
+import 'package:cis_crm/features/activity/data/datasources/activity_config_service.dart';
 import 'package:cis_crm/features/activity/data/models/activity_model.dart';
 import 'package:cis_crm/features/activity/domain/entities/activity.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/call_log_cubit.dart';
@@ -167,25 +168,30 @@ class _CallLogView extends StatelessWidget {
               child: Text(l10n.cancel),
             ),
             FilledButton(
-              onPressed: () {
+              onPressed: () async {
                 final title = titleCtrl.text.trim();
                 if (title.isEmpty) return;
+                final defaultStatus = await ActivityConfigService.instance
+                    .getDefaultStatus('call');
+                final now = DateTime.now();
                 final activity = ActivityModel(
                   id: '',
                   activityType: ActivityType.call,
                   title: title,
-                  statusId: '',
-                  statusName: '',
-                  statusPhase: 'open',
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
+                  statusId: defaultStatus?.id ?? '',
+                  statusName: defaultStatus?.name ?? '',
+                  statusPhase: defaultStatus?.phase ?? 'open',
+                  createdAt: now,
+                  updatedAt: now,
                   description: notesCtrl.text.trim().isNotEmpty
                       ? notesCtrl.text.trim()
                       : null,
                   data: {'direction': direction},
                 );
-                context.read<CallLogCubit>().logCall(activity);
-                Navigator.pop(ctx);
+                if (context.mounted) {
+                  context.read<CallLogCubit>().logCall(activity);
+                }
+                if (ctx.mounted) Navigator.pop(ctx);
               },
               child: Text(l10n.save),
             ),

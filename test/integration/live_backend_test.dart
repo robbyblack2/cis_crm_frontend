@@ -99,9 +99,9 @@ void main() {
   });
 
   group('Tasks', () {
-    test('getTasks handles null data', () async {
+    test('getActivities with type=task handles response', () async {
       final ds = ActivityRemoteDataSourceImpl(dio: dio);
-      final result = await ds.getTasks();
+      final result = await ds.getActivities(activityType: 'task');
       expect(result, isA<List<dynamic>>());
     });
   });

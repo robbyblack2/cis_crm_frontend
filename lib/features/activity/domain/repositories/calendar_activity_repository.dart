@@ -10,7 +10,9 @@ abstract interface class CalendarActivityRepository {
     String? assigneeId,
     String? from,
     String? to,
+    String? startFrom,
+    String? startTo,
     int page = 1,
-    int perPage = 25,
+    int perPage = 100,
   });
 }

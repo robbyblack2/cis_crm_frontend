@@ -59,6 +59,13 @@ class GlobalHeader extends StatelessWidget {
             icon: const Icon(Icons.email_outlined),
             tooltip: 'Compose email',
           ),
+
+          // Drafts
+          IconButton(
+            onPressed: () => context.push(Routes.emailDrafts),
+            icon: const Icon(Icons.drafts_outlined),
+            tooltip: 'Email drafts',
+          ),
           const SizedBox(width: 8),
 
           // Profile menu

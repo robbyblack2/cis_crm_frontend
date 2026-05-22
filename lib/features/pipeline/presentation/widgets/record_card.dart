@@ -1,4 +1,5 @@
 import 'package:cis_crm/core/utils/name_resolver.dart';
+import 'package:cis_crm/core/widgets/crm_tag_chip.dart';
 import 'package:cis_crm/features/pipeline/domain/entities/record.dart';
 import 'package:flutter/material.dart';
 
@@ -42,20 +43,6 @@ class RecordCard extends StatelessWidget {
     return Colors.red;
   }
 
-  static const _tagColors = [
-    Color(0xFFEF4444), Color(0xFFF97316), Color(0xFFEAB308),
-    Color(0xFF22C55E), Color(0xFF14B8A6), Color(0xFF3B82F6),
-    Color(0xFF6366F1), Color(0xFF8B5CF6), Color(0xFFEC4899),
-    Color(0xFF64748B), Color(0xFF78716C), Color(0xFF0EA5E9),
-  ];
-
-  static Color _colorForTag(String name) {
-    var hash = 0;
-    for (var i = 0; i < name.length; i++) {
-      hash = name.codeUnitAt(i) + ((hash << 5) - hash);
-    }
-    return _tagColors[hash.abs() % _tagColors.length];
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -194,24 +181,7 @@ class RecordCard extends StatelessWidget {
                   runSpacing: 4,
                   children: record.tags
                       .map(
-                        (tag) {
-                          final tagColor = _colorForTag(tag);
-                          return Chip(
-                            label: Text(tag),
-                            labelStyle: theme.textTheme.labelSmall?.copyWith(
-                              color: tagColor,
-                            ),
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                            side: BorderSide(
-                              color: tagColor.withValues(alpha: 0.4),
-                            ),
-                            backgroundColor:
-                                tagColor.withValues(alpha: 0.08),
-                          );
-                        },
+                        (tag) => CrmTagChip(name: tag),
                       )
                       .toList(),
                 ),

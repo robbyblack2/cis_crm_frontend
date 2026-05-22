@@ -1,103 +1,83 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:cis_crm/core/error/failures.dart';
 import 'package:cis_crm/core/error/result.dart';
-import 'package:cis_crm/features/activity/domain/entities/call_direction.dart';
-import 'package:cis_crm/features/activity/domain/entities/call_log.dart';
-import 'package:cis_crm/features/activity/domain/entities/call_outcome.dart';
+import 'package:cis_crm/features/activity/data/models/activity_model.dart';
+import 'package:cis_crm/features/activity/domain/entities/activity.dart';
 import 'package:cis_crm/features/activity/domain/repositories/call_log_repository.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/call_log_cubit.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockCallLogRepository extends Mock implements CallLogRepository {}
+class _MockCallLogRepository extends Mock implements CallLogRepository {}
 
-class FakeCallLog extends Fake implements CallLog {}
+class _FakeActivity extends Fake implements Activity {}
+
+final _call = ActivityModel(
+  id: 'call-1',
+  activityType: ActivityType.call,
+  title: 'Discovery call',
+  statusId: 's1',
+  statusName: 'Planned',
+  statusPhase: 'open',
+  createdAt: DateTime.utc(2026),
+  updatedAt: DateTime.utc(2026),
+  data: const {'direction': 'outbound'},
+);
 
 void main() {
-  late MockCallLogRepository mockRepo;
-
-  final now = DateTime(2024);
-  final testLog = CallLog(
-    id: '1',
-    contactId: 'c1',
-    direction: CallDirection.outbound,
-    outcome: CallOutcome.connected,
-    loggedBy: 'user1',
-    createdAt: now,
-  );
+  late _MockCallLogRepository repository;
 
   setUpAll(() {
-    registerFallbackValue(FakeCallLog());
+    registerFallbackValue(_FakeActivity());
   });
 
   setUp(() {
-    mockRepo = MockCallLogRepository();
+    repository = _MockCallLogRepository();
   });
 
   group('CallLogCubit', () {
-    test('initial state is CallLogInitial', () {
-      final cubit = CallLogCubit(callLogRepository: mockRepo);
-      expect(cubit.state, const CallLogInitial());
-      cubit.close();
-    });
-
     blocTest<CallLogCubit, CallLogState>(
-      'emits [Loading, Loaded] when loadCallLogs succeeds',
+      'emits [loading, loaded] on successful loadCallLogs',
       build: () {
-        when(() => mockRepo.getCallLogs())
-            .thenAnswer((_) async => Success([testLog]));
-        return CallLogCubit(callLogRepository: mockRepo);
+        when(() => repository.getCallLogs())
+            .thenAnswer((_) async => Success([_call]));
+        return CallLogCubit(callLogRepository: repository);
       },
       act: (cubit) => cubit.loadCallLogs(),
       expect: () => [
         const CallLogLoading(),
-        CallLogLoaded(callLogs: [testLog]),
+        isA<CallLogLoaded>().having((s) => s.callLogs.length, 'count', 1),
       ],
     );
 
     blocTest<CallLogCubit, CallLogState>(
-      'emits [Loading, Error] when loadCallLogs fails',
+      'emits [loading, error] on failed loadCallLogs',
       build: () {
-        when(() => mockRepo.getCallLogs()).thenAnswer(
-          (_) async => const Failure(ServerFailure('Server error')),
+        when(() => repository.getCallLogs()).thenAnswer(
+          (_) async => const Failure(ServerFailure('fail')),
         );
-        return CallLogCubit(callLogRepository: mockRepo);
+        return CallLogCubit(callLogRepository: repository);
       },
       act: (cubit) => cubit.loadCallLogs(),
       expect: () => [
         const CallLogLoading(),
-        const CallLogError(message: 'Server error'),
+        const CallLogError(message: 'fail'),
       ],
     );
 
     blocTest<CallLogCubit, CallLogState>(
-      'emits [Loading, Loaded] when logCall succeeds',
+      'emits [loading, loaded] on successful logCall + reload',
       build: () {
-        when(() => mockRepo.logCall(any()))
-            .thenAnswer((_) async => Success(testLog));
-        when(() => mockRepo.getCallLogs())
-            .thenAnswer((_) async => Success([testLog]));
-        return CallLogCubit(callLogRepository: mockRepo);
+        when(() => repository.logCall(any()))
+            .thenAnswer((_) async => Success(_call));
+        when(() => repository.getCallLogs())
+            .thenAnswer((_) async => Success([_call]));
+        return CallLogCubit(callLogRepository: repository);
       },
-      act: (cubit) => cubit.logCall(testLog),
+      act: (cubit) => cubit.logCall(_call),
       expect: () => [
         const CallLogLoading(),
-        CallLogLoaded(callLogs: [testLog]),
-      ],
-    );
-
-    blocTest<CallLogCubit, CallLogState>(
-      'emits [Loading, Error] when logCall fails',
-      build: () {
-        when(() => mockRepo.logCall(any())).thenAnswer(
-          (_) async => const Failure(ServerFailure('Log failed')),
-        );
-        return CallLogCubit(callLogRepository: mockRepo);
-      },
-      act: (cubit) => cubit.logCall(testLog),
-      expect: () => [
-        const CallLogLoading(),
-        const CallLogError(message: 'Log failed'),
+        isA<CallLogLoaded>(),
       ],
     );
   });

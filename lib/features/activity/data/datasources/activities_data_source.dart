@@ -8,8 +8,18 @@ class ActivitiesDataSource {
 
   final Dio _dio;
 
+  /// Fetch activities with full filter support matching the backend API.
   Future<List<ActivityModel>> getActivities({
     ActivityType? type,
+    String? phase,
+    String? statusId,
+    String? assigneeId,
+    String? entityType,
+    String? entityId,
+    String? from,
+    String? to,
+    String? startFrom,
+    String? startTo,
     int page = 1,
     int perPage = 50,
   }) async {
@@ -18,6 +28,15 @@ class ActivitiesDataSource {
         '/api/activities',
         queryParameters: {
           if (type != null) 'activity_type': type.name,
+          if (phase != null) 'phase': phase,
+          if (statusId != null) 'status_id': statusId,
+          if (assigneeId != null) 'assignee_id': assigneeId,
+          if (entityType != null) 'entity_type': entityType,
+          if (entityId != null) 'entity_id': entityId,
+          if (from != null) 'from': from,
+          if (to != null) 'to': to,
+          if (startFrom != null) 'start_from': startFrom,
+          if (startTo != null) 'start_to': startTo,
           'page': page,
           'per_page': perPage,
         },
@@ -36,11 +55,13 @@ class ActivitiesDataSource {
     }
   }
 
-  Future<ActivityModel> createActivity(ActivityModel activity) async {
+  /// Create any activity type via POST /api/activities.
+  /// For meetings, use ActivityModel.createMeetingPayload() to build the data.
+  Future<ActivityModel> createActivity(Map<String, dynamic> data) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         '/api/activities',
-        data: activity.toJson(),
+        data: data,
       );
       return ActivityModel.fromJson(
         response.data!['data'] as Map<String, dynamic>,
@@ -53,11 +74,14 @@ class ActivitiesDataSource {
     }
   }
 
-  Future<ActivityModel> updateActivity(ActivityModel activity) async {
+  Future<ActivityModel> updateActivity(
+    String id,
+    Map<String, dynamic> data,
+  ) async {
     try {
       final response = await _dio.put<Map<String, dynamic>>(
-        '/api/activities/${activity.id}',
-        data: activity.toJson(),
+        '/api/activities/$id',
+        data: data,
       );
       return ActivityModel.fromJson(
         response.data!['data'] as Map<String, dynamic>,
@@ -107,6 +131,40 @@ class ActivitiesDataSource {
     } on DioException catch (e) {
       throw ServerException(
         e.message ?? 'Failed to remove link',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  /// Fetch activity statuses for dropdown pickers.
+  Future<List<Map<String, dynamic>>> getStatuses(String activityType) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/api/activity-statuses',
+        queryParameters: {'activity_type': activityType},
+      );
+      final list = response.data?['data'] as List<dynamic>?;
+      return list?.cast<Map<String, dynamic>>() ?? [];
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to fetch statuses',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  /// Fetch activity subtypes for dropdown pickers.
+  Future<List<Map<String, dynamic>>> getSubtypes(String activityType) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/api/activity-subtypes',
+        queryParameters: {'activity_type': activityType},
+      );
+      final list = response.data?['data'] as List<dynamic>?;
+      return list?.cast<Map<String, dynamic>>() ?? [];
+    } on DioException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to fetch subtypes',
         statusCode: e.response?.statusCode,
       );
     }

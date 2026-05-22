@@ -6,6 +6,7 @@ import 'package:cis_crm/features/pipeline/domain/entities/stage_transition.dart'
 
 abstract class RecordRepository {
   Future<Result<PaginatedResponse<PipelineRecord>, AppFailure>> getRecords({
+    String? pipelineId,
     int page = 1,
     int perPage = 25,
   });

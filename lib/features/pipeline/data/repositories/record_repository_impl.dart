@@ -16,11 +16,13 @@ class RecordRepositoryImpl implements RecordRepository {
 
   @override
   Future<Result<PaginatedResponse<PipelineRecord>, AppFailure>> getRecords({
+    String? pipelineId,
     int page = 1,
     int perPage = 25,
   }) async {
     try {
       final response = await _remoteDataSource.getRecords(
+        pipelineId: pipelineId,
         page: page,
         perPage: perPage,
       );

@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 
 enum ActivityType { task, call, meeting }
 
-enum ActivityPriority { low, medium, high }
+enum ActivityPriority { none, low, medium, high }
 
 @immutable
 class Activity extends Equatable {
@@ -27,6 +27,15 @@ class Activity extends Equatable {
     this.createdBy,
     this.data = const {},
     this.links = const [],
+    // Meeting-specific fields
+    this.startTime,
+    this.endTime,
+    this.attendees,
+    this.meetingUrl,
+    this.conferenceProvider,
+    this.calendarProvider,
+    this.calendarEventId,
+    this.version = 1,
   });
 
   final String id;
@@ -48,8 +57,21 @@ class Activity extends Equatable {
   final DateTime updatedAt;
   final Map<String, dynamic> data;
   final List<ActivityLink> links;
+  final int version;
+
+  // Meeting-specific fields
+  final DateTime? startTime;
+  final DateTime? endTime;
+  final List<Map<String, dynamic>>? attendees;
+  final String? meetingUrl;
+  final String? conferenceProvider;
+  final String? calendarProvider;
+  final String? calendarEventId;
 
   bool get isCompleted => statusPhase == 'closed';
+  bool get isMeeting => activityType == ActivityType.meeting;
+  bool get isTask => activityType == ActivityType.task;
+  bool get isCall => activityType == ActivityType.call;
 
   @override
   List<Object?> get props => [
@@ -72,6 +94,14 @@ class Activity extends Equatable {
         updatedAt,
         data,
         links,
+        startTime,
+        endTime,
+        attendees,
+        meetingUrl,
+        conferenceProvider,
+        calendarProvider,
+        calendarEventId,
+        version,
       ];
 }
 
