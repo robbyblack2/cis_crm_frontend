@@ -8,6 +8,7 @@ import 'package:cis_crm/features/activity/data/models/activity_model.dart';
 import 'package:cis_crm/features/activity/domain/entities/activity.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/calendar_activities_bloc.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/tasks_bloc.dart';
+import 'package:cis_crm/features/activity/presentation/pages/activity_detail_page.dart';
 import 'package:cis_crm/features/activity/presentation/widgets/activities_calendar_view.dart';
 import 'package:cis_crm/features/activity/presentation/widgets/day_detail_panel.dart';
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
@@ -138,7 +139,7 @@ class _TasksViewState extends State<_TasksView> {
 
               return ActivitiesCalendarView(
                 onDaySelected: (day) {
-                  _showDayDetailSheet(context, calState, day);
+                  _showDayDetailPage(context, calState, day);
                 },
                 onActivityTap: _onActivityTap,
               );
@@ -150,54 +151,51 @@ class _TasksViewState extends State<_TasksView> {
   }
 
   void _onActivityTap(Activity activity) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => Dialog(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480, maxHeight: 500),
-          child: _ActivityDetailView(
-            activity: activity,
-            onStatusChanged: () {
-              Navigator.pop(ctx);
-              context.read<TasksBloc>().add(const TasksLoadRequested());
-              context.read<CalendarActivitiesBloc>().add(
-                    CalendarMonthRequested(
-                      month: context
-                          .read<CalendarActivitiesBloc>()
-                          .state
-                          .focusedMonth,
-                    ),
-                  );
-            },
-            onDeleted: () {
-              Navigator.pop(ctx);
-              context.read<TasksBloc>().add(TaskDeleted(activity.id));
-            },
-          ),
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ActivityDetailPage(
+          activity: activity,
+          onStatusChanged: () {
+            Navigator.pop(context);
+            context.read<TasksBloc>().add(const TasksLoadRequested());
+            context.read<CalendarActivitiesBloc>().add(
+                  CalendarMonthRequested(
+                    month: context
+                        .read<CalendarActivitiesBloc>()
+                        .state
+                        .focusedMonth,
+                  ),
+                );
+          },
+          onDeleted: () {
+            Navigator.pop(context);
+            context.read<TasksBloc>().add(TaskDeleted(activity.id));
+          },
         ),
       ),
     );
   }
 
-  void _showDayDetailSheet(
+  void _showDayDetailPage(
     BuildContext context,
     CalendarActivitiesState state,
     DateTime day,
   ) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => SizedBox(
-        height: MediaQuery.of(context).size.height * 0.6,
-        child: DayDetailPanel(
-          selectedDay: day,
-          activities: state.activitiesForDay(day),
-          onActivityTap: _onActivityTap,
-          onNewActivity: () {
-            Navigator.pop(context);
-            _showCreateSheet(context);
-          },
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: Text(DateFormat.yMMMMd().format(day))),
+          body: DayDetailPanel(
+            selectedDay: day,
+            activities: state.activitiesForDay(day),
+            onActivityTap: _onActivityTap,
+            onNewActivity: () {
+              Navigator.pop(context);
+              _showCreateSheet(context);
+            },
+          ),
         ),
       ),
     );
@@ -799,118 +797,3 @@ class _CreateActivityFormState extends State<_CreateActivityForm> {
   }
 }
 
-/// Activity detail view shown in a dialog.
-class _ActivityDetailView extends StatelessWidget {
-  const _ActivityDetailView({
-    required this.activity,
-    required this.onStatusChanged,
-    required this.onDeleted,
-  });
-
-  final Activity activity;
-  final VoidCallback onStatusChanged;
-  final VoidCallback onDeleted;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final color = ActivityColors.forType(activity.activityType);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(activity.title),
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.delete_outline, color: cs.error),
-            tooltip: 'Delete',
-            onPressed: () async {
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Delete activity?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Cancel'),
-                    ),
-                    FilledButton(
-                      onPressed: () => Navigator.pop(ctx, true),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: cs.error,
-                      ),
-                      child: const Text('Delete'),
-                    ),
-                  ],
-                ),
-              );
-              if (confirmed == true) onDeleted();
-            },
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Type badge
-          Row(
-            children: [
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                activity.activityType.name[0].toUpperCase() +
-                    activity.activityType.name.substring(1),
-                style: theme.textTheme.labelMedium?.copyWith(color: color),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Status
-          _row(theme, 'Status', activity.statusName),
-          if (activity.subtypeName != null)
-            _row(theme, 'Subtype', activity.subtypeName!),
-          if (activity.priority != null)
-            _row(theme, 'Priority', activity.priority!.name),
-          if (activity.dueDate != null) _row(theme, 'Due date', activity.dueDate!),
-          if (activity.dueTime != null) _row(theme, 'Due time', activity.dueTime!),
-          if (activity.description != null &&
-              activity.description!.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text('Description',
-                style: theme.textTheme.labelSmall
-                    ?.copyWith(color: cs.onSurfaceVariant)),
-            const SizedBox(height: 4),
-            Text(activity.description!, style: theme.textTheme.bodyMedium),
-          ],
-          const SizedBox(height: 16),
-          _row(theme, 'Created', DateFormat.yMMMd().add_jm().format(activity.createdAt)),
-        ],
-      ),
-    );
-  }
-
-  Widget _row(ThemeData theme, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 90,
-            child: Text(label,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-          ),
-          Expanded(child: Text(value, style: theme.textTheme.bodyMedium)),
-        ],
-      ),
-    );
-  }
-}
