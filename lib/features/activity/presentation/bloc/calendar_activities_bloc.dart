@@ -146,7 +146,7 @@ class CalendarActivitiesBloc
       return;
     }
 
-    await _fetchMonth(month, monthKey, emit);
+    await _fetchMonth(month, monthKey, emit, prefetchAdjacent: true);
   }
 
   /// Background prefetch — loads data but does NOT change focusedMonth.
@@ -166,14 +166,19 @@ class CalendarActivitiesBloc
   Future<void> _fetchMonth(
     DateTime month,
     String monthKey,
-    Emitter<CalendarActivitiesState> emit,
-  ) async {
+    Emitter<CalendarActivitiesState> emit, {
+    bool prefetchAdjacent = false,
+  }) async {
     emit(state.copyWith(isLoading: true));
 
     final from = _dateFmt.format(month);
     final lastDay = DateTime(month.year, month.month + 1, 0);
     final to = _dateFmt.format(lastDay);
 
+    // Fetch ALL activities for this month using only from/to.
+    // The unified backend filters both due_date and start_time with
+    // a single date range. Sending start_from/start_to alongside
+    // from/to caused an AND that excluded every row.
     final result = await _repository.getActivities(
       from: from,
       to: to,
@@ -186,9 +191,20 @@ class CalendarActivitiesBloc
         _failedMonths.remove(monthKey);
         final updated = Map<String, List<Activity>>.from(state.activities);
         for (final activity in data) {
-          if (activity.dueDate != null) {
-            final key = activity.dueDate!;
-            updated.putIfAbsent(key, () => []).add(activity);
+          // Meetings: use start_time for calendar placement
+          // Tasks/calls: use due_date
+          String? key;
+          if (activity.isMeeting && activity.startTime != null) {
+            key = _dateFmt.format(activity.startTime!.toLocal());
+          } else if (activity.dueDate != null) {
+            key = activity.dueDate!;
+          }
+          if (key != null) {
+            // Avoid duplicates (from overlapping prefetches)
+            final existing = updated.putIfAbsent(key, () => []);
+            if (!existing.any((a) => a.id == activity.id)) {
+              existing.add(activity);
+            }
           }
         }
         emit(state.copyWith(
@@ -196,9 +212,8 @@ class CalendarActivitiesBloc
           isLoading: false,
           errorMessage: () => null,
         ));
-        _prefetchAdjacent(month);
+        if (prefetchAdjacent) _prefetchAdjacent(month);
       case Failure(:final error):
-        // Mark as failed so prefetch doesn't retry infinitely.
         _failedMonths.add(monthKey);
         emit(state.copyWith(
           isLoading: false,
@@ -241,4 +256,5 @@ class CalendarActivitiesBloc
       add(_CalendarPrefetchRequested(month: next));
     }
   }
+
 }
