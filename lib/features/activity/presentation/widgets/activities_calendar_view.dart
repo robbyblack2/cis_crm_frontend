@@ -93,34 +93,6 @@ class _ActivitiesCalendarViewState extends State<ActivitiesCalendarView> {
               onToday: () => bloc.add(const CalendarTodayRequested()),
               onMonthYearTap: () => _showMonthPicker(context, bloc),
             ),
-            // ── Error / Debug Banner ──
-            if (state.errorMessage != null)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(8),
-                color: Theme.of(context).colorScheme.errorContainer,
-                child: Text(
-                  'Error loading activities: ${state.errorMessage}',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onErrorContainer,
-                  ),
-                ),
-              ),
-            if (!state.isLoading &&
-                state.errorMessage == null &&
-                state.activities.isEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(8),
-                color: Theme.of(context).colorScheme.tertiaryContainer,
-                child: Text(
-                  'No activities loaded — try refreshing',
-                  style: TextStyle(
-                    color:
-                        Theme.of(context).colorScheme.onTertiaryContainer,
-                  ),
-                ),
-              ),
             const SizedBox(height: 4),
             // ── Week Day Headers ──
             _WeekDayHeaders(weekDays: _weekDays),
