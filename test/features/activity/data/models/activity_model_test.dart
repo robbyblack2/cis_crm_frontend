@@ -348,6 +348,81 @@ void main() {
     });
   });
 
+  group('ActivityModel.fromJson — meeting URL extraction from data', () {
+    test('extracts hangout_link from data when meeting_url is absent', () {
+      final json = {
+        'id': 'act-20',
+        'activity_type': 'meeting',
+        'title': 'Demo Call',
+        'status_id': '1',
+        'status': {'id': '1', 'name': 'Planned', 'phase': 'open'},
+        'created_at': '2026-05-20T10:00:00Z',
+        'updated_at': '2026-05-20T10:00:00Z',
+        'data': {'hangout_link': 'https://meet.google.com/abc-defg-hij'},
+      };
+
+      final model = ActivityModel.fromJson(json);
+      expect(model.meetingUrl, 'https://meet.google.com/abc-defg-hij');
+      expect(model.conferenceProvider, 'google_meet');
+    });
+
+    test('extracts html_link from data as fallback', () {
+      final json = {
+        'id': 'act-21',
+        'activity_type': 'meeting',
+        'title': 'Zoom Call',
+        'status_id': '1',
+        'status': {'id': '1', 'name': 'Planned', 'phase': 'open'},
+        'created_at': '2026-05-20T10:00:00Z',
+        'updated_at': '2026-05-20T10:00:00Z',
+        'data': {'html_link': 'https://zoom.us/j/12345'},
+      };
+
+      final model = ActivityModel.fromJson(json);
+      expect(model.meetingUrl, 'https://zoom.us/j/12345');
+      expect(model.conferenceProvider, 'zoom');
+    });
+
+    test('prefers top-level meeting_url over data field', () {
+      final json = {
+        'id': 'act-22',
+        'activity_type': 'meeting',
+        'title': 'Test',
+        'status_id': '1',
+        'status': {'id': '1', 'name': 'Planned', 'phase': 'open'},
+        'meeting_url': 'https://meet.google.com/top-level',
+        'created_at': '2026-05-20T10:00:00Z',
+        'updated_at': '2026-05-20T10:00:00Z',
+        'data': {'hangout_link': 'https://meet.google.com/data-level'},
+      };
+
+      final model = ActivityModel.fromJson(json);
+      expect(model.meetingUrl, 'https://meet.google.com/top-level');
+    });
+
+    test('extracts from conference_data.entry_points', () {
+      final json = {
+        'id': 'act-23',
+        'activity_type': 'meeting',
+        'title': 'Conf Data',
+        'status_id': '1',
+        'status': {'id': '1', 'name': 'Planned', 'phase': 'open'},
+        'created_at': '2026-05-20T10:00:00Z',
+        'updated_at': '2026-05-20T10:00:00Z',
+        'data': {
+          'conference_data': {
+            'entry_points': [
+              {'uri': 'https://meet.google.com/nested-link'},
+            ],
+          },
+        },
+      };
+
+      final model = ActivityModel.fromJson(json);
+      expect(model.meetingUrl, 'https://meet.google.com/nested-link');
+    });
+  });
+
   group('Activity.isCompleted', () {
     test('returns true when statusPhase is closed', () {
       final activity = ActivityModel(

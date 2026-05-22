@@ -30,6 +30,54 @@ const _priorityToString = {
 /// when the value is actually null.
 String? _toStringOrNull(Object? value) => value?.toString();
 
+/// Extracts a meeting URL from the data JSONB field.
+/// Google Calendar sync may store the link under various keys.
+String? _extractMeetingUrl(Map<String, dynamic>? data) {
+  if (data == null) return null;
+  // Try common keys where a meeting URL might be stored
+  for (final key in [
+    'meeting_url',
+    'meetingUrl',
+    'hangout_link',
+    'hangoutLink',
+    'html_link',
+    'htmlLink',
+    'join_url',
+    'joinUrl',
+    'conference_url',
+    'conferenceUrl',
+  ]) {
+    final value = data[key];
+    if (value is String && value.isNotEmpty) return value;
+  }
+  // Check nested conference_data for entry points
+  final confData = data['conference_data'] ?? data['conferenceData'];
+  if (confData is Map<String, dynamic>) {
+    final entryPoints = confData['entry_points'] ?? confData['entryPoints'];
+    if (entryPoints is List && entryPoints.isNotEmpty) {
+      final first = entryPoints.first;
+      if (first is Map<String, dynamic>) {
+        final uri = first['uri'] as String?;
+        if (uri != null && uri.isNotEmpty) return uri;
+      }
+    }
+  }
+  return null;
+}
+
+/// Infers conference provider from a meeting URL.
+String? _extractConferenceProvider(Map<String, dynamic>? data, String? url) {
+  if (data != null) {
+    final provider = data['conference_provider'] ?? data['conferenceProvider'];
+    if (provider is String && provider.isNotEmpty) return provider;
+  }
+  if (url == null) return null;
+  if (url.contains('meet.google.com')) return 'google_meet';
+  if (url.contains('zoom.us') || url.contains('zoom.com')) return 'zoom';
+  if (url.contains('teams.microsoft.com')) return 'teams';
+  return 'other';
+}
+
 class ActivityModel extends Activity {
   const ActivityModel({
     required super.id,
@@ -117,8 +165,13 @@ class ActivityModel extends Activity {
       attendees: attendeesRaw
           ?.whereType<Map<String, dynamic>>()
           .toList(),
-      meetingUrl: json['meeting_url'] as String?,
-      conferenceProvider: json['conference_provider'] as String?,
+      meetingUrl: json['meeting_url'] as String? ??
+          _extractMeetingUrl(json['data'] as Map<String, dynamic>?),
+      conferenceProvider: json['conference_provider'] as String? ??
+          _extractConferenceProvider(
+              json['data'] as Map<String, dynamic>?,
+              json['meeting_url'] as String? ??
+                  _extractMeetingUrl(json['data'] as Map<String, dynamic>?)),
       calendarProvider: json['calendar_provider'] as String?,
       calendarEventId: json['calendar_event_id'] as String?,
     );
