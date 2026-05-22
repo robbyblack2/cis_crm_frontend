@@ -50,6 +50,12 @@ final class CalendarTodayRequested extends CalendarActivitiesEvent {
   const CalendarTodayRequested();
 }
 
+/// Force re-fetch — clears cached data so the calendar picks up new/changed
+/// activities after create, update, or delete.
+final class CalendarRefreshRequested extends CalendarActivitiesEvent {
+  const CalendarRefreshRequested();
+}
+
 // ── State ───────────────────────────────────────────────────────────────
 
 @immutable
@@ -120,6 +126,7 @@ class CalendarActivitiesBloc
     on<_CalendarPrefetchRequested>(_onPrefetch, transformer: concurrent());
     on<CalendarDaySelected>(_onDaySelected);
     on<CalendarTodayRequested>(_onTodayRequested);
+    on<CalendarRefreshRequested>(_onRefresh, transformer: restartable());
   }
 
   final CalendarActivityRepository _repository;
@@ -214,6 +221,19 @@ class CalendarActivitiesBloc
           errorMessage: () => error.message,
         ));
     }
+  }
+
+  /// Clears all cached data and re-fetches for the current focused month.
+  Future<void> _onRefresh(
+    CalendarRefreshRequested event,
+    Emitter<CalendarActivitiesState> emit,
+  ) async {
+    _fetchedMonths.clear();
+    _failedMonths.clear();
+    emit(state.copyWith(activities: const {}));
+    final month = state.focusedMonth;
+    final monthKey = DateFormat('yyyy-MM').format(month);
+    await _fetchMonth(month, monthKey, emit, prefetchAdjacent: true);
   }
 
   void _onDaySelected(

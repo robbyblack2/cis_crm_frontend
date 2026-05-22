@@ -163,6 +163,31 @@ void main() {
     );
   });
 
+  group('CalendarRefreshRequested', () {
+    blocTest<CalendarActivitiesBloc, CalendarActivitiesState>(
+      'clears activities and re-fetches for current month',
+      build: () {
+        stubAll(Success([_activity]));
+        return build();
+      },
+      seed: () => CalendarActivitiesState(
+        focusedMonth: _may,
+        selectedDay: DateTime(2026, 5, 15),
+        activities: {
+          '2026-05-15': [_activity],
+        },
+      ),
+      act: (b) => b.add(const CalendarRefreshRequested()),
+      wait: const Duration(seconds: 2),
+      verify: (b) {
+        // Should have re-fetched and re-populated
+        expect(b.state.isLoading, isFalse);
+        expect(b.state.activities['2026-05-15'], isNotEmpty);
+        expect(b.state.focusedMonth, _may);
+      },
+    );
+  });
+
   group('Prefetch behavior', () {
     blocTest<CalendarActivitiesBloc, CalendarActivitiesState>(
       'prefetch does not change focusedMonth',

@@ -150,6 +150,13 @@ class _TasksViewState extends State<_TasksView> {
     );
   }
 
+  void _refreshAll() {
+    context.read<TasksBloc>().add(const TasksLoadRequested());
+    context.read<CalendarActivitiesBloc>().add(
+          const CalendarRefreshRequested(),
+        );
+  }
+
   void _onActivityTap(Activity activity) {
     Navigator.push<void>(
       context,
@@ -158,19 +165,14 @@ class _TasksViewState extends State<_TasksView> {
           activity: activity,
           onStatusChanged: () {
             Navigator.pop(context);
-            context.read<TasksBloc>().add(const TasksLoadRequested());
-            context.read<CalendarActivitiesBloc>().add(
-                  CalendarMonthRequested(
-                    month: context
-                        .read<CalendarActivitiesBloc>()
-                        .state
-                        .focusedMonth,
-                  ),
-                );
+            _refreshAll();
           },
           onDeleted: () {
             Navigator.pop(context);
             context.read<TasksBloc>().add(TaskDeleted(activity.id));
+            context.read<CalendarActivitiesBloc>().add(
+                  const CalendarRefreshRequested(),
+                );
           },
         ),
       ),
@@ -365,6 +367,9 @@ class _TasksViewState extends State<_TasksView> {
       );
       if (context.mounted) {
         context.read<TasksBloc>().add(TaskUpdateRequested(task: updated));
+        context.read<CalendarActivitiesBloc>().add(
+              const CalendarRefreshRequested(),
+            );
       }
     } else {
       // Complete: set to the first closed status.
@@ -391,6 +396,9 @@ class _TasksViewState extends State<_TasksView> {
       );
       if (context.mounted) {
         context.read<TasksBloc>().add(TaskUpdateRequested(task: updated));
+        context.read<CalendarActivitiesBloc>().add(
+              const CalendarRefreshRequested(),
+            );
       }
     }
   }
@@ -418,20 +426,20 @@ class _TasksViewState extends State<_TasksView> {
   }
 
   void _showCreateSheet(BuildContext context, {DateTime? prefilledDate}) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => Dialog(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480, maxHeight: 600),
-          child: _CreateActivityForm(
-            prefilledDate: prefilledDate,
-            onCreated: (activity) {
-              Navigator.pop(ctx);
-              context.read<TasksBloc>().add(
-                    TaskCreateRequested(task: activity),
-                  );
-            },
-          ),
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _CreateActivityForm(
+          prefilledDate: prefilledDate,
+          onCreated: (activity) {
+            Navigator.pop(context);
+            context.read<TasksBloc>().add(
+                  TaskCreateRequested(task: activity),
+                );
+            context.read<CalendarActivitiesBloc>().add(
+                  const CalendarRefreshRequested(),
+                );
+          },
         ),
       ),
     );
