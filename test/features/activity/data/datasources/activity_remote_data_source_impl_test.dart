@@ -1,97 +1,124 @@
 import 'package:cis_crm/core/error/exceptions.dart';
 import 'package:cis_crm/features/activity/data/datasources/activity_remote_data_source_impl.dart';
-import 'package:cis_crm/features/activity/data/models/crm_task_model.dart';
+import 'package:cis_crm/features/activity/data/models/activity_model.dart';
+import 'package:cis_crm/features/activity/domain/entities/activity.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockDio extends Mock implements Dio {}
 
-class FakeRequestOptions extends Fake implements RequestOptions {}
-
 void main() {
   late MockDio mockDio;
   late ActivityRemoteDataSourceImpl dataSource;
-
-  setUpAll(() {
-    registerFallbackValue(FakeRequestOptions());
-  });
 
   setUp(() {
     mockDio = MockDio();
     dataSource = ActivityRemoteDataSourceImpl(dio: mockDio);
   });
 
-  group('getTasks', () {
-    test('returns list of CrmTaskModel when response is 200', () async {
-      final taskJson = <String, dynamic>{
-        'id': '1',
-        'title': 'Test',
-        'status': 'todo',
-        'priority': 'medium',
-        'parent_type': 'contact',
-        'parent_id': 'c1',
-        'created_by': 'user1',
-        'created_at': '2024-01-01T00:00:00.000',
-        'updated_at': '2024-01-01T00:00:00.000',
-      };
-      when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
-        (_) async => Response(
-          data: <String, dynamic>{'data': [taskJson]},
-          statusCode: 200,
-          requestOptions: RequestOptions(),
-        ),
-      );
+  final tJson = {
+    'id': 'a1',
+    'activity_type': 'task',
+    'title': 'Test',
+    'status_id': 's1',
+    'status_name': 'To Do',
+    'status_phase': 'open',
+    'created_at': '2026-05-20T00:00:00Z',
+    'updated_at': '2026-05-20T00:00:00Z',
+  };
 
-      final result = await dataSource.getTasks();
-      expect(result, isA<List<CrmTaskModel>>());
+  group('getActivities', () {
+    test('returns list on success', () async {
+      when(() => mockDio.get<Map<String, dynamic>>(
+            any(),
+            queryParameters: any(named: 'queryParameters'),
+          )).thenAnswer((_) async => Response(
+            data: {'data': [tJson]},
+            statusCode: 200,
+            requestOptions: RequestOptions(),
+          ));
+
+      final result =
+          await dataSource.getActivities(from: '2026-05-01', to: '2026-05-31');
       expect(result, hasLength(1));
-      expect(result.first.title, 'Test');
+      expect(result.first.id, 'a1');
     });
 
     test('throws ServerException on DioException', () async {
-      when(() => mockDio.get<Map<String, dynamic>>(any())).thenThrow(
-        DioException(
-          requestOptions: RequestOptions(),
-          message: 'Network error',
-          response: Response(
-            statusCode: 500,
-            requestOptions: RequestOptions(),
-          ),
-        ),
-      );
+      when(() => mockDio.get<Map<String, dynamic>>(
+            any(),
+            queryParameters: any(named: 'queryParameters'),
+          )).thenThrow(DioException(requestOptions: RequestOptions()));
 
       expect(
-        () => dataSource.getTasks(),
+        () => dataSource.getActivities(from: 'x', to: 'y'),
         throwsA(isA<ServerException>()),
       );
     });
   });
 
-  group('deleteTask', () {
-    test('completes without error on success', () async {
-      when(() => mockDio.delete<void>(any())).thenAnswer(
+  group('getActivity', () {
+    test('returns ActivityModel on success', () async {
+      when(() => mockDio.get<Map<String, dynamic>>(any())).thenAnswer(
         (_) async => Response(
-          statusCode: 204,
+          data: {'data': tJson},
+          statusCode: 200,
           requestOptions: RequestOptions(),
         ),
       );
 
-      await expectLater(dataSource.deleteTask('1'), completes);
+      final result = await dataSource.getActivity('a1');
+      expect(result.id, 'a1');
+    });
+  });
+
+  group('createActivity', () {
+    test('posts to /api/activities and returns model', () async {
+      when(() => mockDio.post<Map<String, dynamic>>(
+            any(),
+            data: any(named: 'data'),
+          )).thenAnswer((_) async => Response(
+            data: {'data': tJson},
+            statusCode: 201,
+            requestOptions: RequestOptions(),
+          ));
+
+      final task = ActivityModel(
+        id: '',
+        activityType: ActivityType.task,
+        title: 'Test',
+        statusId: 's1',
+        statusName: 'To Do',
+        statusPhase: 'open',
+        createdAt: DateTime.utc(2026, 5, 20),
+        updatedAt: DateTime.utc(2026, 5, 20),
+      );
+
+      final result = await dataSource.createActivity(task);
+      expect(result.id, 'a1');
+      verify(() => mockDio.post<Map<String, dynamic>>(
+            '/api/activities',
+            data: any(named: 'data'),
+          )).called(1);
+    });
+  });
+
+  group('deleteActivity', () {
+    test('completes on success', () async {
+      when(() => mockDio.delete<void>(any())).thenAnswer(
+        (_) async =>
+            Response(statusCode: 204, requestOptions: RequestOptions()),
+      );
+      await expectLater(dataSource.deleteActivity('a1'), completes);
     });
 
-    test('throws ServerException on DioException', () async {
+    test('throws ServerException on failure', () async {
       when(() => mockDio.delete<void>(any())).thenThrow(
-        DioException(
-          requestOptions: RequestOptions(),
-          message: 'fail',
-        ),
+        DioException(requestOptions: RequestOptions()),
       );
-
-      expect(
-        () => dataSource.deleteTask('1'),
-        throwsA(isA<ServerException>()),
-      );
+      expect(() => dataSource.deleteActivity('a1'),
+          throwsA(isA<ServerException>()));
     });
   });
 }

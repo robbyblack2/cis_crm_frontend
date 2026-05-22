@@ -2,6 +2,8 @@ import 'package:cis_crm/app/injection.dart';
 import 'package:cis_crm/core/widgets/activities_section.dart';
 import 'package:cis_crm/features/contacts/data/datasources/company_remote_data_source.dart';
 import 'package:cis_crm/features/contacts/domain/entities/company.dart';
+import 'package:cis_crm/features/contacts/domain/repositories/company_repository.dart';
+import 'package:cis_crm/features/contacts/presentation/widgets/entity_tags_card.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
@@ -80,6 +82,14 @@ class _CompanyDetailPageState extends State<CompanyDetailPage>
         );
       }
     }
+  }
+
+  Future<void> _reload() async {
+    try {
+      final ds = getIt<CompanyRemoteDataSource>();
+      final updated = await ds.getCompany(_company.id);
+      if (mounted) setState(() => _company = updated);
+    } catch (_) {}
   }
 
   Future<void> _loadNotes() async {
@@ -236,29 +246,11 @@ class _CompanyDetailPageState extends State<CompanyDetailPage>
                           },
                         ),
                         // Tags
-                        if (_company.tags.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Icon(Icons.label_outline, size: 20,
-                                  color: colorScheme.onSurfaceVariant),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Wrap(
-                                  spacing: 6,
-                                  runSpacing: 6,
-                                  children: _company.tags
-                                      .map((t) => Chip(
-                                            label: Text(t),
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                          ))
-                                      .toList(),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                        const SizedBox(height: 12),
+                        _CompanyTagsSection(
+                          company: _company,
+                          onUpdated: () => _reload(),
+                        ),
                         const SizedBox(height: 8),
                         _infoRow(theme, 'Created',
                             '${_company.createdAt.day}/${_company.createdAt.month}/${_company.createdAt.year}'),
@@ -724,5 +716,75 @@ class _CompanyEmailsSectionState extends State<_CompanyEmailsSection> {
     } catch (_) {
       return iso;
     }
+  }
+}
+
+/// Company tags section with add/remove, uses EntityTagsCard.
+class _CompanyTagsSection extends StatefulWidget {
+  const _CompanyTagsSection({required this.company, this.onUpdated});
+
+  final Company company;
+  final VoidCallback? onUpdated;
+
+  @override
+  State<_CompanyTagsSection> createState() => _CompanyTagsSectionState();
+}
+
+class _CompanyTagsSectionState extends State<_CompanyTagsSection> {
+  List<String> _availableTags = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTags();
+  }
+
+  Future<void> _loadTags() async {
+    try {
+      final response =
+          await getIt<Dio>().get<Map<String, dynamic>>('/api/tags');
+      final list = response.data?['data'] as List<dynamic>? ?? [];
+      if (mounted) {
+        setState(() {
+          _availableTags = list
+              .map((t) =>
+                  (t as Map<String, dynamic>)['name'] as String? ?? '')
+              .where((n) => n.isNotEmpty)
+              .toList();
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveTags(List<String> tags) async {
+    try {
+      final c = widget.company;
+      await getIt<CompanyRepository>().updateCompany(
+        Company(
+          id: c.id,
+          name: c.name,
+          tags: tags,
+          ownerId: c.ownerId,
+          domain: c.domain,
+          industry: c.industry,
+          phone: c.phone,
+          employeeCount: c.employeeCount,
+          version: c.version,
+          createdAt: c.createdAt,
+          updatedAt: DateTime.now(),
+        ),
+      );
+      widget.onUpdated?.call();
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return EntityTagsCard(
+      tags: widget.company.tags,
+      availableTags: _availableTags,
+      onTagsChanged: _saveTags,
+      title: 'Tags',
+    );
   }
 }
