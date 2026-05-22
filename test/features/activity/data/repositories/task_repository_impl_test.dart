@@ -1,107 +1,147 @@
 import 'package:cis_crm/core/error/exceptions.dart';
 import 'package:cis_crm/core/error/failures.dart';
 import 'package:cis_crm/features/activity/data/datasources/activity_remote_data_source.dart';
-import 'package:cis_crm/features/activity/data/models/crm_task_model.dart';
+import 'package:cis_crm/features/activity/data/models/activity_model.dart';
 import 'package:cis_crm/features/activity/data/repositories/task_repository_impl.dart';
-import 'package:cis_crm/features/activity/domain/entities/task_priority.dart';
-import 'package:cis_crm/features/activity/domain/entities/task_status.dart';
+import 'package:cis_crm/features/activity/domain/entities/activity.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockRemoteDataSource extends Mock implements ActivityRemoteDataSource {}
+class _MockDataSource extends Mock implements ActivityRemoteDataSource {}
 
-class FakeCrmTaskModel extends Fake implements CrmTaskModel {}
+class _FakeActivityModel extends Fake implements ActivityModel {}
+
+final _task = ActivityModel(
+  id: 'task-1',
+  activityType: ActivityType.task,
+  title: 'Follow up',
+  statusId: 's1',
+  statusName: 'To Do',
+  statusPhase: 'open',
+  createdAt: DateTime.utc(2026),
+  updatedAt: DateTime.utc(2026),
+);
 
 void main() {
-  late MockRemoteDataSource mockDataSource;
+  late _MockDataSource ds;
   late TaskRepositoryImpl repo;
 
-  final now = DateTime(2024);
-  final testModel = CrmTaskModel(
-    id: '1',
-    title: 'Test',
-    status: TaskStatus.todo,
-    priority: TaskPriority.medium,
-    parentType: 'contact',
-    parentId: 'c1',
-    createdBy: 'user1',
-    createdAt: now,
-    updatedAt: now,
-  );
-
   setUpAll(() {
-    registerFallbackValue(FakeCrmTaskModel());
+    registerFallbackValue(_FakeActivityModel());
   });
 
   setUp(() {
-    mockDataSource = MockRemoteDataSource();
-    repo = TaskRepositoryImpl(remoteDataSource: mockDataSource);
+    ds = _MockDataSource();
+    repo = TaskRepositoryImpl(remoteDataSource: ds);
   });
 
-  group('getTasks', () {
-    test('returns Success with tasks when datasource succeeds', () async {
-      when(() => mockDataSource.getTasks())
-          .thenAnswer((_) async => [testModel]);
-      final result = await repo.getTasks();
+  group('getActivities', () {
+    test('calls getActivities with no type filter and perPage=100', () async {
+      when(() => ds.getActivities(perPage: 100))
+          .thenAnswer((_) async => [_task]);
+
+      final result = await repo.getActivities();
+
       expect(result.isSuccess, isTrue);
-      expect(result.dataOrNull, [testModel]);
+      expect(result.dataOrNull, hasLength(1));
+      verify(() => ds.getActivities(perPage: 100)).called(1);
     });
 
-    test('returns Failure(ServerFailure) when ServerException thrown',
-        () async {
-      when(() => mockDataSource.getTasks())
-          .thenThrow(const ServerException('fail', statusCode: 500));
-      final result = await repo.getTasks();
+    test('returns failure on ServerException', () async {
+      when(() => ds.getActivities(perPage: 100))
+          .thenThrow(const ServerException('fail'));
+
+      final result = await repo.getActivities();
+
       expect(result.isFailure, isTrue);
       expect(result.failureOrNull, isA<ServerFailure>());
     });
+  });
 
-    test('returns Failure(NetworkFailure) when NetworkException thrown',
+  group('getTasks', () {
+    test('calls getActivities with activityType=task and perPage=100',
         () async {
-      when(() => mockDataSource.getTasks()).thenThrow(const NetworkException());
+      when(() => ds.getActivities(
+            activityType: 'task',
+            perPage: 100,
+          )).thenAnswer((_) async => [_task]);
+
       final result = await repo.getTasks();
+
+      expect(result.isSuccess, isTrue);
+      expect(result.dataOrNull, hasLength(1));
+      verify(() => ds.getActivities(activityType: 'task', perPage: 100))
+          .called(1);
+    });
+
+    test('returns failure on ServerException', () async {
+      when(() => ds.getActivities(
+            activityType: 'task',
+            perPage: 100,
+          )).thenThrow(const ServerException('fail'));
+
+      final result = await repo.getTasks();
+
       expect(result.isFailure, isTrue);
-      expect(result.failureOrNull, isA<NetworkFailure>());
+      expect(result.failureOrNull, isA<ServerFailure>());
+    });
+  });
+
+  group('getTask', () {
+    test('delegates to getActivity', () async {
+      when(() => ds.getActivity('task-1'))
+          .thenAnswer((_) async => _task);
+
+      final result = await repo.getTask('task-1');
+
+      expect(result.isSuccess, isTrue);
+      expect(result.dataOrNull!.id, 'task-1');
     });
   });
 
   group('createTask', () {
-    test('returns Success when datasource succeeds', () async {
-      when(() => mockDataSource.createTask(any()))
-          .thenAnswer((_) async => testModel);
-      final result = await repo.createTask(testModel);
-      expect(result.isSuccess, isTrue);
-    });
+    test('delegates to createActivity', () async {
+      when(() => ds.createActivity(any()))
+          .thenAnswer((_) async => _task);
 
-    test('returns Failure when datasource throws', () async {
-      when(() => mockDataSource.createTask(any()))
-          .thenThrow(const ServerException('fail'));
-      final result = await repo.createTask(testModel);
-      expect(result.isFailure, isTrue);
+      final result = await repo.createTask(_task);
+
+      expect(result.isSuccess, isTrue);
+      verify(() => ds.createActivity(_task)).called(1);
     });
   });
 
   group('updateTask', () {
-    test('returns Success when datasource succeeds', () async {
-      when(() => mockDataSource.updateTask(any()))
-          .thenAnswer((_) async => testModel);
-      final result = await repo.updateTask(testModel);
+    test('delegates to updateActivity', () async {
+      when(() => ds.updateActivity(any()))
+          .thenAnswer((_) async => _task);
+
+      final result = await repo.updateTask(_task);
+
       expect(result.isSuccess, isTrue);
+      verify(() => ds.updateActivity(_task)).called(1);
     });
   });
 
   group('deleteTask', () {
-    test('returns Success when datasource succeeds', () async {
-      when(() => mockDataSource.deleteTask(any())).thenAnswer((_) async {});
-      final result = await repo.deleteTask('1');
+    test('delegates to deleteActivity', () async {
+      when(() => ds.deleteActivity('task-1'))
+          .thenAnswer((_) async {});
+
+      final result = await repo.deleteTask('task-1');
+
       expect(result.isSuccess, isTrue);
+      verify(() => ds.deleteActivity('task-1')).called(1);
     });
 
-    test('returns Failure when datasource throws', () async {
-      when(() => mockDataSource.deleteTask(any()))
-          .thenThrow(const ServerException('fail'));
-      final result = await repo.deleteTask('1');
+    test('returns NetworkFailure on NetworkException', () async {
+      when(() => ds.deleteActivity('task-1'))
+          .thenThrow(const NetworkException('offline'));
+
+      final result = await repo.deleteTask('task-1');
+
       expect(result.isFailure, isTrue);
+      expect(result.failureOrNull, isA<NetworkFailure>());
     });
   });
 }

@@ -15,6 +15,7 @@ import 'package:cis_crm/core/router/routes.dart';
 import 'package:cis_crm/core/router/shell.dart';
 import 'package:cis_crm/core/theme/theme_cubit.dart';
 import 'package:cis_crm/core/widgets/adaptive_scaffold.dart';
+import 'package:cis_crm/features/activity/data/datasources/activities_data_source.dart';
 import 'package:cis_crm/features/activity/data/datasources/activity_remote_data_source.dart';
 import 'package:cis_crm/features/activity/data/datasources/activity_remote_data_source_impl.dart';
 import 'package:cis_crm/features/activity/data/repositories/calendar_activity_repository_impl.dart';
@@ -25,6 +26,7 @@ import 'package:cis_crm/features/activity/domain/repositories/calendar_activity_
 import 'package:cis_crm/features/activity/domain/repositories/call_log_repository.dart';
 import 'package:cis_crm/features/activity/domain/repositories/task_repository.dart';
 import 'package:cis_crm/features/activity/domain/repositories/timeline_repository.dart';
+import 'package:cis_crm/features/activity/presentation/bloc/calendar_activities_bloc.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/call_log_cubit.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/tasks_bloc.dart';
 import 'package:cis_crm/features/activity/presentation/pages/tasks_page.dart';
@@ -90,6 +92,7 @@ import 'package:cis_crm/features/activity/presentation/pages/call_log_page.dart'
 import 'package:cis_crm/features/automation/presentation/pages/automation_page.dart';
 import 'package:cis_crm/features/contacts/presentation/pages/companies_page.dart';
 import 'package:cis_crm/features/email/presentation/pages/email_compose_page.dart';
+import 'package:cis_crm/features/email/presentation/pages/email_drafts_page.dart';
 import 'package:cis_crm/features/email/presentation/pages/email_templates_page.dart';
 import 'package:cis_crm/features/files/presentation/pages/files_page.dart';
 import 'package:cis_crm/features/search/presentation/pages/search_page.dart';
@@ -209,6 +212,9 @@ Future<void> configureDependencies(FlavorConfig config) async {
     ..registerLazySingleton<ActivityRemoteDataSource>(
       () => ActivityRemoteDataSourceImpl(dio: dio),
     )
+    ..registerLazySingleton<ActivitiesDataSource>(
+      () => ActivitiesDataSource(dio: dio),
+    )
     ..registerLazySingleton<AutomationRemoteDataSource>(
       () => AutomationRemoteDataSourceImpl(dio: dio),
     )
@@ -270,7 +276,7 @@ Future<void> configureDependencies(FlavorConfig config) async {
     )
     ..registerLazySingleton<CalendarActivityRepository>(
       () => CalendarActivityRepositoryImpl(
-        remoteDataSource: getIt<ActivityRemoteDataSource>(),
+        dataSource: getIt<ActivitiesDataSource>(),
       ),
     )
     ..registerLazySingleton<TaskRepository>(
@@ -363,6 +369,11 @@ Future<void> configureDependencies(FlavorConfig config) async {
     ..registerFactory<TasksBloc>(
       () => TasksBloc(
         taskRepository: getIt<TaskRepository>(),
+      ),
+    )
+    ..registerFactory<CalendarActivitiesBloc>(
+      () => CalendarActivitiesBloc(
+        repository: getIt<CalendarActivityRepository>(),
       ),
     )
     ..registerFactory<CallLogCubit>(
@@ -535,7 +546,17 @@ Future<void> configureDependencies(FlavorConfig config) async {
         ),
         GoRoute(
           path: Routes.emailCompose,
-          builder: (_, __) => const EmailComposePage(),
+          builder: (_, state) => EmailComposePage(
+            initialTo: state.uri.queryParameters['to'],
+            contactId: state.uri.queryParameters['contact_id'],
+            recordId: state.uri.queryParameters['record_id'],
+            recordTitle: state.uri.queryParameters['record_title'],
+            draftId: state.uri.queryParameters['draft_id'],
+          ),
+        ),
+        GoRoute(
+          path: Routes.emailDrafts,
+          builder: (_, __) => const EmailDraftsPage(),
         ),
         GoRoute(
           path: Routes.callLogs,

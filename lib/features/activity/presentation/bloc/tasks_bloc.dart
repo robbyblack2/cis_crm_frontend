@@ -102,7 +102,7 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     Emitter<TasksState> emit,
   ) async {
     emit(const TasksLoading());
-    final result = await _repository.getTasks();
+    final result = await _repository.getActivities();
     switch (result) {
       case Success(:final data):
         emit(TasksLoaded(tasks: data));
@@ -119,7 +119,7 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     final result = await _repository.createTask(event.task);
     switch (result) {
       case Success():
-        final listResult = await _repository.getTasks();
+        final listResult = await _repository.getActivities();
         switch (listResult) {
           case Success(:final data):
             emit(TasksLoaded(tasks: data));
@@ -139,7 +139,7 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     final result = await _repository.updateTask(event.task);
     switch (result) {
       case Success():
-        final listResult = await _repository.getTasks();
+        final listResult = await _repository.getActivities();
         switch (listResult) {
           case Success(:final data):
             emit(TasksLoaded(tasks: data));

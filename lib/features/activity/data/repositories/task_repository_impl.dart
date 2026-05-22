@@ -14,6 +14,24 @@ class TaskRepositoryImpl implements TaskRepository {
   final ActivityRemoteDataSource _remoteDataSource;
 
   @override
+  Future<Result<List<Activity>, AppFailure>> getActivities() async {
+    try {
+      final activities = await _remoteDataSource.getActivities(
+        perPage: 100,
+      );
+      return Success(activities);
+    } on NetworkException catch (e) {
+      return Failure(NetworkFailure(e.message));
+    } on UnauthorizedException catch (e) {
+      return Failure(UnauthorizedFailure(e.message));
+    } on ServerException catch (e) {
+      return Failure(ServerFailure(e.message, statusCode: e.statusCode));
+    } on AppException catch (e) {
+      return Failure(UnknownFailure(e.message));
+    }
+  }
+
+  @override
   Future<Result<List<Activity>, AppFailure>> getTasks() async {
     try {
       final tasks = await _remoteDataSource.getActivities(

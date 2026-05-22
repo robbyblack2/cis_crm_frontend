@@ -1,9 +1,11 @@
 import 'package:cis_crm/app/injection.dart';
+import 'package:cis_crm/core/widgets/filter_sidebar.dart';
 import 'package:cis_crm/core/widgets/state/empty_state.dart';
 import 'package:cis_crm/core/widgets/state/page_error.dart';
 import 'package:cis_crm/core/widgets/state/page_loading.dart';
+import 'package:cis_crm/features/activity/data/datasources/activity_config_service.dart';
+import 'package:cis_crm/features/activity/data/models/activity_model.dart';
 import 'package:cis_crm/features/activity/domain/entities/activity.dart';
-import 'package:cis_crm/features/activity/domain/repositories/calendar_activity_repository.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/calendar_activities_bloc.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/tasks_bloc.dart';
 import 'package:cis_crm/features/activity/presentation/widgets/activities_calendar_view.dart';
@@ -11,6 +13,7 @@ import 'package:cis_crm/features/activity/presentation/widgets/day_detail_panel.
 import 'package:cis_crm/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 
 class TasksPage extends StatelessWidget {
   const TasksPage({super.key});
@@ -24,11 +27,11 @@ class TasksPage extends StatelessWidget {
               getIt<TasksBloc>()..add(const TasksLoadRequested()),
         ),
         BlocProvider(
-          create: (_) => CalendarActivitiesBloc(
-            repository: getIt<CalendarActivityRepository>(),
-          )..add(CalendarMonthRequested(
-              month: DateTime(DateTime.now().year, DateTime.now().month),
-            )),
+          create: (_) =>
+              getIt<CalendarActivitiesBloc>()
+                ..add(CalendarMonthRequested(
+                  month: DateTime(DateTime.now().year, DateTime.now().month),
+                )),
         ),
       ],
       child: const _TasksView(),
@@ -44,9 +47,12 @@ class _TasksView extends StatefulWidget {
 }
 
 class _TasksViewState extends State<_TasksView> {
-  String? _phaseFilter; // null = all, "open", "closed"
+  Set<String> _phaseFilter = {};
+  Set<String> _typeFilter = {};
+  Set<String> _priorityFilter = {};
   String _search = '';
   bool _calendarView = true;
+  bool _sidebarOpen = false;
 
   @override
   Widget build(BuildContext context) {
@@ -138,18 +144,40 @@ class _TasksViewState extends State<_TasksView> {
               );
             },
           ),
-          floatingActionButton: FloatingActionButton.extended(
-            heroTag: 'tasks_fab',
-            onPressed: () => _showCreateSheet(context),
-            icon: const Icon(Icons.add),
-            label: const Text('New Activity'),
-          ),
         );
       },
     );
   }
 
-  void _onActivityTap(activity) {}
+  void _onActivityTap(Activity activity) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480, maxHeight: 500),
+          child: _ActivityDetailView(
+            activity: activity,
+            onStatusChanged: () {
+              Navigator.pop(ctx);
+              context.read<TasksBloc>().add(const TasksLoadRequested());
+              context.read<CalendarActivitiesBloc>().add(
+                    CalendarMonthRequested(
+                      month: context
+                          .read<CalendarActivitiesBloc>()
+                          .state
+                          .focusedMonth,
+                    ),
+                  );
+            },
+            onDeleted: () {
+              Navigator.pop(ctx);
+              context.read<TasksBloc>().add(TaskDeleted(activity.id));
+            },
+          ),
+        ),
+      ),
+    );
+  }
 
   void _showDayDetailSheet(
     BuildContext context,
@@ -186,73 +214,60 @@ class _TasksViewState extends State<_TasksView> {
                 (t.description?.toLowerCase().contains(q) ?? false);
           }).toList();
 
-    if (_phaseFilter != null) {
+    if (_phaseFilter.isNotEmpty) {
       filtered =
-          filtered.where((t) => t.statusPhase == _phaseFilter).toList();
+          filtered.where((t) => _phaseFilter.contains(t.statusPhase)).toList();
     }
-
-    final openCount = tasks.where((t) => t.statusPhase == 'open').length;
-    final closedCount = tasks.where((t) => t.statusPhase == 'closed').length;
+    if (_typeFilter.isNotEmpty) {
+      filtered = filtered
+          .where((t) => _typeFilter.contains(t.activityType.name))
+          .toList();
+    }
+    if (_priorityFilter.isNotEmpty) {
+      filtered = filtered
+          .where(
+              (t) => t.priority != null && _priorityFilter.contains(t.priority!.name))
+          .toList();
+    }
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Activities'),
-        actions: [_viewToggle()],
+        actions: [
+          IconButton(
+            icon: Icon(_sidebarOpen ? Icons.filter_list_off : Icons.filter_list),
+            tooltip: 'Filters',
+            onPressed: () => setState(() => _sidebarOpen = !_sidebarOpen),
+          ),
+          _viewToggle(),
+        ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(100),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search activities...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    isDense: true,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                  ),
-                  onChanged: (v) => setState(() => _search = v),
+          preferredSize: const Size.fromHeight(56),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search activities...',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                isDense: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
                 ),
               ),
-              const SizedBox(height: 8),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: Row(
-                  children: [
-                    _phaseChip(
-                      context,
-                      label: 'All (${tasks.length})',
-                      value: null,
-                    ),
-                    const SizedBox(width: 8),
-                    _phaseChip(
-                      context,
-                      label: 'Open ($openCount)',
-                      value: 'open',
-                    ),
-                    const SizedBox(width: 8),
-                    _phaseChip(
-                      context,
-                      label: 'Closed ($closedCount)',
-                      value: 'closed',
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              onChanged: (v) => setState(() => _search = v),
+            ),
           ),
         ),
       ),
-      body: filtered.isEmpty
-          ? EmptyState(
+      body: Row(
+        children: [
+          Expanded(
+            child: filtered.isEmpty
+                ? EmptyState(
               icon: Icons.task_alt,
               title: AppLocalizations.of(context)!.tasksEmpty,
               message: AppLocalizations.of(context)!.tasksEmptyAction,
@@ -266,13 +281,54 @@ class _TasksViewState extends State<_TasksView> {
                 return _ActivityListTile(
                   activity: activity,
                   onTap: () => _onActivityTap(activity),
-                  onToggleComplete: () {
-                    // Toggle between open/closed not implemented yet —
-                    // requires fetching available statuses.
-                  },
+                  onToggleComplete: () => _toggleComplete(context, activity),
                 );
               },
             ),
+          ),
+          if (_sidebarOpen)
+            FilterSidebar(
+              totalCount: tasks.length,
+              resultCount: filtered.length,
+              onClearAll: () => setState(() {
+                _phaseFilter = {};
+                _typeFilter = {};
+                _priorityFilter = {};
+              }),
+              sections: [
+                FilterSection.checkboxGroup(
+                  title: 'Phase',
+                  options: const [
+                    FilterOption(value: 'open', label: 'Open'),
+                    FilterOption(value: 'closed', label: 'Closed'),
+                  ],
+                  selected: _phaseFilter,
+                  onChanged: (v) => setState(() => _phaseFilter = v),
+                ),
+                FilterSection.checkboxGroup(
+                  title: 'Type',
+                  options: const [
+                    FilterOption(value: 'task', label: 'Task'),
+                    FilterOption(value: 'call', label: 'Call'),
+                    FilterOption(value: 'meeting', label: 'Meeting'),
+                  ],
+                  selected: _typeFilter,
+                  onChanged: (v) => setState(() => _typeFilter = v),
+                ),
+                FilterSection.checkboxGroup(
+                  title: 'Priority',
+                  options: const [
+                    FilterOption(value: 'low', label: 'Low'),
+                    FilterOption(value: 'medium', label: 'Medium'),
+                    FilterOption(value: 'high', label: 'High'),
+                  ],
+                  selected: _priorityFilter,
+                  onChanged: (v) => setState(() => _priorityFilter = v),
+                ),
+              ],
+            ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'tasks_fab',
         onPressed: () => _showCreateSheet(context),
@@ -280,6 +336,65 @@ class _TasksViewState extends State<_TasksView> {
         label: const Text('New Activity'),
       ),
     );
+  }
+
+  Future<void> _toggleComplete(BuildContext context, Activity activity) async {
+    final config = ActivityConfigService.instance;
+    final typeName = activity.activityType.name;
+
+    if (activity.isCompleted) {
+      // Reopen: set to the default open status.
+      final defaultStatus = await config.getDefaultStatus(typeName);
+      if (defaultStatus == null) return;
+      final updated = ActivityModel(
+        id: activity.id,
+        activityType: activity.activityType,
+        title: activity.title,
+        statusId: defaultStatus.id,
+        statusName: defaultStatus.name,
+        statusPhase: defaultStatus.phase,
+        createdAt: activity.createdAt,
+        updatedAt: activity.updatedAt,
+        description: activity.description,
+        priority: activity.priority,
+        assigneeId: activity.assigneeId,
+        subtypeId: activity.subtypeId,
+        subtypeName: activity.subtypeName,
+        dueDate: activity.dueDate,
+        dueTime: activity.dueTime,
+        data: activity.data,
+        links: activity.links,
+      );
+      if (context.mounted) {
+        context.read<TasksBloc>().add(TaskUpdateRequested(task: updated));
+      }
+    } else {
+      // Complete: set to the first closed status.
+      final closedStatus = await config.getClosedStatus(typeName);
+      if (closedStatus == null) return;
+      final updated = ActivityModel(
+        id: activity.id,
+        activityType: activity.activityType,
+        title: activity.title,
+        statusId: closedStatus.id,
+        statusName: closedStatus.name,
+        statusPhase: closedStatus.phase,
+        createdAt: activity.createdAt,
+        updatedAt: activity.updatedAt,
+        description: activity.description,
+        priority: activity.priority,
+        assigneeId: activity.assigneeId,
+        subtypeId: activity.subtypeId,
+        subtypeName: activity.subtypeName,
+        dueDate: activity.dueDate,
+        dueTime: activity.dueTime,
+        data: activity.data,
+        links: activity.links,
+      );
+      if (context.mounted) {
+        context.read<TasksBloc>().add(TaskUpdateRequested(task: updated));
+      }
+    }
   }
 
   // ── Shared Widgets ──
@@ -304,23 +419,23 @@ class _TasksViewState extends State<_TasksView> {
     );
   }
 
-  Widget _phaseChip(
-    BuildContext context, {
-    required String label,
-    required String? value,
-  }) {
-    final isSelected = _phaseFilter == value;
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (_) => setState(() => _phaseFilter = value),
-    );
-  }
-
-  void _showCreateSheet(BuildContext context) {
-    // Placeholder — full activity creation form needs status/subtype pickers.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Activity creation coming soon')),
+  void _showCreateSheet(BuildContext context, {DateTime? prefilledDate}) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480, maxHeight: 600),
+          child: _CreateActivityForm(
+            prefilledDate: prefilledDate,
+            onCreated: (activity) {
+              Navigator.pop(ctx);
+              context.read<TasksBloc>().add(
+                    TaskCreateRequested(task: activity),
+                  );
+            },
+          ),
+        ),
+      ),
     );
   }
 }
@@ -408,6 +523,394 @@ class _ActivityListTile extends StatelessWidget {
       ),
       trailing: const Icon(Icons.chevron_right, size: 16),
       onTap: onTap,
+    );
+  }
+}
+
+/// Full activity creation form with type, title, status, subtype, due date.
+class _CreateActivityForm extends StatefulWidget {
+  const _CreateActivityForm({this.prefilledDate, required this.onCreated});
+
+  final DateTime? prefilledDate;
+  final ValueChanged<ActivityModel> onCreated;
+
+  @override
+  State<_CreateActivityForm> createState() => _CreateActivityFormState();
+}
+
+class _CreateActivityFormState extends State<_CreateActivityForm> {
+  final _titleCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
+  var _type = ActivityType.task;
+  ActivityStatus? _status;
+  ActivitySubtype? _subtype;
+  ActivityPriority? _priority;
+  DateTime? _dueDate;
+  List<ActivityStatus> _statuses = [];
+  List<ActivitySubtype> _subtypes = [];
+  bool _loadingConfig = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _dueDate = widget.prefilledDate;
+    _loadConfig();
+  }
+
+  Future<void> _loadConfig() async {
+    final config = ActivityConfigService.instance;
+    final statuses = await config.getStatuses(_type.name);
+    final subtypes = await config.getSubtypes(_type.name);
+    if (mounted) {
+      setState(() {
+        _statuses = statuses;
+        _subtypes = subtypes;
+        _status = statuses.cast<ActivityStatus?>().firstWhere(
+              (s) => s!.isDefault,
+              orElse: () => statuses.isNotEmpty ? statuses.first : null,
+            );
+        _loadingConfig = false;
+      });
+    }
+  }
+
+  Future<void> _onTypeChanged(ActivityType type) async {
+    setState(() {
+      _type = type;
+      _loadingConfig = true;
+      _status = null;
+      _subtype = null;
+    });
+    await _loadConfig();
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _descCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('New Activity'),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: _submit,
+            child: const Text('Create'),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: _loadingConfig
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                // Type selector
+                SegmentedButton<ActivityType>(
+                  segments: const [
+                    ButtonSegment(
+                      value: ActivityType.task,
+                      label: Text('Task'),
+                      icon: Icon(Icons.task_alt, size: 16),
+                    ),
+                    ButtonSegment(
+                      value: ActivityType.call,
+                      label: Text('Call'),
+                      icon: Icon(Icons.phone, size: 16),
+                    ),
+                    ButtonSegment(
+                      value: ActivityType.meeting,
+                      label: Text('Meeting'),
+                      icon: Icon(Icons.event, size: 16),
+                    ),
+                  ],
+                  selected: {_type},
+                  onSelectionChanged: (v) => _onTypeChanged(v.first),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _titleCtrl,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Title *',
+                    border: OutlineInputBorder(),
+                  ),
+                  textCapitalization: TextCapitalization.sentences,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _descCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                  minLines: 2,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    if (_statuses.isNotEmpty)
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: _status?.id,
+                          decoration: const InputDecoration(
+                            labelText: 'Status',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: _statuses
+                              .map((s) => DropdownMenuItem(
+                                    value: s.id,
+                                    child: Text(s.name),
+                                  ))
+                              .toList(),
+                          onChanged: (id) {
+                            setState(() {
+                              _status = _statuses.firstWhere((s) => s.id == id);
+                            });
+                          },
+                        ),
+                      ),
+                    if (_statuses.isNotEmpty && _subtypes.isNotEmpty)
+                      const SizedBox(width: 12),
+                    if (_subtypes.isNotEmpty)
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: _subtype?.id,
+                          decoration: const InputDecoration(
+                            labelText: 'Subtype',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: [
+                            const DropdownMenuItem(
+                              child: Text('None'),
+                            ),
+                            ..._subtypes.map((s) => DropdownMenuItem(
+                                  value: s.id,
+                                  child: Text(s.name),
+                                )),
+                          ],
+                          onChanged: (id) {
+                            setState(() {
+                              _subtype = id != null
+                                  ? _subtypes
+                                      .cast<ActivitySubtype?>()
+                                      .firstWhere((s) => s!.id == id,
+                                          orElse: () => null)
+                                  : null;
+                            });
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<ActivityPriority>(
+                        value: _priority,
+                        decoration: const InputDecoration(
+                          labelText: 'Priority',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(child: Text('None')),
+                          DropdownMenuItem(
+                            value: ActivityPriority.low,
+                            child: Text('Low'),
+                          ),
+                          DropdownMenuItem(
+                            value: ActivityPriority.medium,
+                            child: Text('Medium'),
+                          ),
+                          DropdownMenuItem(
+                            value: ActivityPriority.high,
+                            child: Text('High'),
+                          ),
+                        ],
+                        onChanged: (v) => setState(() => _priority = v),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.event_outlined),
+                        label: Text(
+                          _dueDate != null
+                              ? DateFormat.yMMMd().format(_dueDate!)
+                              : 'Set due date',
+                        ),
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _dueDate ?? DateTime.now(),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2030),
+                          );
+                          if (picked != null) {
+                            setState(() => _dueDate = picked);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+    );
+  }
+
+  void _submit() {
+    final title = _titleCtrl.text.trim();
+    if (title.isEmpty) return;
+    if (_status == null) return;
+
+    final now = DateTime.now();
+    final activity = ActivityModel(
+      id: '',
+      activityType: _type,
+      title: title,
+      statusId: _status!.id,
+      statusName: _status!.name,
+      statusPhase: _status!.phase,
+      createdAt: now,
+      updatedAt: now,
+      description:
+          _descCtrl.text.trim().isNotEmpty ? _descCtrl.text.trim() : null,
+      priority: _priority,
+      subtypeId: _subtype?.id,
+      subtypeName: _subtype?.name,
+      dueDate: _dueDate != null
+          ? DateFormat('yyyy-MM-dd').format(_dueDate!)
+          : null,
+    );
+    widget.onCreated(activity);
+  }
+}
+
+/// Activity detail view shown in a dialog.
+class _ActivityDetailView extends StatelessWidget {
+  const _ActivityDetailView({
+    required this.activity,
+    required this.onStatusChanged,
+    required this.onDeleted,
+  });
+
+  final Activity activity;
+  final VoidCallback onStatusChanged;
+  final VoidCallback onDeleted;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final color = ActivityColors.forType(activity.activityType);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(activity.title),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.delete_outline, color: cs.error),
+            tooltip: 'Delete',
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Delete activity?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Cancel'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: cs.error,
+                      ),
+                      child: const Text('Delete'),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed == true) onDeleted();
+            },
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Type badge
+          Row(
+            children: [
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                activity.activityType.name[0].toUpperCase() +
+                    activity.activityType.name.substring(1),
+                style: theme.textTheme.labelMedium?.copyWith(color: color),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Status
+          _row(theme, 'Status', activity.statusName),
+          if (activity.subtypeName != null)
+            _row(theme, 'Subtype', activity.subtypeName!),
+          if (activity.priority != null)
+            _row(theme, 'Priority', activity.priority!.name),
+          if (activity.dueDate != null) _row(theme, 'Due date', activity.dueDate!),
+          if (activity.dueTime != null) _row(theme, 'Due time', activity.dueTime!),
+          if (activity.description != null &&
+              activity.description!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text('Description',
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(color: cs.onSurfaceVariant)),
+            const SizedBox(height: 4),
+            Text(activity.description!, style: theme.textTheme.bodyMedium),
+          ],
+          const SizedBox(height: 16),
+          _row(theme, 'Created', DateFormat.yMMMd().add_jm().format(activity.createdAt)),
+        ],
+      ),
+    );
+  }
+
+  Widget _row(ThemeData theme, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 90,
+            child: Text(label,
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+          ),
+          Expanded(child: Text(value, style: theme.textTheme.bodyMedium)),
+        ],
+      ),
     );
   }
 }
