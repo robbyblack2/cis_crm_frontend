@@ -174,6 +174,92 @@ void main() {
     );
   });
 
+  group('Calendar keying', () {
+    blocTest<CalendarActivitiesBloc, CalendarActivitiesState>(
+      'keys meetings by startTime',
+      build: () {
+        final meeting = ActivityModel(
+          id: 'm1',
+          activityType: ActivityType.meeting,
+          title: 'Demo',
+          statusId: 's',
+          statusName: 'Planned',
+          statusPhase: 'open',
+          createdAt: DateTime.utc(2026, 5, 1),
+          updatedAt: DateTime.utc(2026, 5, 1),
+          startTime: DateTime.utc(2026, 5, 20, 14),
+        );
+        stubAll(Success([meeting]));
+        return build();
+      },
+      act: (b) => b.add(CalendarMonthRequested(month: _may)),
+      wait: const Duration(seconds: 2),
+      verify: (b) {
+        expect(b.state.activities['2026-05-20'], isNotEmpty);
+        expect(b.state.activities['2026-05-20']!.first.id, 'm1');
+      },
+    );
+
+    blocTest<CalendarActivitiesBloc, CalendarActivitiesState>(
+      'keys tasks by dueDate',
+      build: () {
+        stubAll(Success([_activity]));
+        return build();
+      },
+      act: (b) => b.add(CalendarMonthRequested(month: _may)),
+      wait: const Duration(seconds: 2),
+      verify: (b) {
+        expect(b.state.activities['2026-05-15'], isNotEmpty);
+      },
+    );
+
+    blocTest<CalendarActivitiesBloc, CalendarActivitiesState>(
+      'falls back to createdAt when no dueDate or startTime',
+      build: () {
+        final created = DateTime(2026, 5, 8, 12); // local time
+        final noDate = ActivityModel(
+          id: 'nd1',
+          activityType: ActivityType.task,
+          title: 'No date',
+          statusId: 's',
+          statusName: 'To Do',
+          statusPhase: 'open',
+          createdAt: created,
+          updatedAt: created,
+        );
+        stubAll(Success([noDate]));
+        return build();
+      },
+      act: (b) => b.add(CalendarMonthRequested(month: _may)),
+      wait: const Duration(seconds: 2),
+      verify: (b) {
+        // Should be keyed by createdAt local date
+        expect(b.state.activities['2026-05-08'], isNotEmpty);
+        expect(b.state.activities['2026-05-08']!.first.id, 'nd1');
+      },
+    );
+
+    blocTest<CalendarActivitiesBloc, CalendarActivitiesState>(
+      'does not create duplicate entries from overlapping fetches',
+      build: () {
+        stubAll(Success([_activity]));
+        return build();
+      },
+      seed: () => CalendarActivitiesState(
+        focusedMonth: _may,
+        selectedDay: DateTime(2026, 5, 1),
+        activities: {
+          '2026-05-15': [_activity],
+        },
+      ),
+      act: (b) => b.add(const CalendarRefreshRequested()),
+      wait: const Duration(seconds: 2),
+      verify: (b) {
+        expect(b.state.activities['2026-05-15'], hasLength(1));
+      },
+    );
+  });
+
   group('Prefetch behavior', () {
     blocTest<CalendarActivitiesBloc, CalendarActivitiesState>(
       'prefetch does not change focusedMonth',

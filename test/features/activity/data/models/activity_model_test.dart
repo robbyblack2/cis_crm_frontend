@@ -230,6 +230,119 @@ void main() {
     });
   });
 
+  group('ActivityModel.toJson — create_meet_link', () {
+    test('extracts create_meet_link from data to top-level field', () {
+      final model = ActivityModel(
+        id: '',
+        activityType: ActivityType.meeting,
+        title: 'Demo',
+        statusId: 's1',
+        statusName: '',
+        statusPhase: 'open',
+        createdAt: _epoch,
+        updatedAt: _epoch,
+        startTime: DateTime.utc(2026, 6, 1, 14),
+        endTime: DateTime.utc(2026, 6, 1, 14, 30),
+        data: const {'create_meet_link': true},
+      );
+
+      final json = model.toJson();
+
+      expect(json['create_meet_link'], isTrue);
+      // Should NOT be in the nested data field
+      final dataField = json['data'] as Map<String, dynamic>?;
+      expect(dataField == null || !dataField.containsKey('create_meet_link'),
+          isTrue);
+    });
+
+    test('does not include create_meet_link when not in data', () {
+      final model = ActivityModel(
+        id: '',
+        activityType: ActivityType.meeting,
+        title: 'No Meet',
+        statusId: 's1',
+        statusName: '',
+        statusPhase: 'open',
+        createdAt: _epoch,
+        updatedAt: _epoch,
+        startTime: DateTime.utc(2026, 6, 1, 14),
+        endTime: DateTime.utc(2026, 6, 1, 14, 30),
+      );
+
+      final json = model.toJson();
+
+      expect(json.containsKey('create_meet_link'), isFalse);
+    });
+  });
+
+  group('ActivityModel.toJson — meeting fields', () {
+    test('serializes start_time and end_time as UTC ISO8601', () {
+      final model = ActivityModel(
+        id: '',
+        activityType: ActivityType.meeting,
+        title: 'Meeting',
+        statusId: 's1',
+        statusName: '',
+        statusPhase: 'open',
+        createdAt: _epoch,
+        updatedAt: _epoch,
+        startTime: DateTime.utc(2026, 6, 1, 14),
+        endTime: DateTime.utc(2026, 6, 1, 14, 30),
+      );
+
+      final json = model.toJson();
+
+      expect(json['start_time'], '2026-06-01T14:00:00.000Z');
+      expect(json['end_time'], '2026-06-01T14:30:00.000Z');
+    });
+
+    test('serializes attendees list', () {
+      final model = ActivityModel(
+        id: '',
+        activityType: ActivityType.meeting,
+        title: 'Meeting',
+        statusId: 's1',
+        statusName: '',
+        statusPhase: 'open',
+        createdAt: _epoch,
+        updatedAt: _epoch,
+        startTime: DateTime.utc(2026, 6, 1, 14),
+        endTime: DateTime.utc(2026, 6, 1, 14, 30),
+        attendees: [
+          {'email': 'a@b.com', 'rsvp_status': 'needs_action'},
+        ],
+      );
+
+      final json = model.toJson();
+
+      expect(json['attendees'], hasLength(1));
+      expect(
+        (json['attendees'] as List).first['email'],
+        'a@b.com',
+      );
+    });
+
+    test('omits meeting fields when null', () {
+      final model = ActivityModel(
+        id: '',
+        activityType: ActivityType.task,
+        title: 'Task',
+        statusId: 's1',
+        statusName: '',
+        statusPhase: 'open',
+        createdAt: _epoch,
+        updatedAt: _epoch,
+      );
+
+      final json = model.toJson();
+
+      expect(json.containsKey('start_time'), isFalse);
+      expect(json.containsKey('end_time'), isFalse);
+      expect(json.containsKey('attendees'), isFalse);
+      expect(json.containsKey('meeting_url'), isFalse);
+    });
+  });
+
   group('ActivityModel.fromJson — nested backend format', () {
     test('parses nested status object for status_name and status_phase', () {
       final json = {
