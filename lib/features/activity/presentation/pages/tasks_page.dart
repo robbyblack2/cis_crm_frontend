@@ -567,7 +567,7 @@ class _CreateActivityFormState extends State<_CreateActivityForm> {
     final now = DateTime.now();
     final nextHour = DateTime(now.year, now.month, now.day, now.hour + 1);
     _startTime = nextHour;
-    _endTime = nextHour.add(const Duration(hours: 1));
+    _endTime = nextHour.add(const Duration(minutes: 30));
     _loadConfig();
   }
 
