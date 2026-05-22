@@ -349,22 +349,36 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
                   ),
                 ),
               ),
-        // Join Meeting button
-        if (_activity.isMeeting &&
-            _activity.meetingUrl != null &&
-            _activity.meetingUrl!.isNotEmpty) ...[
+        // Join Meeting button — always show for meetings
+        if (_activity.isMeeting) ...[
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: () => _launchUrl(_activity.meetingUrl!),
-              icon: Icon(_meetingIcon(_activity.conferenceProvider)),
-              label: Text(_joinLabel(_activity.conferenceProvider)),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
+          if (_activity.meetingUrl != null &&
+              _activity.meetingUrl!.isNotEmpty)
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => _launchUrl(_activity.meetingUrl!),
+                icon: Icon(_meetingIcon(_activity.conferenceProvider)),
+                label: Text(_joinLabel(_activity.conferenceProvider)),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            )
+          else
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: null,
+                icon: const Icon(Icons.hourglass_top),
+                label: const Text(
+                  'Meeting link pending — refresh to check',
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
               ),
             ),
-          ),
         ],
         // Meeting time summary
         if (_activity.isMeeting && _activity.startTime != null) ...[

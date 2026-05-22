@@ -4,6 +4,8 @@ import 'package:cis_crm/core/widgets/state/empty_state.dart';
 import 'package:cis_crm/core/widgets/state/page_error.dart';
 import 'package:cis_crm/core/widgets/state/page_loading.dart';
 import 'package:cis_crm/features/activity/data/datasources/activity_config_service.dart';
+import 'package:cis_crm/features/contacts/data/datasources/contact_remote_data_source.dart';
+import 'package:cis_crm/features/contacts/data/models/contact_model.dart';
 import 'package:cis_crm/features/activity/data/models/activity_model.dart';
 import 'package:cis_crm/features/activity/domain/entities/activity.dart';
 import 'package:cis_crm/features/activity/presentation/bloc/calendar_activities_bloc.dart';
@@ -680,7 +682,11 @@ class _CreateActivityFormState extends State<_CreateActivityForm> {
   // Meeting-specific
   DateTime? _startTime;
   DateTime? _endTime;
+  bool _createMeetLink = true;
   final List<Map<String, dynamic>> _attendees = [];
+  // Contact search
+  List<ContactModel> _contactResults = [];
+  bool _searchingContacts = false;
   List<ActivityStatus> _statuses = [];
   List<ActivitySubtype> _subtypes = [];
   bool _loadingConfig = true;
@@ -897,52 +903,136 @@ class _CreateActivityFormState extends State<_CreateActivityForm> {
                     onChanged: (dt) => setState(() => _endTime = dt),
                   ),
                   const SizedBox(height: 16),
-                  // Attendees
+                  // Google Meet toggle
+                  SwitchListTile(
+                    title: const Text('Create Google Meet'),
+                    subtitle: const Text(
+                      'Generate a video call link and push to Google Calendar',
+                    ),
+                    secondary: const Icon(Icons.video_call),
+                    value: _createMeetLink,
+                    onChanged: (v) => setState(() => _createMeetLink = v),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(height: 16),
+                  // Attendees with contact search
                   Text('Attendees',
                       style: Theme.of(context).textTheme.titleSmall),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _attendeeCtrl,
-                          decoration: const InputDecoration(
-                            hintText: 'Enter email address',
-                            border: OutlineInputBorder(),
-                            isDense: true,
-                            prefixIcon: Icon(Icons.person_add, size: 20),
+                  Autocomplete<ContactModel>(
+                    fieldViewBuilder: (context, ctrl, focusNode, onSubmit) {
+                      return TextField(
+                        controller: ctrl,
+                        focusNode: focusNode,
+                        decoration: InputDecoration(
+                          hintText: 'Search contacts by name or email...',
+                          border: const OutlineInputBorder(),
+                          isDense: true,
+                          prefixIcon:
+                              const Icon(Icons.person_search, size: 20),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.add),
+                            tooltip: 'Add as raw email',
+                            onPressed: () {
+                              final text = ctrl.text.trim();
+                              if (text.contains('@')) {
+                                _addAttendeeByEmail(text);
+                                ctrl.clear();
+                              }
+                            },
                           ),
-                          keyboardType: TextInputType.emailAddress,
-                          onSubmitted: (_) => _addAttendee(),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton.filled(
-                        onPressed: _addAttendee,
-                        icon: const Icon(Icons.add),
-                        tooltip: 'Add attendee',
-                      ),
-                    ],
+                        keyboardType: TextInputType.emailAddress,
+                        onSubmitted: (v) {
+                          if (v.trim().contains('@')) {
+                            _addAttendeeByEmail(v.trim());
+                            ctrl.clear();
+                          }
+                        },
+                      );
+                    },
+                    optionsBuilder: (textEditingValue) async {
+                      final query = textEditingValue.text.trim();
+                      if (query.length < 2) return const [];
+                      return _searchContacts(query);
+                    },
+                    displayStringForOption: (c) =>
+                        '${c.firstName} ${c.lastName}'.trim(),
+                    optionsViewBuilder: (context, onSelected, options) {
+                      return Align(
+                        alignment: Alignment.topLeft,
+                        child: Material(
+                          elevation: 4,
+                          borderRadius: BorderRadius.circular(8),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(
+                              maxHeight: 250,
+                              maxWidth: 400,
+                            ),
+                            child: ListView.builder(
+                              padding: EdgeInsets.zero,
+                              shrinkWrap: true,
+                              itemCount: options.length,
+                              itemBuilder: (context, index) {
+                                final c = options.elementAt(index);
+                                final name =
+                                    '${c.firstName} ${c.lastName}'.trim();
+                                return ListTile(
+                                  dense: true,
+                                  leading: CircleAvatar(
+                                    radius: 14,
+                                    child: Text(
+                                      c.firstName.isNotEmpty
+                                          ? c.firstName[0].toUpperCase()
+                                          : '?',
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                  ),
+                                  title: Text(name),
+                                  subtitle: Text(
+                                    c.email,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall,
+                                  ),
+                                  onTap: () {
+                                    onSelected(c);
+                                    _addAttendeeFromContact(c);
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   if (_attendees.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     ..._attendees.asMap().entries.map((entry) {
                       final i = entry.key;
                       final a = entry.value;
+                      final name = a['name'] as String? ?? '';
+                      final email = a['email'] as String? ?? '';
                       return ListTile(
                         dense: true,
                         contentPadding: EdgeInsets.zero,
                         leading: CircleAvatar(
                           radius: 14,
                           child: Text(
-                            (a['email'] as String)[0].toUpperCase(),
+                            name.isNotEmpty
+                                ? name[0].toUpperCase()
+                                : (email.isNotEmpty
+                                    ? email[0].toUpperCase()
+                                    : '?'),
                             style: const TextStyle(fontSize: 12),
                           ),
                         ),
                         title: Text(
-                          a['email'] as String,
+                          name.isNotEmpty ? name : email,
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
+                        subtitle: name.isNotEmpty ? Text(email) : null,
                         trailing: IconButton(
                           icon: const Icon(Icons.close, size: 16),
                           onPressed: () =>
@@ -951,15 +1041,6 @@ class _CreateActivityFormState extends State<_CreateActivityForm> {
                       );
                     }),
                   ],
-                  const SizedBox(height: 8),
-                  Text(
-                    'A Google Meet link will be created automatically',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontStyle: FontStyle.italic,
-                        ),
-                  ),
                 ],
                 // Task/Call: due date
                 if (_type != ActivityType.meeting) ...[
@@ -991,13 +1072,40 @@ class _CreateActivityFormState extends State<_CreateActivityForm> {
     );
   }
 
-  void _addAttendee() {
-    final email = _attendeeCtrl.text.trim();
+  Future<List<ContactModel>> _searchContacts(String query) async {
+    try {
+      final ds = getIt<ContactRemoteDataSource>();
+      final result = await ds.getContacts(page: 1, perPage: 20);
+      final q = query.toLowerCase();
+      return result.items
+          .where((c) =>
+              c.firstName.toLowerCase().contains(q) ||
+              c.lastName.toLowerCase().contains(q) ||
+              c.email.toLowerCase().contains(q))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  void _addAttendeeFromContact(ContactModel contact) {
+    final email = contact.email;
+    if (email.isEmpty) return;
+    if (_attendees.any((a) => a['email'] == email)) return;
+    setState(() {
+      _attendees.add({
+        'email': email,
+        'name': '${contact.firstName} ${contact.lastName}'.trim(),
+        'rsvp_status': 'needs_action',
+      });
+    });
+  }
+
+  void _addAttendeeByEmail(String email) {
     if (email.isEmpty || !email.contains('@')) return;
     if (_attendees.any((a) => a['email'] == email)) return;
     setState(() {
       _attendees.add({'email': email, 'rsvp_status': 'needs_action'});
-      _attendeeCtrl.clear();
     });
   }
 
@@ -1067,6 +1175,9 @@ class _CreateActivityFormState extends State<_CreateActivityForm> {
           _type == ActivityType.meeting && _attendees.isNotEmpty
               ? _attendees
               : null,
+      data: _type == ActivityType.meeting && _createMeetLink
+          ? const {'create_meet_link': true}
+          : const {},
     );
     widget.onCreated(activity);
   }

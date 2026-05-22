@@ -187,7 +187,8 @@ class ActivityModel extends Activity {
         if (subtypeId != null) 'subtype_id': subtypeId,
         if (dueDate != null) 'due_date': dueDate,
         if (dueTime != null) 'due_time': dueTime,
-        if (data.isNotEmpty) 'data': data,
+        if (data.isNotEmpty) 'data': Map<String, dynamic>.from(data)
+          ..remove('create_meet_link'),
         if (links.isNotEmpty)
           'links': links
               .map((l) => {
@@ -202,13 +203,10 @@ class ActivityModel extends Activity {
           'end_time': endTime!.toUtc().toIso8601String(),
         if (attendees != null) 'attendees': attendees,
         if (meetingUrl != null) 'meeting_url': meetingUrl,
-        // Auto-generate Google Meet link for new meetings (id is empty
-        // on create). Backend uses this flag to create the Meet link and
-        // push to Google Calendar.
-        if (activityType == ActivityType.meeting &&
-            id.isEmpty &&
-            meetingUrl == null)
-          'create_meet_link': true,
+        // create_meet_link is a top-level API flag stored in data
+        // for transport — extracted here so it goes in the POST body.
+        if (data.containsKey('create_meet_link'))
+          'create_meet_link': data['create_meet_link'],
       };
 
   /// Build a create payload for POST /api/activities (meeting-specific).
