@@ -255,6 +255,27 @@ void main() {
           isTrue);
     });
 
+    test('includes create_google_event when create_meet_link is set', () {
+      final model = ActivityModel(
+        id: '',
+        activityType: ActivityType.meeting,
+        title: 'Google Event',
+        statusId: 's1',
+        statusName: '',
+        statusPhase: 'open',
+        createdAt: _epoch,
+        updatedAt: _epoch,
+        startTime: DateTime.utc(2026, 6, 1, 14),
+        endTime: DateTime.utc(2026, 6, 1, 14, 30),
+        data: const {'create_meet_link': true},
+      );
+
+      final json = model.toJson();
+
+      expect(json['create_meet_link'], isTrue);
+      expect(json['create_google_event'], isTrue);
+    });
+
     test('does not include create_meet_link when not in data', () {
       final model = ActivityModel(
         id: '',

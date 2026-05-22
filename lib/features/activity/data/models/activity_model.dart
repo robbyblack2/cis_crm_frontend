@@ -203,10 +203,13 @@ class ActivityModel extends Activity {
           'end_time': endTime!.toUtc().toIso8601String(),
         if (attendees != null) 'attendees': attendees,
         if (meetingUrl != null) 'meeting_url': meetingUrl,
-        // create_meet_link is a top-level API flag stored in data
-        // for transport — extracted here so it goes in the POST body.
+        // create_meet_link and create_google_event are top-level API flags.
+        // create_meet_link is stored in data for transport and extracted
+        // here. create_google_event is always true when creating a Meet.
         if (data.containsKey('create_meet_link'))
           'create_meet_link': data['create_meet_link'],
+        if (data.containsKey('create_meet_link'))
+          'create_google_event': true,
       };
 
   /// Build a create payload for POST /api/activities (meeting-specific).
