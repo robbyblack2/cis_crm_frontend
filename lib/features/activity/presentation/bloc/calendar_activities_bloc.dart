@@ -190,20 +190,22 @@ class CalendarActivitiesBloc
         _failedMonths.remove(monthKey);
         final updated = Map<String, List<Activity>>.from(state.activities);
         for (final activity in data) {
-          // Meetings: use start_time for calendar placement
-          // Tasks/calls: use due_date
-          String? key;
+          // Determine which calendar day to place this activity on:
+          // 1. Meetings: prefer start_time
+          // 2. Tasks/calls: prefer due_date
+          // 3. Fallback: use createdAt so every activity appears somewhere
+          String key;
           if (activity.isMeeting && activity.startTime != null) {
             key = _dateFmt.format(activity.startTime!.toLocal());
           } else if (activity.dueDate != null) {
             key = activity.dueDate!;
+          } else {
+            key = _dateFmt.format(activity.createdAt.toLocal());
           }
-          if (key != null) {
-            // Avoid duplicates (from overlapping prefetches)
-            final existing = updated.putIfAbsent(key, () => []);
-            if (!existing.any((a) => a.id == activity.id)) {
-              existing.add(activity);
-            }
+          // Avoid duplicates (from overlapping prefetches)
+          final existing = updated.putIfAbsent(key, () => []);
+          if (!existing.any((a) => a.id == activity.id)) {
+            existing.add(activity);
           }
         }
         emit(state.copyWith(

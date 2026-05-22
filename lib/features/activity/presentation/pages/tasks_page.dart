@@ -552,6 +552,9 @@ class _CreateActivityFormState extends State<_CreateActivityForm> {
   ActivitySubtype? _subtype;
   ActivityPriority? _priority;
   DateTime? _dueDate;
+  // Meeting-specific
+  DateTime? _startTime;
+  DateTime? _endTime;
   List<ActivityStatus> _statuses = [];
   List<ActivitySubtype> _subtypes = [];
   bool _loadingConfig = true;
@@ -559,7 +562,12 @@ class _CreateActivityFormState extends State<_CreateActivityForm> {
   @override
   void initState() {
     super.initState();
-    _dueDate = widget.prefilledDate;
+    _dueDate = widget.prefilledDate ?? DateTime.now();
+    // Default meeting times: next hour, 1 hour duration
+    final now = DateTime.now();
+    final nextHour = DateTime(now.year, now.month, now.day, now.hour + 1);
+    _startTime = nextHour;
+    _endTime = nextHour.add(const Duration(hours: 1));
     _loadConfig();
   }
 
@@ -721,59 +729,115 @@ class _CreateActivityFormState extends State<_CreateActivityForm> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<ActivityPriority>(
-                        value: _priority,
-                        decoration: const InputDecoration(
-                          labelText: 'Priority',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: const [
-                          DropdownMenuItem(child: Text('None')),
-                          DropdownMenuItem(
-                            value: ActivityPriority.low,
-                            child: Text('Low'),
-                          ),
-                          DropdownMenuItem(
-                            value: ActivityPriority.medium,
-                            child: Text('Medium'),
-                          ),
-                          DropdownMenuItem(
-                            value: ActivityPriority.high,
-                            child: Text('High'),
-                          ),
-                        ],
-                        onChanged: (v) => setState(() => _priority = v),
-                      ),
+                // Priority
+                DropdownButtonFormField<ActivityPriority>(
+                  value: _priority,
+                  decoration: const InputDecoration(
+                    labelText: 'Priority',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(child: Text('None')),
+                    DropdownMenuItem(
+                      value: ActivityPriority.low,
+                      child: Text('Low'),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.event_outlined),
-                        label: Text(
-                          _dueDate != null
-                              ? DateFormat.yMMMd().format(_dueDate!)
-                              : 'Set due date',
-                        ),
-                        onPressed: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: _dueDate ?? DateTime.now(),
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime(2030),
-                          );
-                          if (picked != null) {
-                            setState(() => _dueDate = picked);
-                          }
-                        },
-                      ),
+                    DropdownMenuItem(
+                      value: ActivityPriority.medium,
+                      child: Text('Medium'),
+                    ),
+                    DropdownMenuItem(
+                      value: ActivityPriority.high,
+                      child: Text('High'),
                     ),
                   ],
+                  onChanged: (v) => setState(() => _priority = v),
                 ),
+                const SizedBox(height: 12),
+                // Meeting: start/end time pickers
+                if (_type == ActivityType.meeting) ...[
+                  _dateTimePickerRow(
+                    label: 'Start Time *',
+                    value: _startTime!,
+                    onChanged: (dt) => setState(() {
+                      _startTime = dt;
+                      // Auto-adjust end time to maintain 1hr gap
+                      if (_endTime != null && dt.isAfter(_endTime!)) {
+                        _endTime = dt.add(const Duration(hours: 1));
+                      }
+                    }),
+                  ),
+                  const SizedBox(height: 12),
+                  _dateTimePickerRow(
+                    label: 'End Time *',
+                    value: _endTime!,
+                    onChanged: (dt) => setState(() => _endTime = dt),
+                  ),
+                ],
+                // Task/Call: due date
+                if (_type != ActivityType.meeting) ...[
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.event_outlined),
+                    label: Text(
+                      _dueDate != null
+                          ? 'Due: ${DateFormat.yMMMd().format(_dueDate!)}'
+                          : 'Set due date',
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                    ),
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _dueDate ?? DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2030),
+                      );
+                      if (picked != null) {
+                        setState(() => _dueDate = picked);
+                      }
+                    },
+                  ),
+                ],
               ],
             ),
+    );
+  }
+
+  Widget _dateTimePickerRow({
+    required String label,
+    required DateTime value,
+    required ValueChanged<DateTime> onChanged,
+  }) {
+    return OutlinedButton.icon(
+      icon: const Icon(Icons.schedule),
+      label: Text(
+        '$label: ${DateFormat('EEE, MMM d · h:mm a').format(value)}',
+      ),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(double.infinity, 48),
+      ),
+      onPressed: () async {
+        final pickedDate = await showDatePicker(
+          context: context,
+          initialDate: value,
+          firstDate: DateTime(2020),
+          lastDate: DateTime(2030),
+        );
+        if (pickedDate == null || !mounted) return;
+        final pickedTime = await showTimePicker(
+          context: context,
+          initialTime: TimeOfDay.fromDateTime(value),
+        );
+        if (pickedTime == null) return;
+        onChanged(DateTime(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        ));
+      },
     );
   }
 
@@ -797,9 +861,12 @@ class _CreateActivityFormState extends State<_CreateActivityForm> {
       priority: _priority,
       subtypeId: _subtype?.id,
       subtypeName: _subtype?.name,
-      dueDate: _dueDate != null
+      dueDate: _type != ActivityType.meeting && _dueDate != null
           ? DateFormat('yyyy-MM-dd').format(_dueDate!)
           : null,
+      // Meeting-specific fields
+      startTime: _type == ActivityType.meeting ? _startTime : null,
+      endTime: _type == ActivityType.meeting ? _endTime : null,
     );
     widget.onCreated(activity);
   }
